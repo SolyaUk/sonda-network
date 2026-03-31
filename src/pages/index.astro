@@ -1,17 +1,1069 @@
 ---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Header from '../components/Header.astro';
 
+import fs from 'node:fs';
+import path from 'node:path';
+
+let snap = null;
+try {
+  const raw = fs.readFileSync(path.resolve('./public/data/snapshot.json'), 'utf8');
+  snap = JSON.parse(raw);
+} catch (e) {
+  snap = null;
+}
+const v = snap?.validators;
+const dec = v?.decentralization;
+const dz = snap?.doublezero;
+const bam = snap?.bam;
+const health = snap?.cluster_health;
+
+const fmt = (n: number) => n?.toLocaleString('en-US') ?? '-';
+const pct = (n: number, digits = 1) => n != null ? `${n.toFixed(digits)}%` : '-';
+
+function nakRating(dim: string, val: number) {
+  if (dim === 'validator') {
+    if (val >= 50) return 'Excellent';
+    if (val >= 20) return 'Good';
+    return 'Warning';
+  }
+  if (val <= 2) return 'Critical';
+  if (val <= 5) return 'Warning';
+  if (val <= 10) return 'Moderate';
+  return 'Good';
+}
+
+function nakColor(rating: string) {
+  if (rating === 'Excellent' || rating === 'Good') return 'good';
+  if (rating === 'Warning' || rating === 'Moderate') return 'warning';
+  return 'critical';
+}
+
+function hhiRating(val: number) {
+  if (val > 2500) return { label: 'Highly concentrated', color: 'critical' };
+  if (val > 1500) return { label: 'Moderately concentrated', color: 'warning' };
+  return { label: 'Competitive', color: 'good' };
+}
+
+function giniRating(val: number) {
+  if (val > 0.8) return { label: 'Very high inequality', color: 'critical' };
+  if (val > 0.6) return { label: 'High inequality', color: 'warning' };
+  if (val > 0.4) return { label: 'Moderate inequality', color: 'neutral' };
+  return { label: 'Low inequality', color: 'good' };
+}
+
+// Country code to flag emoji
+function flag(cc: string): string {
+  return cc.toUpperCase().split('').map(c =>
+    String.fromCodePoint(c.charCodeAt(0) + 127397)
+  ).join('');
+}
+
+const topCountries = v?.country_distribution
+  ? Object.entries(v.country_distribution as Record<string, number>).slice(0, 10)
+  : [];
+const maxCount = topCountries[0]?.[1] ?? 1;
+
+const stakeByVersion = health?.stake_by_version
+  ? Object.entries(health.stake_by_version as Record<string, any>)
+      .filter(([k]) => k !== 'unknown')
+      .sort((a, b) => b[1].currentActiveStake - a[1].currentActiveStake)
+      .slice(0, 3)
+  : [];
+
+const updatedAt = snap?.timestamp
+  ? new Date(snap.timestamp).toUTCString().replace('GMT', 'UTC')
+  : '-';
+
+const skipRate = health?.average_stake_weighted_skip_rate ?? 0;
+const delinqPct = health?.delinquent_stake_percent ?? 0;
+
+const hhi_country = dec?.hhi_country?.value;
+const hhi_asn = dec?.hhi_asn?.value;
+const gini = dec?.gini_validators?.value;
 ---
 
-<html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
-		<meta name="viewport" content="width=device-width" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Astro</title>
-	</head>
-	<body>
-		<h1>Astro</h1>
-	</body>
-</html>
+<BaseLayout>
+  <Header />
+
+  <!-- Dev banner - visible everywhere -->
+<div class="dev-banner">
+  <div class="dev-banner-inner">
+    <span class="dev-badge">BETA</span>
+    Dashboard is under active development. Data may come from older snapshots. Some sections are incomplete.
+    <a href="https://github.com/SolyaUk/sonda-network" target="_blank" rel="noopener" class="dev-link">View on GitHub</a>
+  </div>
+</div>
+
+  <main class="main-content">
+    <div class="container">
+
+      <!-- HERO -->
+      <section class="hero">
+        <div class="hero-label">Solana Observatory for Network Decentralization Analysis</div>
+        <h1 class="hero-title">The Solana network,<br/>mapped and verified.</h1>
+        <p class="hero-desc">
+          Multi-source geo-verified analysis of validator distribution,
+          infrastructure coverage, and network health.
+        </p>
+        <div class="hero-meta">
+          <span class="epoch-badge">
+            Epoch <span class="mono">{snap?.epoch ?? '-'}</span>
+            <span class="epoch-dot"></span>
+            <span class="mono">{snap?.epoch_completed_percent ?? '-'}%</span> complete
+          </span>
+          <span class="updated-badge">
+            Snapshot: <span class="mono">{updatedAt}</span>
+          </span>
+        </div>
+      </section>
+
+      <!-- NETWORK HEALTH -->
+      <section class="section">
+        <h2 class="section-title">Network Health</h2>
+        <p class="section-desc">Current state of the validator set and cluster performance.</p>
+
+        <div class="cards-grid cards-4">
+
+          <div class="card">
+            <div class="card-label">Active Validators</div>
+            <div class="card-value violet">{fmt(v?.total)}</div>
+            <div class="card-sub">of {fmt(v?.total_all)} total, {v?.offline} offline</div>
+          </div>
+
+          <div class="card">
+            <div class="card-label">
+              Delinquent Stake
+              <span class="tooltip-wrap">
+                <span class="tooltip-icon">?</span>
+                <span class="tooltip-box">Percentage of total stake held by validators that are behind on voting. Below 1% is healthy.</span>
+              </span>
+            </div>
+            <div class={`card-value ${delinqPct > 1 ? 'warning' : delinqPct > 5 ? 'critical' : 'good'}`}>
+              {pct(delinqPct, 2)}
+            </div>
+            <div class="card-sub">of total active stake</div>
+          </div>
+
+          <div class="card">
+            <div class="card-label">
+              Skip Rate
+              <span class="tooltip-wrap">
+                <span class="tooltip-icon">?</span>
+                <span class="tooltip-box">Stake-weighted average percentage of assigned leader slots that were skipped. Lower is better. A healthy network stays below 1%.</span>
+              </span>
+            </div>
+            <div class={`card-value ${skipRate > 1 ? 'warning' : 'good'}`}>
+              {pct(skipRate, 2)}
+            </div>
+            <div class="card-sub">stake-weighted</div>
+          </div>
+
+          <div class="card">
+            <div class="card-label">RPC Nodes</div>
+            <div class="card-value violet">{fmt(snap?.record_counts?.rpc)}</div>
+            <div class="card-sub">public RPC endpoints</div>
+          </div>
+
+        </div>
+
+        {stakeByVersion.length > 0 && (
+          <div class="version-bar-wrap">
+            <div class="card-label">Top Client Versions</div>
+            <div class="version-list">
+              {stakeByVersion.map(([ver, info]) => (
+                <div class="version-item">
+                  <span class="version-name mono">{ver}</span>
+                  <span class="version-validators">{fmt(info.currentValidators)} validators</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </section>
+
+      <!-- DECENTRALIZATION -->
+      <section class="section">
+        <h2 class="section-title">Decentralization</h2>
+        <p class="section-desc">
+          How distributed is stake across countries, networks, and individual validators?
+        </p>
+
+        <!-- HHI + Gini - prominent -->
+        <div class="dec-explainer">
+          <div class="dec-explainer-item">
+            <div class="dec-explainer-label">
+              Market Concentration (HHI)
+              <span class="tooltip-wrap">
+                <span class="tooltip-icon">?</span>
+                <span class="tooltip-box">Herfindahl-Hirschman Index. Used in economics to measure market concentration. Below 1500 is competitive. Above 2500 means a few players dominate. We calculate this for countries and network providers.</span>
+              </span>
+            </div>
+            <p class="dec-explainer-text">
+              Imagine all validator stake as a market. HHI tells you how monopolized it is.
+              A score near zero means thousands of equal players. A score near 10,000 means one player controls everything.
+            </p>
+            <div class="dec-explainer-values">
+              <div class="dec-val-item">
+                <span class="dec-val-num mono {hhiRating(hhi_country).color}">{hhi_country?.toFixed(0) ?? '-'}</span>
+                <span class="dec-val-sub">by country</span>
+                <span class={`status-badge ${hhiRating(hhi_country).color}`}>{hhiRating(hhi_country).label}</span>
+              </div>
+              <div class="dec-val-item">
+                <span class="dec-val-num mono {hhiRating(hhi_asn).color}">{hhi_asn?.toFixed(0) ?? '-'}</span>
+                <span class="dec-val-sub">by network provider</span>
+                <span class={`status-badge ${hhiRating(hhi_asn).color}`}>{hhiRating(hhi_asn).label}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="dec-explainer-item">
+            <div class="dec-explainer-label">
+              Stake Inequality (Gini)
+              <span class="tooltip-wrap">
+                <span class="tooltip-icon">?</span>
+                <span class="tooltip-box">Gini coefficient measures inequality. 0 means all validators have equal stake. 1 means one validator holds all stake. Used the same way economists measure wealth inequality in a country.</span>
+              </span>
+            </div>
+            <p class="dec-explainer-text">
+              Think of it like income inequality, but for stake. A high Gini means a few validators hold most of the network's stake, while hundreds of smaller validators share the rest.
+            </p>
+            <div class="dec-explainer-values">
+              <div class="dec-val-item">
+                <span class={`dec-val-num mono ${giniRating(gini).color}`}>{gini?.toFixed(3) ?? '-'}</span>
+                <span class="dec-val-sub">across all validators</span>
+                <span class={`status-badge ${giniRating(gini).color}`}>{giniRating(gini).label}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Nakamoto -->
+        <div class="subsection-label" style="margin-top: 2rem;">
+          Nakamoto Coefficient
+          <span class="tooltip-wrap">
+            <span class="tooltip-icon">?</span>
+            <span class="tooltip-box">The minimum number of independent entities that together control 33%+ of stake. Named after Bitcoin's creator. Higher means more decentralized.</span>
+          </span>
+        </div>
+
+        <div class="cards-grid cards-4">
+          {[
+            {
+              dim: 'ASN',
+              key: 'nakamoto_asn',
+              why: 'One network provider (TERASWITCH) hosts enough validators to exceed 33% of stake alone. This is a known concentration risk in Solana infrastructure.'
+            },
+            {
+              dim: 'Country',
+              key: 'nakamoto_country',
+              why: 'Two countries (US and Germany) together hold over 33% of stake. Geographic concentration creates regulatory and infrastructure risk.'
+            },
+            {
+              dim: 'City',
+              key: 'nakamoto_city',
+              why: 'Two cities (Frankfurt and Amsterdam) together exceed 33% of stake. Most validators cluster in major European datacenter hubs.'
+            },
+            {
+              dim: 'Validator',
+              key: 'nakamoto_validator',
+              why: 'It takes 20 independent validators to reach 33% of stake. This is the strongest dimension - no single validator dominates.'
+            },
+          ].map(({ dim, key, why }) => {
+            const val = dec?.[key]?.value;
+            const rating = nakRating(dim.toLowerCase(), val);
+            const color = nakColor(rating);
+            return (
+              <div class="card card-nakamoto">
+                <div class="card-label">
+                  {dim}
+                  <span class="tooltip-wrap">
+                    <span class="tooltip-icon">?</span>
+                    <span class="tooltip-box">{why}</span>
+                  </span>
+                </div>
+                <div class={`card-value-big mono ${color}`}>{val ?? '-'}</div>
+                <div class={`status-badge ${color}`}>{rating}</div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      <!-- INFRASTRUCTURE -->
+      <section class="section">
+        <h2 class="section-title">Infrastructure Coverage</h2>
+        <p class="section-desc">
+          Adoption of advanced networking infrastructure across the validator set.
+        </p>
+
+        <div class="cards-grid cards-2">
+          <div class="card card-infra">
+            <div class="infra-header">
+              <div class="infra-name">DoubleZero</div>
+              <span class="tooltip-wrap">
+                <span class="tooltip-icon">?</span>
+                <span class="tooltip-box">A private fiber network that connects Solana validators, bypassing the public internet for faster and more reliable block propagation.</span>
+              </span>
+            </div>
+            <div class="infra-stats">
+              <div class="infra-stat">
+                <div class="infra-value violet">{fmt(dz?.validators)}</div>
+                <div class="infra-label">validators connected</div>
+              </div>
+              <div class="infra-stat">
+                <div class="infra-value">{pct(dz?.validators_percent)}</div>
+                <div class="infra-label">of all validators</div>
+              </div>
+              <div class="infra-stat">
+                <div class="infra-value">{pct(dz?.validators_stake_percent)}</div>
+                <div class="infra-label">of total stake</div>
+              </div>
+            </div>
+            <div class="infra-detail">
+              <span>{fmt(dz?.devices)} devices</span>
+              <span class="sep-dot">·</span>
+              <span>{fmt(dz?.rpc)} RPC nodes</span>
+              <span class="sep-dot">·</span>
+              <span class={dz?.network_health?.links_healthy === dz?.network_health?.links_total ? 'good-text' : 'warning-text'}>
+                {dz?.network_health?.links_healthy}/{dz?.network_health?.links_total} links healthy
+              </span>
+            </div>
+          </div>
+
+          <div class="card card-infra">
+            <div class="infra-header">
+              <div class="infra-name">Jito BAM</div>
+              <span class="tooltip-wrap">
+                <span class="tooltip-icon">?</span>
+                <span class="tooltip-box">Block-level Attestation Mechanism by Jito. Coordinates validators for more efficient MEV handling and block building.</span>
+              </span>
+            </div>
+            <div class="infra-stats">
+              <div class="infra-stat">
+                <div class="infra-value violet">{fmt(bam?.total_connected_validators)}</div>
+                <div class="infra-label">validators connected</div>
+              </div>
+              <div class="infra-stat">
+                <div class="infra-value">{pct(bam?.stake_percentage)}</div>
+                <div class="infra-label">of total stake</div>
+              </div>
+              <div class="infra-stat">
+                <div class="infra-value">{fmt(bam?.node_count)}</div>
+                <div class="infra-label">BAM nodes</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- GEOGRAPHIC DISTRIBUTION -->
+      <section class="section">
+        <h2 class="section-title">Geographic Distribution</h2>
+        <p class="section-desc">
+          Validator count by country. {Object.keys(v?.country_distribution ?? {}).length} countries represented.
+        </p>
+
+        <div class="card">
+          <div class="geo-chart">
+            {topCountries.map(([cc, count]) => {
+              const barWidth = Math.round((count / maxCount) * 100);
+              const stakePct = v?.stake_by_country?.[cc];
+              return (
+                <div class="geo-row">
+                  <div class="geo-country">
+                    <span class="geo-flag">{flag(cc)}</span>
+                    <span class="geo-cc">{cc}</span>
+                  </div>
+                  <div class="geo-bar-wrap">
+                    <div class="geo-bar" style={`width: ${barWidth}%`}></div>
+                  </div>
+                  <div class="geo-count mono">{fmt(count)}</div>
+                  {stakePct != null && (
+                    <div class="geo-stake">{pct(stakePct)} stake</div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      <!-- ABOUT -->
+      <section class="section">
+        <h2 class="section-title">About SONDA</h2>
+
+        <div class="cards-grid cards-2">
+          <div class="card about-card">
+            <h3 class="about-heading">What is SONDA?</h3>
+            <p class="about-text">
+              SONDA started as private scripts to cross-verify validator geolocation while choosing
+              a datacenter for the Solya validator. Existing tools reported conflicting locations,
+              so we built a multi-source verification pipeline instead.
+            </p>
+            <p class="about-text">
+              The result is an open-source observatory tracking where validators actually run,
+              how infrastructure coverage evolves over time, and what decentralization
+              looks like in practice.
+            </p>
+          </div>
+
+          <div class="card about-card">
+            <h3 class="about-heading">What makes it different?</h3>
+            <ul class="about-list">
+              <li>4-source geo cross-verification per IP (DB-IP, IPInfo, GeoJS, ip-api)</li>
+              <li>Discrepancy detection - flags validators where sources disagree</li>
+              <li>Full location history since 2021 across 785+ epochs</li>
+              <li>DoubleZero and Jito BAM integration with live data</li>
+              <li>Three clusters: mainnet, testnet, devnet</li>
+              <li>Open source - <a href="https://github.com/SolyaUk/sonda" target="_blank" class="link">github.com/SolyaUk/sonda</a></li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-top">
+        <div class="footer-brand">
+          <span class="footer-logo">SONDA</span>
+          <span class="footer-by">by <a href="https://solya.studio" target="_blank" class="link">Solya validator</a></span>
+        </div>
+        <div class="footer-links">
+          <a href="https://github.com/SolyaUk/sonda-network" target="_blank" class="footer-link">GitHub</a>
+        </div>
+      </div>
+
+      <div class="footer-sources">
+        <span class="footer-sources-label">Data sources:</span>
+        <span>Solana RPC</span><span class="sep">·</span>
+        <span>Jito Kobe</span><span class="sep">·</span>
+        <span>SFDP</span><span class="sep">·</span>
+        <span>StakeWiz</span><span class="sep">·</span>
+        <span>DB-IP</span><span class="sep">·</span>
+        <span>IPInfo</span><span class="sep">·</span>
+        <span>GeoJS</span><span class="sep">·</span>
+        <span>DoubleZero</span><span class="sep">·</span>
+        <span>Jito BAM</span><span class="sep">·</span>
+        <span>RIPE Stat</span>
+      </div>
+
+      <div class="footer-bottom">
+        <span>Data updates every ~60 seconds. Last snapshot: <span class="mono">{updatedAt}</span></span>
+        <span>MIT License</span>
+      </div>
+
+      <!-- Dev status - visible everywhere -->
+      <div class="footer-dev-note">
+        SONDA is in active development. Features are incomplete and data may not reflect the latest network state.
+      </div>
+    </div>
+  </footer>
+
+  <!-- Prod-only banner - injected via JS only on sonda.network -->
+  <div id="prod-banner" style="display:none;">
+    <div class="prod-banner-inner">
+      <strong>Work in progress.</strong>
+      The full dashboard is being built. What you see is an early preview with real network data.
+      Follow progress on <a href="https://github.com/SolyaUk/sonda-network" target="_blank">GitHub</a>
+      or check back soon.
+    </div>
+  </div>
+</BaseLayout>
+
+<style>
+/* Dev banner */
+.dev-banner {
+  background: rgba(59, 130, 246, 0.08);
+  border-bottom: 1px solid rgba(59, 130, 246, 0.2);
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
+.dev-banner-inner {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0.5rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.dev-badge {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  background: var(--accent-blue);
+  color: #fff;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  letter-spacing: 0.08em;
+  flex-shrink: 0;
+}
+
+.dev-link {
+  color: var(--accent-blue);
+  text-decoration: none;
+  margin-left: auto;
+}
+
+.dev-link:hover { text-decoration: underline; }
+
+/* Prod banner */
+#prod-banner {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 200;
+}
+
+.prod-banner-inner {
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-accent);
+  padding: 0.85rem 1.5rem;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.prod-banner-inner a {
+  color: var(--accent-blue);
+  text-decoration: none;
+}
+
+/* Layout */
+.main-content { padding: 0 0 4rem; }
+
+.container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+/* Hero */
+.hero {
+  padding: 4rem 0 3rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 3rem;
+}
+
+.hero-label {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent-blue);
+  margin-bottom: 1rem;
+}
+
+.hero-title {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  font-weight: 700;
+  line-height: 1.15;
+  color: var(--text-primary);
+  margin: 0 0 1.25rem;
+}
+
+.hero-desc {
+  font-size: 1.05rem;
+  color: var(--text-secondary);
+  max-width: 600px;
+  margin: 0 0 1.5rem;
+  line-height: 1.7;
+}
+
+.hero-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+}
+
+.epoch-badge, .updated-badge {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.epoch-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--status-good);
+  display: inline-block;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* Sections */
+.section { margin-bottom: 3.5rem; }
+
+.section-title {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 0.4rem;
+}
+
+.section-desc {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin: 0 0 1.5rem;
+}
+
+.subsection-label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+/* Cards grid */
+.cards-grid { display: grid; gap: 1rem; }
+.cards-4 { grid-template-columns: repeat(4, 1fr); }
+.cards-3 { grid-template-columns: repeat(3, 1fr); }
+.cards-2 { grid-template-columns: repeat(2, 1fr); }
+
+@media (max-width: 900px) {
+  .cards-4 { grid-template-columns: repeat(2, 1fr); }
+  .cards-3 { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 560px) {
+  .cards-4, .cards-3, .cards-2 { grid-template-columns: 1fr; }
+}
+
+/* Card */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.25rem;
+  transition: border-color 0.15s ease;
+}
+
+.card:hover { border-color: var(--border-accent); }
+
+.card-label {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.card-value {
+  font-family: var(--font-mono);
+  font-size: 1.8rem;
+  font-weight: 600;
+  line-height: 1;
+  margin-bottom: 0.4rem;
+  color: var(--text-primary);
+}
+
+.card-value-big {
+  font-family: var(--font-mono);
+  font-size: 2.8rem;
+  font-weight: 700;
+  line-height: 1;
+  margin-bottom: 0.5rem;
+}
+
+.card-sub {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+/* Status colors */
+.violet   { color: var(--accent-violet); }
+.good     { color: var(--status-good); }
+.warning  { color: var(--status-warning); }
+.critical { color: var(--status-critical); }
+.neutral  { color: var(--status-neutral); }
+.good-text    { color: var(--status-good); }
+.warning-text { color: var(--status-warning); }
+
+/* Status badge */
+.status-badge {
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+}
+
+.status-badge.good     { background: rgba(34, 197, 94, 0.12); color: var(--status-good); }
+.status-badge.warning  { background: rgba(249, 115, 22, 0.12); color: var(--status-warning); }
+.status-badge.critical { background: rgba(239, 68, 68, 0.12); color: var(--status-critical); }
+.status-badge.neutral  { background: rgba(107, 114, 128, 0.12); color: var(--status-neutral); }
+
+/* Nakamoto card */
+.card-nakamoto { text-align: center; }
+
+/* Tooltip */
+.tooltip-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.tooltip-icon {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--bg-card-hover);
+  border: 1px solid var(--border);
+  font-size: 0.6rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  cursor: help;
+  flex-shrink: 0;
+}
+
+.tooltip-box {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.6rem 0.8rem;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  width: 240px;
+  line-height: 1.55;
+  z-index: 50;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 400;
+  text-align: left;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.tooltip-wrap:hover .tooltip-box { display: block; }
+
+/* Decentralization explainer */
+.dec-explainer {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 700px) {
+  .dec-explainer { grid-template-columns: 1fr; }
+}
+
+.dec-explainer-item {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.dec-explainer-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.dec-explainer-text {
+  font-size: 0.83rem;
+  color: var(--text-secondary);
+  line-height: 1.65;
+  margin: 0;
+}
+
+.dec-explainer-values {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.25rem;
+}
+
+.dec-val-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.dec-val-num {
+  font-family: var(--font-mono);
+  font-size: 1.9rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.dec-val-sub {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+/* Version */
+.version-bar-wrap {
+  margin-top: 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.25rem;
+}
+
+.version-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 2rem;
+  margin-top: 0.5rem;
+}
+
+.version-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.version-name { font-size: 0.85rem; color: var(--accent-blue); }
+.version-validators { font-size: 0.8rem; color: var(--text-muted); }
+
+/* Infrastructure */
+.card-infra { display: flex; flex-direction: column; gap: 1rem; }
+
+.infra-header {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.infra-name {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.infra-stats {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.infra-value {
+  font-family: var(--font-mono);
+  font-size: 1.6rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1;
+}
+
+.infra-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 0.2rem;
+}
+
+.infra-detail {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border);
+  padding-top: 0.75rem;
+}
+
+.sep-dot { opacity: 0.4; }
+
+/* Geo chart */
+.geo-chart { display: flex; flex-direction: column; gap: 0.65rem; }
+
+.geo-row {
+  display: grid;
+  grid-template-columns: 70px 1fr 55px 90px;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.geo-country {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.geo-flag { font-size: 1rem; line-height: 1; }
+.geo-cc { font-size: 0.75rem; color: var(--text-muted); font-family: var(--font-mono); }
+
+.geo-bar-wrap {
+  height: 6px;
+  background: var(--bg-secondary);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.geo-bar {
+  height: 100%;
+  background: var(--accent-blue);
+  border-radius: 3px;
+}
+
+.geo-count { font-size: 0.82rem; color: var(--text-primary); text-align: right; }
+.geo-stake { font-size: 0.75rem; color: var(--text-muted); text-align: right; }
+
+/* About */
+.about-card { display: flex; flex-direction: column; gap: 0.75rem; }
+
+.about-heading {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.about-text {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  line-height: 1.7;
+  margin: 0;
+}
+
+.about-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.about-list li {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  padding-left: 1rem;
+  position: relative;
+}
+
+.about-list li::before {
+  content: '-';
+  position: absolute;
+  left: 0;
+  color: var(--accent-blue);
+}
+
+/* Links */
+.link { color: var(--accent-blue); text-decoration: none; }
+.link:hover { text-decoration: underline; }
+
+.mono { font-family: var(--font-mono); }
+
+/* Footer */
+.site-footer {
+  border-top: 1px solid var(--border);
+  padding: 2rem 0;
+  margin-top: 2rem;
+}
+
+.footer-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.footer-brand { display: flex; align-items: center; gap: 0.5rem; }
+
+.footer-logo {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+}
+
+.footer-by { font-size: 0.8rem; color: var(--text-muted); }
+
+.footer-links { display: flex; gap: 1.25rem; }
+
+.footer-link {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  text-decoration: none;
+}
+
+.footer-link:hover { color: var(--accent-blue); }
+
+.footer-sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  align-items: center;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-bottom: 0.75rem;
+}
+
+.footer-sources-label {
+  color: var(--text-secondary);
+  font-weight: 500;
+  margin-right: 0.2rem;
+}
+
+.sep { opacity: 0.4; }
+
+.footer-bottom {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.footer-dev-note {
+  margin-top: 0.75rem;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+</style>
+
+<script>
+  // Prod-only banner - only on sonda.network
+  if (window.location.hostname === 'sonda.network') {
+    const banner = document.getElementById('prod-banner');
+    if (banner) banner.style.display = 'block';
+  }
+</script>

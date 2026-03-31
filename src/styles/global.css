@@ -1,1 +1,93 @@
 @import "tailwindcss";
+
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+:root {
+  --font-display: 'Space Grotesk', sans-serif;
+  --font-body:    'Inter', sans-serif;
+  --font-mono:    'JetBrains Mono', monospace;
+}
+
+[data-theme="dark"] {
+  --bg-primary:      #09090f;
+  --bg-secondary:    #111118;
+  --bg-card:         #16161f;
+  --bg-card-hover:   #1c1c28;
+  --text-primary:    #f0ede8;
+  --text-secondary:  #b0adc0;
+  --text-muted:      #706d82;
+  --border:          rgba(255, 255, 255, 0.09);
+  --border-accent:   rgba(59, 130, 246, 0.30);
+  --accent-blue:     #3b82f6;
+  --accent-blue-dim: #1d4ed8;
+  --accent-violet:   #a78bfa;
+  --status-critical: #ef4444;
+  --status-warning:  #f97316;
+  --status-good:     #22c55e;
+  --status-neutral:  #6b7280;
+  --status-info:     #38bdf8;
+}
+
+[data-theme="light"] {
+  --bg-primary:      #f4f3ef;
+  --bg-secondary:    #ffffff;
+  --bg-card:         #ffffff;
+  --bg-card-hover:   #f0ede8;
+  --text-primary:    #1a1a2e;
+  --text-secondary:  #4a4860;
+  --text-muted:      #8884a0;
+  --border:          rgba(0, 0, 0, 0.09);
+  --border-accent:   rgba(59, 130, 246, 0.30);
+  --accent-blue:     #2563eb;
+  --accent-blue-dim: #1d4ed8;
+  --accent-violet:   #7c3aed;
+  --status-critical: #dc2626;
+  --status-warning:  #ea580c;
+  --status-good:     #16a34a;
+  --status-neutral:  #6b7280;
+  --status-info:     #0284c7;
+}
+
+html {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100vh;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.font-display { font-family: var(--font-display); }
+.font-mono    { font-family: var(--font-mono); }
+
+[data-theme="dark"] ::-webkit-scrollbar { width: 6px; }
+[data-theme="dark"] ::-webkit-scrollbar-track { background: var(--bg-secondary); }
+[data-theme="dark"] ::-webkit-scrollbar-thumb { background: var(--text-muted); border-radius: 3px; }
+
+::selection {
+  background-color: var(--accent-blue);
+  color: #fff;
+}
+
+html:not([data-theme]) {
+  --bg-primary:      #09090f;
+  --bg-secondary:    #111118;
+  --bg-card:         #16161f;
+  --text-primary:    #f0ede8;
+  --text-secondary:  #b0adc0;
+  --text-muted:      #706d82;
+  --border:          rgba(255, 255, 255, 0.09);
+  --accent-blue:     #3b82f6;
+  --accent-violet:   #a78bfa;
+  --status-critical: #ef4444;
+  --status-warning:  #f97316;
+  --status-good:     #22c55e;
+  --status-neutral:  #6b7280;
+}

@@ -1,0 +1,61 @@
+---
+import '../styles/global.css';
+
+const {
+  title = 'SONDA - Solana Network Decentralization Analysis',
+  description = 'Multi-source geo-verified analysis of Solana validator distribution, infrastructure mapping, and network health metrics.',
+  ogImage = '/og-image.png',
+} = Astro.props;
+---
+
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="generator" content={Astro.generator} />
+
+  <title>{title}</title>
+  <meta name="description" content={description} />
+
+  <meta property="og:title" content={title} />
+  <meta property="og:description" content={description} />
+  <meta property="og:image" content={`https://sonda.network${ogImage}`} />
+  <meta property="og:url" content="https://sonda.network" />
+  <meta property="og:type" content="website" />
+
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content={title} />
+  <meta name="twitter:description" content={description} />
+  <meta name="twitter:image" content={`https://sonda.network${ogImage}`} />
+
+  <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+  <script is:inline>
+    (function() {
+      var stored = localStorage.getItem('sonda-theme');
+      var preferred = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', stored || preferred);
+    })();
+  </script>
+
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "SONDA",
+      "url": "https://sonda.network",
+      "description": "Solana Observatory for Network Decentralization Analysis"
+    }
+  </script>
+</head>
+<body>
+  <slot />
+</body>
+</html>
