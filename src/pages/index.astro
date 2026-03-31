@@ -357,6 +357,11 @@ const gini = dec?.gini_validators?.value;
         </div>
       </section>
 
+<div class="more-coming-banner">
+  <span class="more-coming-icon">+</span>
+  More sections in development: Validators Table, Per-validator History, Endpoint Monitor, Geo Discrepancy Analysis, Datacenter Pages, Historical Charts.
+</div>
+
       <!-- GEOGRAPHIC DISTRIBUTION -->
       <section class="section">
         <h2 class="section-title">Geographic Distribution</h2>
@@ -464,14 +469,39 @@ const gini = dec?.gini_validators?.value;
   </footer>
 
   <!-- Prod-only banner - injected via JS only on sonda.network -->
-  <div id="prod-banner" style="display:none;">
-    <div class="prod-banner-inner">
-      <strong>Work in progress.</strong>
-      The full dashboard is being built. What you see is an early preview with real network data.
-      Follow progress on <a href="https://github.com/SolyaUk/sonda-network" target="_blank">GitHub</a>
-      or check back soon.
+<div id="prod-overlay" style="display:none;">
+  <div class="prod-overlay-content">
+    <img src="/logo-500.png" alt="SONDA" class="prod-overlay-logo" />
+    <h1 class="prod-overlay-title">SONDA</h1>
+    <p class="prod-overlay-sub">Solana Observatory for Network Decentralization Analysis</p>
+    <div class="prod-overlay-status">
+      <span class="dev-badge">IN DEVELOPMENT</span>
+    </div>
+    <p class="prod-overlay-text">
+      We are building a multi-source analytics dashboard for the Solana network.
+      Validator geolocation, decentralization metrics, infrastructure coverage,
+      and historical data across 785+ epochs.
+    </p>
+    <div class="prod-overlay-coming">
+      <div class="coming-item">Network Health</div>
+      <div class="coming-item">Decentralization Metrics (Nakamoto, HHI, Gini)</div>
+      <div class="coming-item">DoubleZero and Jito BAM Coverage</div>
+      <div class="coming-item">Geographic Distribution</div>
+      <div class="coming-item">Validators Table with Search</div>
+      <div class="coming-item">Per-validator Location History</div>
+      <div class="coming-item">Endpoint Health Monitor</div>
+      <div class="coming-item">Geo Discrepancy Analysis</div>
+    </div>
+    <div class="prod-overlay-links">
+      <a href="https://github.com/SolyaUk/sonda-network" target="_blank" rel="noopener" class="prod-overlay-btn">
+        View on GitHub
+      </a>
+      <a href="https://solya.studio" target="_blank" rel="noopener" class="prod-overlay-link">
+        by Solya validator
+      </a>
     </div>
   </div>
+</div>
 </BaseLayout>
 
 <style>
@@ -536,6 +566,119 @@ const gini = dec?.gini_validators?.value;
   color: var(--accent-blue);
   text-decoration: none;
 }
+
+#prod-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  background: var(--bg-primary);
+  overflow-y: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1.5rem;
+}
+
+.prod-overlay-content {
+  max-width: 560px;
+  width: 100%;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.prod-overlay-logo {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+}
+
+.prod-overlay-title {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+  letter-spacing: 0.08em;
+}
+
+.prod-overlay-sub {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin: 0;
+}
+
+.prod-overlay-status {
+  margin: 0.25rem 0;
+}
+
+.prod-overlay-text {
+  font-size: 0.92rem;
+  color: var(--text-secondary);
+  line-height: 1.7;
+  margin: 0;
+  max-width: 480px;
+}
+
+.prod-overlay-coming {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  width: 100%;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  text-align: left;
+  margin: 0.5rem 0;
+}
+
+.coming-item {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  padding-left: 1rem;
+  position: relative;
+}
+
+.coming-item::before {
+  content: '+';
+  position: absolute;
+  left: 0;
+  color: var(--accent-blue);
+  font-weight: 600;
+}
+
+.prod-overlay-links {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  margin-top: 0.5rem;
+}
+
+.prod-overlay-btn {
+  background: var(--accent-blue);
+  color: #fff;
+  padding: 0.6rem 1.25rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: opacity 0.15s ease;
+}
+
+.prod-overlay-btn:hover { opacity: 0.85; }
+
+.prod-overlay-link {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+.prod-overlay-link:hover { color: var(--accent-blue); }
 
 /* Layout */
 .main-content { padding: 0 0 4rem; }
@@ -904,6 +1047,27 @@ const gini = dec?.gini_validators?.value;
   padding-top: 0.75rem;
 }
 
+.more-coming-banner {
+  background: var(--bg-card);
+  border: 1px dashed var(--border-accent);
+  border-radius: 10px;
+  padding: 0.75rem 1.25rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-bottom: 3.5rem;
+}
+
+.more-coming-icon {
+  color: var(--accent-blue);
+  font-weight: 700;
+  font-size: 1rem;
+  line-height: 1.2;
+  flex-shrink: 0;
+}
+
 .sep-dot { opacity: 0.4; }
 
 /* Geo chart */
@@ -1061,9 +1225,11 @@ const gini = dec?.gini_validators?.value;
 </style>
 
 <script>
-  // Prod-only banner - only on sonda.network
-  if (window.location.hostname === 'sonda.network') {
-    const banner = document.getElementById('prod-banner');
-    if (banner) banner.style.display = 'block';
-  }
+  document.addEventListener('DOMContentLoaded', () => {
+    const hostname = window.location.hostname;
+    if (hostname === 'sonda.network' || hostname === 'www.sonda.network') {
+      const overlay = document.getElementById('prod-overlay');
+      if (overlay) overlay.style.display = 'flex';
+    }
+  });
 </script>
