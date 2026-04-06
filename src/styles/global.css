@@ -55,6 +55,12 @@ html {
   font-size: 16px;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+  /*
+    Reserve space for scrollbar in both themes.
+    Without this, adding/removing a 6px scrollbar shifts all content
+    and causes layout jumps when switching themes.
+  */
+  scrollbar-gutter: stable;
 }
 
 body {
@@ -67,15 +73,26 @@ body {
 .font-display { font-family: var(--font-display); }
 .font-mono    { font-family: var(--font-mono); }
 
-[data-theme="dark"] ::-webkit-scrollbar { width: 6px; }
-[data-theme="dark"] ::-webkit-scrollbar-track { background: var(--bg-secondary); }
-[data-theme="dark"] ::-webkit-scrollbar-thumb { background: var(--text-muted); border-radius: 3px; }
+/* Scrollbar — same style in both themes so it never changes size */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+}
+
+[data-theme="light"] ::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 3px;
+}
 
 ::selection {
   background-color: var(--accent-blue);
   color: #fff;
 }
 
+/* Fallback before JS sets data-theme (prevents any flash) */
 html:not([data-theme]) {
   --bg-primary:      #09090f;
   --bg-secondary:    #111118;

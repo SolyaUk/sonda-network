@@ -17,13 +17,37 @@
         <button class="cluster-btn disabled" data-cluster="devnet" title="Coming soon">devnet</button>
       </div>
 
-<button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme" title="Toggle light/dark theme">
-  <span class="toggle-track">
-    <span class="toggle-thumb" id="toggle-thumb"></span>
-  </span>
-</button>
+      <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme" title="Toggle light/dark theme">
+        <span class="toggle-track">
+          <span class="toggle-icon icon-moon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+            </svg>
+          </span>
+          <span class="toggle-icon icon-sun">
+            <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+              <circle cx="12" cy="12" r="4"/>
+              <line x1="12" y1="2" x2="12" y2="5"/>
+              <line x1="12" y1="19" x2="12" y2="22"/>
+              <line x1="4.22" y1="4.22" x2="6.34" y2="6.34"/>
+              <line x1="17.66" y1="17.66" x2="19.78" y2="19.78"/>
+              <line x1="2" y1="12" x2="5" y2="12"/>
+              <line x1="19" y1="12" x2="22" y2="12"/>
+              <line x1="4.22" y1="19.78" x2="6.34" y2="17.66"/>
+              <line x1="17.66" y1="6.34" x2="19.78" y2="4.22"/>
+            </svg>
+          </span>
+          <span class="toggle-thumb"></span>
+        </span>
+      </button>
 
-      <a href="https://github.com/SolyaUk/sonda-network" target="_blank" rel="noopener" class="github-link" aria-label="GitHub">
+      <a href="https://x.com/SondaNetwork" target="_blank" rel="noopener" class="icon-link" aria-label="Twitter / X">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.259 5.63L18.244 2.25zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77z"/>
+        </svg>
+      </a>
+
+      <a href="https://github.com/SolyaUk/sonda-network" target="_blank" rel="noopener" class="icon-link" aria-label="GitHub">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
           <path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0 1 12 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/>
         </svg>
@@ -81,7 +105,7 @@
 .header-controls {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.5rem;
 }
 
 .cluster-switcher {
@@ -92,6 +116,7 @@
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 3px;
+  margin-right: 0.25rem;
 }
 
 .cluster-btn {
@@ -119,7 +144,7 @@
   opacity: 0.35;
 }
 
-/* Theme toggle - pill switch */
+/* ---- Theme toggle pill ---- */
 .theme-toggle {
   background: none;
   border: none;
@@ -131,75 +156,72 @@
 
 .toggle-track {
   position: relative;
-  width: 44px;
-  height: 24px;
-  border-radius: 12px;
+  width: 52px;
+  height: 28px;
+  border-radius: 14px;
   border: 1.5px solid var(--border);
-  background: var(--bg-secondary);
+  background: var(--bg-card);
   display: block;
-  transition: border-color 0.2s ease, background 0.2s ease;
+  transition: border-color 0.15s ease, background 0.2s ease;
+  overflow: hidden;
 }
 
 .theme-toggle:hover .toggle-track {
   border-color: var(--accent-blue);
 }
 
-.toggle-thumb {
-  position: absolute;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  top: 2px;
-  transition: left 0.2s ease, background 0.2s ease;
-  background: var(--accent-blue);
-}
-
+/*
+  Icons are fixed on left (moon) and right (sun).
+  Thumb slides over them:
+    dark  mode -> thumb on LEFT  -> moon hidden, sun visible  (shows what to switch TO)
+    light mode -> thumb on RIGHT -> sun hidden,  moon visible (shows what to switch TO)
+*/
 .toggle-icon {
   position: absolute;
-  font-size: 0.6rem;
-  font-weight: 700;
   top: 50%;
   transform: translateY(-50%);
-  color: #fff;
-  line-height: 1;
-  pointer-events: none;
-}
-
-.toggle-icon.moon { right: 5px; }
-.toggle-icon.sun  { left: 5px; }
-
-:global([data-theme="dark"])  .toggle-icon.sun  { opacity: 0; }
-:global([data-theme="dark"])  .toggle-icon.moon { opacity: 1; }
-:global([data-theme="light"]) .toggle-icon.moon { opacity: 0; }
-:global([data-theme="light"]) .toggle-icon.sun  { opacity: 1; }
-
-.toggle-thumb { left: 2px; }
-
-.toggle-track::before {
-  content: ')';
-  position: absolute;
-  right: 6px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 0.65rem;
-  color: var(--text-muted);
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   pointer-events: none;
   z-index: 1;
 }
 
-.toggle-track::after {
-  content: '*';
-  position: absolute;
-  left: 6px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 0.65rem;
-  color: var(--text-muted);
-  pointer-events: none;
-  z-index: 1;
+.icon-moon {
+  left: 2px;
+  color: #a78bfa;
 }
 
-.github-link {
+.icon-sun {
+  right: 2px;
+  color: #f59e0b;
+}
+
+.toggle-thumb {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  top: 2px;
+  background: var(--accent-blue);
+  transition: left 0.2s ease;
+  z-index: 2;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+}
+
+/* Thumb position via :global so it reads html[data-theme] outside component scope */
+:global([data-theme="dark"])  .toggle-thumb { left: 2px; }
+:global([data-theme="light"]) .toggle-thumb { left: 26px; }
+
+:global([data-theme="light"]) .toggle-track {
+  background: #dbeafe;
+  border-color: #bfdbfe;
+}
+
+/* ---- Icon links (Twitter, GitHub) ---- */
+.icon-link {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -214,12 +236,12 @@
   flex-shrink: 0;
 }
 
-.github-link:hover {
+.icon-link:hover {
   border-color: var(--accent-blue);
   color: var(--accent-blue);
 }
 
-@media (max-width: 480px) {
+@media (max-width: 600px) {
   .logo-text { display: none; }
   .cluster-btn { padding: 0.25rem 0.4rem; font-size: 0.65rem; }
   .header-inner { padding: 0 1rem; }
@@ -227,30 +249,11 @@
 </style>
 
 <script>
-  function applyToggleState() {
-    const theme = document.documentElement.getAttribute('data-theme') || 'dark';
-    const thumb = document.getElementById('toggle-thumb');
-    const track = thumb?.parentElement;
-    if (!thumb) return;
-    if (theme === 'light') {
-      thumb.style.left = '22px';
-      thumb.style.background = '#2563eb';
-      if (track) track.style.background = '#e0e7ff';
-    } else {
-      thumb.style.left = '2px';
-      thumb.style.background = '#3b82f6';
-      if (track) track.style.background = '';
-    }
-  }
-
-  applyToggleState();
-
   const toggle = document.getElementById('theme-toggle');
   toggle?.addEventListener('click', () => {
     const html = document.documentElement;
     const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
     html.setAttribute('data-theme', next);
     localStorage.setItem('sonda-theme', next);
-    applyToggleState();
   });
 </script>
