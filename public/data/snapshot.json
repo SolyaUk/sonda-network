@@ -1,17 +1,17 @@
 {
-  "timestamp": "2026-03-31T18:41:18.012826+00:00",
+  "timestamp": "2026-04-10T11:37:17.292704+00:00",
   "cluster": "mainnet-beta",
-  "epoch": 949,
-  "epoch_completed_percent": 41.47,
+  "epoch": 954,
+  "epoch_completed_percent": 35.44,
   "record_counts": {
-    "validator": 783,
+    "validator": 769,
     "validator-hidden": 1,
-    "validator-inactive": 12,
+    "validator-inactive": 26,
     "backup-node": 0,
-    "rpc": 182,
-    "co-hosted": 21,
-    "unknown-node": 4116,
-    "dz-device": 95,
+    "rpc": 184,
+    "co-hosted": 0,
+    "unknown-node": 4082,
+    "dz-device": 96,
     "jito-block-engine": 38,
     "jito-shred-receiver": 8,
     "jito-ntp": 8,
@@ -24,74 +24,73 @@
     "solana-entrypoint": 5
   },
   "validators": {
-    "total": 783,
+    "total": 769,
     "total_all": 796,
-    "offline": 13,
+    "offline": 27,
     "country_distribution": {
-      "DE": 185,
-      "NL": 138,
-      "US": 127,
-      "JP": 68,
-      "SG": 49,
-      "GB": 41,
-      "BR": 20,
+      "DE": 167,
+      "NL": 139,
+      "US": 123,
+      "JP": 74,
+      "SG": 55,
+      "GB": 38,
+      "BR": 28,
+      "HK": 19,
       "LT": 16,
-      "CA": 16,
-      "HK": 15,
-      "FR": 15,
-      "ZA": 12,
-      "IE": 10,
-      "PL": 9,
-      "SE": 9
+      "CA": 15,
+      "FR": 14,
+      "ZA": 10,
+      "IE": 9,
+      "PL": 7,
+      "SE": 6
     },
     "asn_distribution": {
-      "TERASWITCH": 121,
-      "LATITUDE-SH": 113,
-      "AS-VULTR": 90,
-      "ALLNODES": 67,
-      "AMARUTU-TECHNOLOGY": 41,
-      "OVH": 36,
+      "TERASWITCH": 118,
+      "LATITUDE-SH": 111,
+      "AS-VULTR": 87,
+      "ALLNODES": 68,
+      "AMARUTU-TECHNOLOGY": 44,
+      "OVH": 35,
+      "WEBNX": 20,
       "AS262287": 19,
-      "WEBNX": 19,
-      "SERVERS-COM": 18,
-      "CHERRYSERVERS2-AS": 18
+      "CHERRYSERVERS2-AS": 17,
+      "CHERRYSERVERS1-AS": 16
     },
     "stake_by_country": {
-      "DE": 32.584016625261626,
-      "NL": 25.05618984875072,
-      "US": 9.914751472686213,
-      "GB": 9.206821708871631,
-      "JP": 6.531418962308936,
-      "LT": 4.487497746725361,
-      "SG": 2.896131671236795,
-      "IE": 1.8517386511018397,
-      "SE": 1.6565624712973532,
-      "FR": 0.9374260926654063,
-      "CA": 0.7752887170921573,
-      "BR": 0.7055828482442359,
-      "HK": 0.48500136830655016,
-      "CH": 0.4741265562390086,
-      "ES": 0.3227001764168981,
-      "PL": 0.2956043413917985,
-      "NO": 0.26634775675710687,
-      "ZA": 0.24161436083104915,
-      "CZ": 0.2372020221513057,
-      "SK": 0.2348580090268496,
-      "AE": 0.20997583854381918,
-      "MX": 0.16617467343051723,
-      "RU": 0.07173219008158359,
-      "OFFLINE": 0.057771462367375834,
-      "LV": 0.04842390707633075,
-      "RO": 0.04620778940817237,
-      "CL": 0.04513760880457922,
-      "AT": 0.04310704345414341,
-      "AL": 0.0345292621739222,
-      "AR": 0.03130008889245184,
-      "LU": 0.03032445477482872,
-      "BG": 0.029376283692379664,
-      "EE": 0.012538934691255194,
-      "FI": 0.012516347701533582,
-      "KR": 0.0000027075442928773864
+      "NL": 23.158289560403606,
+      "DE": 22.876992414540844,
+      "US": 11.805680783184394,
+      "JP": 10.315301463050533,
+      "GB": 8.828424462141477,
+      "CA": 6.481140046164678,
+      "LT": 4.504786350934178,
+      "SG": 3.185308637030765,
+      "IE": 2.47323268320919,
+      "SE": 1.4926875529431145,
+      "BR": 0.8469384857311105,
+      "HK": 0.7039426972565463,
+      "FR": 0.5425352431094967,
+      "CH": 0.4743440038207013,
+      "CZ": 0.3623207404873219,
+      "ES": 0.27469312287064973,
+      "ZA": 0.2280099509751004,
+      "SK": 0.21842068864528724,
+      "AE": 0.21023000843626635,
+      "PL": 0.18070779991213423,
+      "NO": 0.1691604657018181,
+      "MX": 0.16633105466897635,
+      "RU": 0.07256912426608247,
+      "AL": 0.0679302501316705,
+      "OFFLINE": 0.06534130950445285,
+      "RO": 0.048882739143631074,
+      "LV": 0.04585611550910658,
+      "AT": 0.045590531760982975,
+      "AR": 0.0370637391959334,
+      "CL": 0.031962101209669296,
+      "BG": 0.031822776644258914,
+      "LU": 0.02840924832415593,
+      "EE": 0.012563510667636715,
+      "FI": 0.012530338424225284
     },
     "decentralization": {
       "nakamoto_country": {
@@ -120,189 +119,201 @@
         "value": 20
       },
       "superminority_country_50": {
-        "value": 2
+        "value": 3
       },
       "superminority_asn_50": {
-        "value": 3
+        "value": 4
       },
       "superminority_validator_50": {
-        "value": 44
+        "value": 43
       },
       "superminority_country_66": {
-        "value": 3
+        "value": 4
       },
       "superminority_asn_66": {
         "value": 8
       },
       "superminority_validator_66": {
-        "value": 82
+        "value": 81
       },
       "hhi_country": {
-        "value": 1952.9,
-        "rating": "Moderately concentrated"
+        "value": 1466.4,
+        "rating": "Competitive"
       },
       "hhi_asn": {
-        "value": 1425.3,
+        "value": 1383.4,
         "rating": "Competitive"
       },
       "hhi_validator": {
-        "value": 92.2,
+        "value": 94.3,
         "rating": "Competitive"
       },
       "gini_validators": {
-        "value": 0.7488,
+        "value": 0.7523,
         "rating": "High inequality"
       },
       "shannon_country": {
-        "entropy": 2.9497,
-        "normalized": 0.5751,
+        "entropy": 3.2245,
+        "normalized": 0.6338,
         "rating": "Moderate diversity"
       },
       "shannon_asn": {
-        "entropy": 4.0219,
-        "normalized": 0.6094,
+        "entropy": 4.0486,
+        "normalized": 0.6191,
         "rating": "Moderate diversity"
       },
       "shannon_validator": {
-        "entropy": 7.8463,
-        "normalized": 0.8148,
+        "entropy": 7.8257,
+        "normalized": 0.8124,
         "rating": "High diversity"
       }
     }
   },
   "cluster_health": {
-    "total_active_stake": 424739127269405250,
-    "total_current_stake": 424613648095903170,
-    "total_delinquent_stake": 125479173502090,
+    "total_active_stake": 424544419430092200,
+    "total_current_stake": 424410467734040400,
+    "total_delinquent_stake": 133951696051829,
     "delinquent_stake_percent": 0.03,
-    "average_skip_rate": 0.39802340557316723,
-    "average_stake_weighted_skip_rate": 0.06987438049329472,
+    "average_skip_rate": 0.9843734617681474,
+    "average_stake_weighted_skip_rate": 0.21662564466510295,
     "stake_by_version": {
       "unknown": {
         "currentValidators": 1,
-        "delinquentValidators": 12,
-        "currentActiveStake": 228447122463264,
-        "delinquentActiveStake": 16930882606701
+        "delinquentValidators": 26,
+        "currentActiveStake": 228776133781186,
+        "delinquentActiveStake": 48626749302513
       },
       "0.1.1": {
-        "currentValidators": 9,
+        "currentValidators": 10,
         "delinquentValidators": 0,
-        "currentActiveStake": 6376910105944260,
-        "delinquentActiveStake": 0
-      },
-      "0.811.30108": {
-        "currentValidators": 1,
-        "delinquentValidators": 0,
-        "currentActiveStake": 146570217382166,
+        "currentActiveStake": 11138696833715160,
         "delinquentActiveStake": 0
       },
       "0.813.30108": {
         "currentValidators": 2,
         "delinquentValidators": 0,
-        "currentActiveStake": 9466016767298,
+        "currentActiveStake": 9466120026175,
         "delinquentActiveStake": 0
       },
       "0.814.30108": {
-        "currentValidators": 43,
+        "currentValidators": 4,
         "delinquentValidators": 0,
-        "currentActiveStake": 9516634132591668,
-        "delinquentActiveStake": 0
-      },
-      "0.815.30110": {
-        "currentValidators": 1,
-        "delinquentValidators": 0,
-        "currentActiveStake": 135226463633875,
+        "currentActiveStake": 2331212108290675,
         "delinquentActiveStake": 0
       },
       "0.817.30110": {
-        "currentValidators": 15,
+        "currentValidators": 4,
         "delinquentValidators": 0,
-        "currentActiveStake": 18412354138816156,
+        "currentActiveStake": 1365200913924627,
         "delinquentActiveStake": 0
       },
       "0.818.30111": {
-        "currentValidators": 18,
+        "currentValidators": 1,
         "delinquentValidators": 0,
-        "currentActiveStake": 26086225106718990,
+        "currentActiveStake": 53337683423956,
         "delinquentActiveStake": 0
+      },
+      "0.819.30111": {
+        "currentValidators": 64,
+        "delinquentValidators": 0,
+        "currentActiveStake": 40047578458617880,
+        "delinquentActiveStake": 0
+      },
+      "3.0.11": {
+        "currentValidators": 0,
+        "delinquentValidators": 1,
+        "currentActiveStake": 0,
+        "delinquentActiveStake": 997717120
       },
       "3.1.2": {
-        "currentValidators": 2,
-        "delinquentValidators": 0,
-        "currentActiveStake": 53161825993498,
-        "delinquentActiveStake": 0
+        "currentValidators": 0,
+        "delinquentValidators": 2,
+        "currentActiveStake": 0,
+        "delinquentActiveStake": 53196852515753
       },
       "3.1.8": {
-        "currentValidators": 19,
+        "currentValidators": 16,
         "delinquentValidators": 0,
-        "currentActiveStake": 24886794935031710,
+        "currentActiveStake": 10411081637583460,
         "delinquentActiveStake": 0
       },
       "3.1.9": {
-        "currentValidators": 2,
+        "currentValidators": 1,
         "delinquentValidators": 0,
-        "currentActiveStake": 111335491263068,
+        "currentActiveStake": 103980292837171,
         "delinquentActiveStake": 0
       },
       "3.1.10": {
-        "currentValidators": 500,
-        "delinquentValidators": 9,
-        "currentActiveStake": 246887597153518700,
-        "delinquentActiveStake": 101884836052126
+        "currentValidators": 104,
+        "delinquentValidators": 4,
+        "currentActiveStake": 93303637811102700,
+        "delinquentActiveStake": 31796485890272
       },
       "3.1.11": {
-        "currentValidators": 149,
-        "delinquentValidators": 1,
-        "currentActiveStake": 90639759581974500,
-        "delinquentActiveStake": 6663454843263
+        "currentValidators": 406,
+        "delinquentValidators": 2,
+        "currentActiveStake": 207045290857032100,
+        "delinquentActiveStake": 330610626171
       },
       "3.1.12": {
-        "currentValidators": 4,
+        "currentValidators": 133,
         "delinquentValidators": 0,
-        "currentActiveStake": 711616971583012,
+        "currentActiveStake": 56884057566666840,
         "delinquentActiveStake": 0
       },
-      "4.0.0-beta.5": {
+      "3.1.13": {
+        "currentValidators": 2,
+        "delinquentValidators": 0,
+        "currentActiveStake": 114918087361573,
+        "delinquentActiveStake": 0
+      },
+      "4.0.0-beta.2": {
         "currentValidators": 1,
         "delinquentValidators": 0,
-        "currentActiveStake": 57435904209976,
+        "currentActiveStake": 293002807060679,
+        "delinquentActiveStake": 0
+      },
+      "4.0.0-beta.4": {
+        "currentValidators": 1,
+        "delinquentValidators": 0,
+        "currentActiveStake": 11893599338312,
         "delinquentActiveStake": 0
       },
       "4.0.0-beta.6": {
-        "currentValidators": 1,
+        "currentValidators": 3,
         "delinquentValidators": 0,
-        "currentActiveStake": 57410781716116,
+        "currentActiveStake": 334737508352509,
         "delinquentActiveStake": 0
       },
-      "4.0.0": {
-        "currentValidators": 1,
+      "4.0.0-beta.7": {
+        "currentValidators": 2,
         "delinquentValidators": 0,
-        "currentActiveStake": 11910297124322,
+        "currentActiveStake": 115009907325123,
         "delinquentActiveStake": 0
       },
       "4.1.0-alpha.0": {
-        "currentValidators": 5,
+        "currentValidators": 6,
         "delinquentValidators": 0,
-        "currentActiveStake": 284791849170586,
+        "currentActiveStake": 618589407600284,
         "delinquentActiveStake": 0
       }
     }
   },
   "doublezero": {
-    "validators": 453,
-    "validators_percent": 56.9,
-    "validators_stake_percent": 47.2,
+    "validators": 454,
+    "validators_percent": 57,
+    "validators_stake_percent": 49.77,
     "connection_types": {
-      "ibrl_only": 95,
-      "multicast_only": 7,
-      "ibrl_and_multicast": 351,
+      "ibrl_only": 45,
+      "multicast_only": 5,
+      "ibrl_and_multicast": 404,
       "unknown": 0
     },
-    "rpc": 95,
-    "devices": 95,
+    "rpc": 105,
+    "devices": 96,
     "network_health": {
-      "devices_total": 95,
-      "devices_reporting": 94,
+      "devices_total": 96,
+      "devices_reporting": 95,
       "devices_no_telemetry": 1,
       "devices_issues": [
         {
@@ -311,27 +322,11 @@
           "status": "no_telemetry"
         }
       ],
-      "links_total": 164,
-      "links_healthy": 159,
-      "links_degraded": 4,
+      "links_total": 166,
+      "links_healthy": 165,
+      "links_degraded": 0,
       "links_unavailable": 1,
       "link_issues": [
-        {
-          "link": "chi001-dz002:nyc001-dz002",
-          "source_target": "chi-nyc",
-          "contributor": "JumpCrypto",
-          "quality": "degraded",
-          "rtt_ms": 18.5,
-          "packet_loss": 3.571428571428571
-        },
-        {
-          "link": "sea001-dz001:chi001-dz001",
-          "source_target": "sea-chi",
-          "contributor": "JumpCrypto",
-          "quality": "degraded",
-          "rtt_ms": 41.58,
-          "packet_loss": 14.285714285714285
-        },
         {
           "link": "tyo001-dz002:sin001-dz002",
           "source_target": "tyo-sin",
@@ -339,29 +334,13 @@
           "quality": "unavailable",
           "rtt_ms": 0,
           "packet_loss": 100
-        },
-        {
-          "link": "dz-sea10-sw01:dz-ch2-sw01",
-          "source_target": "sea-chi",
-          "contributor": "Galaxy",
-          "quality": "degraded",
-          "rtt_ms": 38.98,
-          "packet_loss": 92
-        },
-        {
-          "link": "dz100a-chi1-tsw:dz100a-sea1-tsw",
-          "source_target": "chi-sea",
-          "contributor": "Teraswitch",
-          "quality": "degraded",
-          "rtt_ms": 46.63,
-          "packet_loss": 3.8461538461538463
         }
       ]
     }
   },
   "bam": {
-    "stake_percentage": 28.4226,
-    "total_connected_validators": 361,
+    "stake_percentage": 28.1193,
+    "total_connected_validators": 355,
     "node_count": 13
   }
 }

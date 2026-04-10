@@ -504,6 +504,9 @@ const giniR = giniRating(gini);
         <a href="https://github.com/SolyaUk/sonda-network" target="_blank" rel="noopener" class="prod-overlay-btn">
           View on GitHub
         </a>
+        <a href="https://sonda-network.pages.dev" target="_blank" rel="noopener" class="prod-overlay-btn prod-overlay-btn-secondary">
+          Open Preview
+        </a>
         <a href="https://x.com/SondaNetwork" target="_blank" rel="noopener" class="prod-overlay-link">
           @SondaNetwork
         </a>
@@ -650,6 +653,18 @@ const giniR = giniRating(gini);
   transition: opacity 0.15s ease;
 }
 .prod-overlay-btn:hover { opacity: 0.85; }
+
+.prod-overlay-btn-secondary {
+  background: transparent;
+  border: 1.5px solid var(--accent-blue);
+  color: var(--accent-blue);
+}
+
+.prod-overlay-btn-secondary:hover {
+  background: var(--accent-blue);
+  color: #fff;
+  opacity: 1;
+}
 
 .prod-overlay-link {
   font-size: 0.82rem;
