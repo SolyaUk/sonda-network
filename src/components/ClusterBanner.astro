@@ -1,0 +1,142 @@
+---
+---
+
+<div class="cluster-banner" id="cluster-banner" data-state="hidden" style="display:none;">
+  <div class="cluster-banner-inner">
+    <span class="cluster-banner-dot"></span>
+    <div class="cluster-banner-content">
+      <strong class="cluster-banner-title" id="cluster-banner-title">CLUSTER</strong>
+      <span class="cluster-banner-text" id="cluster-banner-text">description</span>
+    </div>
+  </div>
+</div>
+
+<style>
+.cluster-banner {
+  position: sticky;
+  top: 104px; /* below StatusStrip default (60 + 44) */
+  z-index: 85;
+  background: color-mix(in srgb, var(--cluster-accent) 14%, var(--bg-primary));
+  border-bottom: 1px solid color-mix(in srgb, var(--cluster-accent) 30%, transparent);
+  height: 38px;
+  transition: height 0.25s ease, top 0.25s ease;
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+}
+.cluster-banner.shrunk {
+  height: 22px;
+  top: 86px; /* below shrunk StatusStrip (60 + 26) */
+}
+
+.cluster-banner-inner {
+  max-width: 1280px; margin: 0 auto; height: 100%;
+  padding: 0 1.5rem;
+  display: flex; align-items: center; gap: 0.6rem;
+  overflow: hidden;
+}
+
+.cluster-banner-dot {
+  width: 9px; height: 9px; border-radius: 50%;
+  background: var(--cluster-accent);
+  box-shadow: 0 0 8px var(--cluster-accent);
+  flex-shrink: 0;
+}
+
+.cluster-banner-content {
+  display: flex; align-items: baseline; gap: 0.55rem;
+  min-width: 0; flex: 1;
+}
+
+.cluster-banner-title {
+  font-family: var(--font-mono);
+  font-size: 0.72rem; font-weight: 700;
+  color: var(--cluster-accent);
+  text-transform: uppercase; letter-spacing: 0.08em;
+  flex-shrink: 0;
+}
+
+.cluster-banner.shrunk .cluster-banner-title {
+  font-size: 0.65rem;
+}
+
+.cluster-banner-text {
+  font-size: 0.78rem; color: var(--text-secondary);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.cluster-banner.shrunk .cluster-banner-text {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .cluster-banner-text { font-size: 0.72rem; }
+  .cluster-banner-inner { padding: 0 1rem; }
+}
+</style>
+
+<script>
+const banner = document.getElementById('cluster-banner');
+
+if (banner) {
+  // Same scroll-based hysteresis as StatusStrip (same SHRINK_AT/EXPAND_AT
+  // thresholds), so the two stay in sync without any cross-component coupling.
+  // Direct scroll handling avoids the flicker that bedevilled the previous
+  // IntersectionObserver-then-MutationObserver chain.
+  let isShrunk = false;
+  let raf: number | null = null;
+  const SHRINK_AT = 80;
+  const EXPAND_AT = 30;
+
+  const update = () => {
+    raf = null;
+    if (banner.dataset.state !== 'visible') return;
+    const y = window.scrollY;
+    if (!isShrunk && y > SHRINK_AT) {
+      isShrunk = true;
+      banner.classList.add('shrunk');
+    } else if (isShrunk && y < EXPAND_AT) {
+      isShrunk = false;
+      banner.classList.remove('shrunk');
+    }
+  };
+
+  window.addEventListener('scroll', () => {
+    if (raf == null) raf = requestAnimationFrame(update);
+  }, { passive: true });
+
+  // Re-sync when banner shows/hides (cluster switch)
+  (window as any).__sondaSyncBannerScroll = () => {
+    isShrunk = false;
+    banner.classList.remove('shrunk');
+    if (raf == null) raf = requestAnimationFrame(update);
+  };
+}
+
+(window as any).sondaSetClusterBanner = (cluster: string) => {
+  const titleEl = document.getElementById('cluster-banner-title');
+  const textEl = document.getElementById('cluster-banner-text');
+  if (!banner || !titleEl || !textEl) return;
+
+  if (cluster === 'mainnet-beta') {
+    banner.style.display = 'none';
+    banner.dataset.state = 'hidden';
+    return;
+  }
+
+  banner.style.display = 'block';
+  banner.dataset.state = 'visible';
+
+  if (cluster === 'testnet') {
+    titleEl.textContent = 'TESTNET CLUSTER';
+    textEl.textContent = 'New client releases get stress-tested here. SFDP-approved validators run a testnet node alongside their mainnet one.';
+  } else if (cluster === 'devnet') {
+    titleEl.textContent = 'DEVNET CLUSTER';
+    textEl.textContent = 'A sandbox for application developers. Smaller validator set, network resets are possible, no real economic value at stake.';
+  }
+
+  // Sync shrunk state with current scroll position right after showing
+  if ((window as any).__sondaSyncBannerScroll) {
+    (window as any).__sondaSyncBannerScroll();
+  }
+};
+</script>

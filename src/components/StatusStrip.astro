@@ -1,0 +1,139 @@
+---
+---
+
+<div id="status-strip-sentinel"></div>
+
+<div class="status-strip" id="status-strip">
+  <div class="strip-inner">
+    <div class="strip-left">
+      <span class="strip-label">Epoch</span>
+      <span class="strip-value mono" id="strip-epoch">--</span>
+      <span class="strip-pct mono" id="strip-pct">--%</span>
+      <div class="strip-bar-wrap">
+        <div class="strip-bar-fill" id="strip-bar"></div>
+      </div>
+    </div>
+    <div class="strip-right">
+      <span class="strip-cluster mono" id="strip-cluster">mainnet-beta</span>
+      <span class="strip-live">
+        <span class="strip-live-dot"></span>
+        LIVE
+      </span>
+      <span class="strip-ago mono" id="strip-ago">--</span>
+    </div>
+  </div>
+</div>
+
+<style>
+.status-strip {
+  position: sticky; top: 60px; z-index: 90;
+  background: var(--bg-secondary); border-bottom: 1px solid var(--border);
+  height: 44px; transition: height 0.25s ease;
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+}
+.status-strip.shrunk { height: 26px; }
+
+.strip-inner {
+  max-width: 1280px; margin: 0 auto; height: 100%; padding: 0 1.5rem;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 1rem; font-size: 0.78rem;
+}
+.status-strip.shrunk .strip-inner { font-size: 0.7rem; }
+
+.strip-left, .strip-right { display: flex; align-items: center; gap: 0.6rem; }
+
+.strip-label { color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.07em; font-size: 0.65rem; font-weight: 500; }
+.strip-value { color: var(--text-primary); font-weight: 500; }
+.strip-pct { color: var(--status-good); font-weight: 500; }
+
+.strip-bar-wrap {
+  width: 140px; height: 6px; background: var(--bg-primary);
+  border: 1px solid var(--border); border-radius: 3px; overflow: hidden; flex-shrink: 0;
+}
+.status-strip.shrunk .strip-bar-wrap { width: 90px; height: 4px; }
+
+.strip-bar-fill {
+  height: 100%; border-radius: 2px; width: 0%;
+  background: linear-gradient(90deg, var(--cluster-accent), var(--accent-violet));
+  transition: width 1s ease, background 0.4s ease;
+}
+
+.strip-cluster {
+  color: var(--text-secondary); text-transform: lowercase;
+  padding: 0.15rem 0.45rem; background: var(--bg-card);
+  border: 1px solid var(--border); border-radius: 4px; font-size: 0.68rem;
+}
+.status-strip.shrunk .strip-cluster { padding: 0.05rem 0.35rem; font-size: 0.62rem; }
+
+.strip-live { display: flex; align-items: center; gap: 0.3rem; color: var(--status-good); font-size: 0.65rem; font-weight: 600; letter-spacing: 0.08em; }
+.strip-live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--status-good); box-shadow: 0 0 8px var(--status-good); animation: live-pulse 2s infinite; }
+@keyframes live-pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(0.85); } }
+
+.strip-ago { color: var(--text-muted); font-size: 0.68rem; }
+
+@media (max-width: 768px) {
+  .strip-bar-wrap { display: none; }
+  .strip-inner { gap: 0.5rem; }
+  .strip-label { display: none; }
+}
+@media (max-width: 480px) { .strip-cluster { display: none; } }
+</style>
+
+<script>
+const sentinel = document.getElementById('status-strip-sentinel');
+const strip = document.getElementById('status-strip');
+if (sentinel && strip) {
+  // Scroll-based with hysteresis. IntersectionObserver flickered at the boundary
+  // (the 1px sentinel can flip isIntersecting on sub-pixel scroll), and even with
+  // rootMargin the user reported persistent banner flicker. Hysteresis fixes it
+  // for good: shrink at 80px down, only expand back at 30px down. The 50px gap
+  // is the "no-toggle zone" — sub-pixel scroll noise can never trigger anything.
+  let isShrunk = false;
+  let raf: number | null = null;
+  const SHRINK_AT = 80;
+  const EXPAND_AT = 30;
+
+  const update = () => {
+    raf = null;
+    const y = window.scrollY;
+    if (!isShrunk && y > SHRINK_AT) {
+      isShrunk = true;
+      strip.classList.add('shrunk');
+    } else if (isShrunk && y < EXPAND_AT) {
+      isShrunk = false;
+      strip.classList.remove('shrunk');
+    }
+  };
+
+  window.addEventListener('scroll', () => {
+    if (raf == null) raf = requestAnimationFrame(update);
+  }, { passive: true });
+
+  // Initial check
+  update();
+}
+
+let stripLastUpdate: number | null = null;
+function updateStripAgo() {
+  const el = document.getElementById('strip-ago');
+  if (!el || !stripLastUpdate) return;
+  const sec = Math.floor((Date.now() - stripLastUpdate) / 1000);
+  if (sec < 60) el.textContent = `updated ${sec}s ago`;
+  else if (sec < 3600) el.textContent = `updated ${Math.floor(sec/60)}m ago`;
+  else el.textContent = `updated ${Math.floor(sec/3600)}h ago`;
+}
+setInterval(updateStripAgo, 5000);
+
+(window as any).sondaUpdateStrip = (data: any) => {
+  const epochEl = document.getElementById('strip-epoch');
+  const pctEl = document.getElementById('strip-pct');
+  const barEl = document.getElementById('strip-bar');
+  const clusterEl = document.getElementById('strip-cluster');
+  if (epochEl) epochEl.textContent = String(data.epoch);
+  if (pctEl) pctEl.textContent = `${(data.epoch_completed_percent || 0).toFixed(1)}%`;
+  if (barEl) (barEl as HTMLElement).style.width = `${data.epoch_completed_percent || 0}%`;
+  if (clusterEl) clusterEl.textContent = data.cluster;
+  stripLastUpdate = new Date(data.timestamp).getTime();
+  updateStripAgo();
+};
+</script>

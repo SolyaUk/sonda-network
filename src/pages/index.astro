@@ -1,100 +1,19 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Header from '../components/Header.astro';
-
-import fs from 'node:fs';
-import path from 'node:path';
-
-let snap = null;
-try {
-  const raw = fs.readFileSync(path.resolve('./public/data/snapshot.json'), 'utf8');
-  snap = JSON.parse(raw);
-} catch (e) {
-  snap = null;
-}
-
-const v = snap?.validators;
-const dec = v?.decentralization;
-const dz = snap?.doublezero;
-const bam = snap?.bam;
-const health = snap?.cluster_health;
-
-const fmt = (n: number) => n?.toLocaleString('en-US') ?? '-';
-const pct = (n: number, digits = 1) => n != null ? `${n.toFixed(digits)}%` : '-';
-
-function nakRating(dim: string, val: number) {
-  if (dim === 'validator') {
-    if (val >= 50) return 'Excellent';
-    if (val >= 20) return 'Good';
-    return 'Warning';
-  }
-  if (val <= 2) return 'Critical';
-  if (val <= 5) return 'Warning';
-  if (val <= 10) return 'Moderate';
-  return 'Good';
-}
-
-function nakColor(rating: string) {
-  if (rating === 'Excellent' || rating === 'Good') return 'good';
-  if (rating === 'Warning' || rating === 'Moderate') return 'warning';
-  return 'critical';
-}
-
-function hhiRating(val: number) {
-  if (val > 2500) return { label: 'Highly concentrated', color: 'critical' };
-  if (val > 1500) return { label: 'Moderately concentrated', color: 'warning' };
-  return { label: 'Competitive', color: 'good' };
-}
-
-function giniRating(val: number) {
-  if (val > 0.8) return { label: 'Very high inequality', color: 'critical' };
-  if (val > 0.6) return { label: 'High inequality', color: 'warning' };
-  if (val > 0.4) return { label: 'Moderate inequality', color: 'neutral' };
-  return { label: 'Low inequality', color: 'good' };
-}
-
-function flag(cc: string): string {
-  return cc.toUpperCase().split('').map(c =>
-    String.fromCodePoint(c.charCodeAt(0) + 127397)
-  ).join('');
-}
-
-const topCountries = v?.country_distribution
-  ? Object.entries(v.country_distribution as Record<string, number>).slice(0, 10)
-  : [];
-const maxCount = topCountries[0]?.[1] ?? 1;
-
-const stakeByVersion = health?.stake_by_version
-  ? Object.entries(health.stake_by_version as Record<string, any>)
-      .filter(([k]) => k !== 'unknown')
-      .sort((a, b) => b[1].currentActiveStake - a[1].currentActiveStake)
-      .slice(0, 3)
-  : [];
-
-const updatedAt = snap?.timestamp
-  ? new Date(snap.timestamp).toUTCString().replace('GMT', 'UTC')
-  : '-';
-
-const skipRate = health?.average_stake_weighted_skip_rate ?? 0;
-const delinqPct = health?.delinquent_stake_percent ?? 0;
-
-const hhi_country = dec?.hhi_country?.value;
-const hhi_asn = dec?.hhi_asn?.value;
-const gini = dec?.gini_validators?.value;
-
-const hhiCountryRating = hhiRating(hhi_country);
-const hhiAsnRating = hhiRating(hhi_asn);
-const giniR = giniRating(gini);
+import StatusStrip from '../components/StatusStrip.astro';
+import ClusterBanner from '../components/ClusterBanner.astro';
 ---
 
 <BaseLayout>
-  <Header />
+  <Header activePage="overview" />
+  <StatusStrip />
+  <ClusterBanner />
 
-  <!-- Dev banner -->
   <div class="dev-banner">
     <div class="dev-banner-inner">
       <span class="dev-badge">BETA</span>
-      Dashboard is under active development. Data may come from older snapshots. Some sections are incomplete.
+      Dashboard is under active development. Some sections are incomplete.
       <a href="https://github.com/SolyaUk/sonda-network" target="_blank" rel="noopener" class="dev-link">View on GitHub</a>
     </div>
   </div>
@@ -102,330 +21,489 @@ const giniR = giniRating(gini);
   <main class="main-content">
     <div class="container">
 
-      <!-- COMPACT HERO -->
       <section class="hero-compact">
-        <div class="hero-compact-left">
+        <div>
           <span class="hero-eyebrow">Solana Observatory for Network Decentralization Analysis</span>
-          <h1 class="hero-title-compact">The Solana network, mapped and verified.</h1>
-        </div>
-        <div class="hero-compact-right">
-          <span class="epoch-badge">
-            Epoch <span class="mono">{snap?.epoch ?? '-'}</span>
-            <span class="epoch-dot"></span>
-            <span class="mono">{snap?.epoch_completed_percent ?? '-'}%</span> complete
-          </span>
-          <span class="updated-badge">
-            Snapshot: <span class="mono">{updatedAt}</span>
-          </span>
+          <h1 class="hero-title">The Solana network, mapped and verified.</h1>
         </div>
       </section>
 
-      <!-- NETWORK HEALTH -->
+      <!-- PULSE -->
+      <section class="pulse-row" id="pulse-row">
+        <div class="pulse-item"><div class="pulse-num mono sk-val">--</div><div class="pulse-label">loading</div></div>
+        <div class="pulse-divider"></div>
+        <div class="pulse-item"><div class="pulse-num mono sk-val">--</div><div class="pulse-label">loading</div></div>
+        <div class="pulse-divider"></div>
+        <div class="pulse-item"><div class="pulse-num mono sk-val">--</div><div class="pulse-label">loading</div></div>
+        <div class="pulse-divider"></div>
+        <div class="pulse-item"><div class="pulse-num mono sk-val">--</div><div class="pulse-label">loading</div></div>
+      </section>
+
+      <!-- INSIGHTS -->
       <section class="section">
-        <h2 class="section-title">Network Health</h2>
-        <p class="section-desc">Current state of the validator set and cluster performance.</p>
+        <div class="section-header">
+          <div>
+            <h2 class="section-title">Insights</h2>
+            <p class="section-desc">Network signals at a glance.</p>
+          </div>
+          <div class="watermark mono" id="watermark-insights"></div>
+        </div>
+        <div class="stories-grid" id="stories-grid">
+          <div class="story sk-card"><div class="sk-line" style="width:60%"></div><div class="sk-line" style="width:40%"></div></div>
+          <div class="story sk-card"><div class="sk-line" style="width:60%"></div><div class="sk-line" style="width:40%"></div></div>
+          <div class="story sk-card"><div class="sk-line" style="width:60%"></div><div class="sk-line" style="width:40%"></div></div>
+          <div class="story sk-card"><div class="sk-line" style="width:60%"></div><div class="sk-line" style="width:40%"></div></div>
+        </div>
+      </section>
 
-        <div class="cards-grid cards-4">
+      <!-- LIVE INFRASTRUCTURE -->
+      <section class="section">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title">Live infrastructure status</h2>
+            <p class="section-desc">Reachability of critical Solana infrastructure endpoints.</p>
+          </div>
+          <a href="/endpoints" data-stub class="section-link">Explore all endpoints →</a>
+        </div>
+        <div class="infra-status-grid" id="infra-grid">
+          <div class="infra-card sk-card"><div class="sk-line" style="width:60%"></div><div class="sk-line" style="width:40%"></div></div>
+          <div class="infra-card sk-card"><div class="sk-line" style="width:60%"></div><div class="sk-line" style="width:40%"></div></div>
+          <div class="infra-card sk-card"><div class="sk-line" style="width:60%"></div><div class="sk-line" style="width:40%"></div></div>
+          <div class="infra-card sk-card"><div class="sk-line" style="width:60%"></div><div class="sk-line" style="width:40%"></div></div>
+        </div>
 
-          <div class="card">
-            <div class="card-label">Active Validators</div>
-            <div class="card-value violet">{fmt(v?.total)}</div>
-            <div class="card-sub">of {fmt(v?.total_all)} total, {v?.offline} offline</div>
+        <!-- RPC + DZ summary lines side-by-side on desktop. RPC first (left). -->
+        <div class="infra-summary-grid">
+          <div class="infra-summary-line" id="rpc-summary-card">
+            <div class="infra-summary-rpc-grid">
+              <div class="rpc-summary-text">
+                <div class="infra-summary-head">
+                  <span class="infra-summary-label" style="color: var(--accent-blue);">Public RPC nodes</span>
+                  <span class="infra-summary-stats" id="rpc-summary-stats">loading...</span>
+                </div>
+                <div class="rpc-stats-row" id="rpc-stats-row"></div>
+              </div>
+              <div class="rpc-donut-wrap" id="rpc-donut-wrap"></div>
+            </div>
           </div>
 
-          <div class="card">
+          <div class="infra-summary-line" id="dz-summary-card">
+            <div class="infra-summary-head">
+              <span class="infra-summary-label" style="color: var(--accent-violet);">DoubleZero network</span>
+              <span class="infra-summary-stats" id="dz-summary-stats">loading...</span>
+            </div>
+            <div class="dz-issues" id="dz-issues"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- PATH -->
+      <section class="section">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title">Path to better decentralization</h2>
+            <p class="section-desc">How much stake would need to migrate to reach healthier thresholds.</p>
+          </div>
+          <div class="watermark mono" id="watermark-path"></div>
+        </div>
+        <div class="path-list" id="path-list">
+          <div class="sk-line" style="width:80%; height:48px"></div>
+          <div class="sk-line" style="width:80%; height:48px"></div>
+          <div class="sk-line" style="width:80%; height:48px"></div>
+        </div>
+      </section>
+
+      <!-- GEOGRAPHIC -->
+      <section class="section">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title">Geographic distribution</h2>
+            <p class="section-desc" id="geo-desc">Validator count and stake share.</p>
+          </div>
+          <a href="/validators" data-stub class="section-link">All validators →</a>
+        </div>
+        <div class="geo-grid">
+          <div class="geo-block">
+            <div class="card-label">By country</div>
+            <div class="geo-chart" id="geo-countries">
+              <div class="sk-line" style="width:100%"></div>
+              <div class="sk-line" style="width:80%"></div>
+            </div>
+          </div>
+          <div class="geo-block">
             <div class="card-label">
-              Delinquent Stake
+              By network provider (ASN)
               <span class="tooltip-wrap">
-                <span class="tooltip-icon">?</span>
-                <span class="tooltip-box">Percentage of total stake held by validators that are behind on voting. Below 1% is healthy.</span>
+                <span class="tooltip-icon" aria-label="info"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
+                <span class="tooltip-box">SFDP requires validators to avoid ASNs holding more than 25% of stake (effective May 2026). ASNs above this threshold are highlighted.</span>
               </span>
             </div>
-            <div class:list={['card-value', delinqPct > 5 ? 'critical' : delinqPct > 1 ? 'warning' : 'good']}>
-              {pct(delinqPct, 2)}
-            </div>
-            <div class="card-sub">of total active stake</div>
-          </div>
-
-          <div class="card">
-            <div class="card-label">
-              Skip Rate
-              <span class="tooltip-wrap">
-                <span class="tooltip-icon">?</span>
-                <span class="tooltip-box">Stake-weighted average of leader slots skipped. Lower is better. A healthy network stays below 1%.</span>
-              </span>
-            </div>
-            <div class:list={['card-value', skipRate > 1 ? 'warning' : 'good']}>
-              {pct(skipRate, 2)}
-            </div>
-            <div class="card-sub">stake-weighted</div>
-          </div>
-
-          <div class="card">
-            <div class="card-label">RPC Nodes</div>
-            <div class="card-value violet">{fmt(snap?.record_counts?.rpc)}</div>
-            <div class="card-sub">public RPC endpoints</div>
-          </div>
-
-        </div>
-
-        {stakeByVersion.length > 0 && (
-          <div class="version-bar-wrap">
-            <div class="card-label">Top Client Versions</div>
-            <div class="version-list">
-              {stakeByVersion.map(([ver, info]) => (
-                <div class="version-item">
-                  <span class="version-name mono">{ver}</span>
-                  <span class="version-validators">{fmt(info.currentValidators)} validators</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </section>
-
-      <!-- DECENTRALIZATION -->
-      <section class="section">
-        <h2 class="section-title">Decentralization</h2>
-        <p class="section-desc">
-          How distributed is stake across countries, networks, and individual validators?
-        </p>
-
-        <!-- HHI + Gini -->
-        <div class="dec-explainer">
-          <div class="dec-explainer-item">
-            <div class="dec-explainer-label">
-              Market Concentration (HHI)
-              <span class="tooltip-wrap">
-                <span class="tooltip-icon">?</span>
-                <span class="tooltip-box">Herfindahl-Hirschman Index. Used in economics to measure market concentration. Below 1500 is competitive. Above 2500 means a few players dominate.</span>
-              </span>
-            </div>
-            <p class="dec-explainer-text">
-              Imagine all validator stake as a market. HHI tells you how monopolized it is.
-              A score near zero means thousands of equal players. A score near 10,000 means one player controls everything.
-            </p>
-            <div class="dec-explainer-values">
-              <div class="dec-val-item">
-                <span class:list={['dec-val-num', 'mono', hhiCountryRating.color]}>{hhi_country?.toFixed(0) ?? '-'}</span>
-                <span class="dec-val-sub">by country</span>
-                <span class:list={['status-badge', hhiCountryRating.color]}>{hhiCountryRating.label}</span>
-              </div>
-              <div class="dec-val-item">
-                <span class:list={['dec-val-num', 'mono', hhiAsnRating.color]}>{hhi_asn?.toFixed(0) ?? '-'}</span>
-                <span class="dec-val-sub">by network provider</span>
-                <span class:list={['status-badge', hhiAsnRating.color]}>{hhiAsnRating.label}</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="dec-explainer-item">
-            <div class="dec-explainer-label">
-              Stake Inequality (Gini)
-              <span class="tooltip-wrap">
-                <span class="tooltip-icon">?</span>
-                <span class="tooltip-box">Gini coefficient measures inequality. 0 means all validators have equal stake. 1 means one validator holds all stake. Same scale economists use for wealth inequality.</span>
-              </span>
-            </div>
-            <p class="dec-explainer-text">
-              Think of it like income inequality, but for stake. A high Gini means a few validators hold most of the stake, while hundreds of smaller validators share the rest.
-            </p>
-            <div class="dec-explainer-values">
-              <div class="dec-val-item">
-                <span class:list={['dec-val-num', 'mono', giniR.color]}>{gini?.toFixed(3) ?? '-'}</span>
-                <span class="dec-val-sub">across all validators</span>
-                <span class:list={['status-badge', giniR.color]}>{giniR.label}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Nakamoto -->
-        <div class="subsection-label" style="margin-top: 2rem;">
-          Nakamoto Coefficient
-          <span class="tooltip-wrap">
-            <span class="tooltip-icon">?</span>
-            <span class="tooltip-box">Minimum number of independent entities that together control 33%+ of stake. Higher means more decentralized.</span>
-          </span>
-        </div>
-
-        <div class="cards-grid cards-4">
-          {[
-            {
-              dim: 'ASN',
-              key: 'nakamoto_asn',
-              why: 'One network provider (TERASWITCH) hosts enough validators to exceed 33% of stake alone. This is a known concentration risk in Solana infrastructure.'
-            },
-            {
-              dim: 'Country',
-              key: 'nakamoto_country',
-              why: 'Two countries (US and Germany) together hold over 33% of stake. Geographic concentration creates regulatory and infrastructure risk.'
-            },
-            {
-              dim: 'City',
-              key: 'nakamoto_city',
-              why: 'Two cities (Frankfurt and Amsterdam) together exceed 33% of stake. Most validators cluster in major European datacenter hubs.'
-            },
-            {
-              dim: 'Validator',
-              key: 'nakamoto_validator',
-              why: 'It takes 20 independent validators to reach 33% of stake. This is the strongest dimension - no single validator dominates.'
-            },
-          ].map(({ dim, key, why }) => {
-            const val = dec?.[key]?.value;
-            const rating = nakRating(dim.toLowerCase(), val);
-            const color = nakColor(rating);
-            return (
-              <div class="card card-nakamoto">
-                <div class="card-label">
-                  {dim}
-                  <span class="tooltip-wrap">
-                    <span class="tooltip-icon">?</span>
-                    <span class="tooltip-box">{why}</span>
-                  </span>
-                </div>
-                <div class:list={['card-value-big', 'mono', color]}>{val ?? '-'}</div>
-                <div class:list={['status-badge', color]}>{rating}</div>
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
-      <!-- INFRASTRUCTURE -->
-      <section class="section">
-        <h2 class="section-title">Infrastructure Coverage</h2>
-        <p class="section-desc">
-          Adoption of advanced networking infrastructure across the validator set.
-        </p>
-
-        <div class="cards-grid cards-2">
-          <div class="card card-infra">
-            <div class="infra-header">
-              <div class="infra-name">DoubleZero</div>
-              <span class="tooltip-wrap">
-                <span class="tooltip-icon">?</span>
-                <span class="tooltip-box">A private fiber network connecting Solana validators, bypassing the public internet for faster and more reliable block propagation.</span>
-              </span>
-            </div>
-            <div class="infra-stats">
-              <div class="infra-stat">
-                <div class="infra-value violet">{fmt(dz?.validators)}</div>
-                <div class="infra-label">validators connected</div>
-              </div>
-              <div class="infra-stat">
-                <div class="infra-value">{pct(dz?.validators_percent)}</div>
-                <div class="infra-label">of all validators</div>
-              </div>
-              <div class="infra-stat">
-                <div class="infra-value">{pct(dz?.validators_stake_percent)}</div>
-                <div class="infra-label">of total stake</div>
-              </div>
-            </div>
-            <div class="infra-detail">
-              <span>{fmt(dz?.devices)} devices</span>
-              <span class="sep-dot">·</span>
-              <span>{fmt(dz?.rpc)} RPC nodes</span>
-              <span class="sep-dot">·</span>
-              <span class:list={[dz?.network_health?.links_healthy === dz?.network_health?.links_total ? 'good-text' : 'warning-text']}>
-                {dz?.network_health?.links_healthy}/{dz?.network_health?.links_total} links healthy
-              </span>
-            </div>
-          </div>
-
-          <div class="card card-infra">
-            <div class="infra-header">
-              <div class="infra-name">Jito BAM</div>
-              <span class="tooltip-wrap">
-                <span class="tooltip-icon">?</span>
-                <span class="tooltip-box">Block-level Attestation Mechanism by Jito. Coordinates validators for more efficient MEV handling and block building.</span>
-              </span>
-            </div>
-            <div class="infra-stats">
-              <div class="infra-stat">
-                <div class="infra-value violet">{fmt(bam?.total_connected_validators)}</div>
-                <div class="infra-label">validators connected</div>
-              </div>
-              <div class="infra-stat">
-                <div class="infra-value">{pct(bam?.stake_percentage)}</div>
-                <div class="infra-label">of total stake</div>
-              </div>
-              <div class="infra-stat">
-                <div class="infra-value">{fmt(bam?.node_count)}</div>
-                <div class="infra-label">BAM nodes</div>
-              </div>
+            <div class="geo-chart" id="geo-asns">
+              <div class="sk-line" style="width:100%"></div>
+              <div class="sk-line" style="width:60%"></div>
             </div>
           </div>
         </div>
       </section>
 
-      <!-- MORE COMING -->
-      <div class="more-coming-banner">
-        <span class="more-coming-icon">+</span>
-        More sections in development: Validators Table, Per-validator History, Endpoint Monitor, Geo Discrepancy Analysis, Datacenter Pages, Historical Charts.
-      </div>
-
-      <!-- GEOGRAPHIC DISTRIBUTION -->
+      <!-- DECENTRALIZATION METRICS — 5 cards now -->
       <section class="section">
-        <h2 class="section-title">Geographic Distribution</h2>
-        <p class="section-desc">
-          Validator count by country. {Object.keys(v?.country_distribution ?? {}).length} countries represented.
-        </p>
+        <div class="section-header">
+          <div>
+            <h2 class="section-title">Decentralization metrics</h2>
+            <p class="section-desc">Academic indicators of network distribution.</p>
+          </div>
+        </div>
 
-        <div class="card">
-          <div class="geo-chart">
-            {topCountries.map(([cc, count]) => {
-              const barWidth = Math.round((count / maxCount) * 100);
-              const stakePct = v?.stake_by_country?.[cc];
-              return (
-                <div class="geo-row">
-                  <div class="geo-country">
-                    <span class="geo-flag">{flag(cc)}</span>
-                    <span class="geo-cc">{cc}</span>
+        <div class="academic-grid" id="academic-grid">
+
+          <!-- HHI -->
+          <div class="academic-card">
+            <div class="academic-label">
+              HHI
+              <span class="tooltip-wrap">
+                <span class="tooltip-icon" aria-label="info"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
+                <span class="tooltip-box">Herfindahl-Hirschman Index measures concentration on a 0–10000 scale. Below 1500 is competitive (green), 1500–2500 moderate (orange), above 2500 highly concentrated (red).</span>
+              </span>
+            </div>
+            <div class="academic-tile-grid">
+              <div class="academic-tile" data-scale-tip="hhi-country">
+                <div class="academic-tile-label">by country</div>
+                <div class="academic-tile-num mono" id="hhi-country">--</div>
+                <div class="academic-scale">
+                  <div class="academic-scale-track">
+                    <div class="academic-scale-seg good" style="width:15%"></div>
+                    <div class="academic-scale-seg warn" style="width:10%"></div>
+                    <div class="academic-scale-seg crit" style="width:75%"></div>
                   </div>
-                  <div class="geo-bar-wrap">
-                    <div class="geo-bar" style={`width: ${barWidth}%`}></div>
-                  </div>
-                  <div class="geo-count mono">{fmt(count)}</div>
-                  {stakePct != null && (
-                    <div class="geo-stake">{pct(stakePct)} stake</div>
-                  )}
+                  <div class="academic-scale-pin" id="hhi-country-pin"></div>
                 </div>
-              );
-            })}
+              </div>
+              <div class="academic-tile" data-scale-tip="hhi-asn">
+                <div class="academic-tile-label">by ASN</div>
+                <div class="academic-tile-num mono" id="hhi-asn">--</div>
+                <div class="academic-scale">
+                  <div class="academic-scale-track">
+                    <div class="academic-scale-seg good" style="width:15%"></div>
+                    <div class="academic-scale-seg warn" style="width:10%"></div>
+                    <div class="academic-scale-seg crit" style="width:75%"></div>
+                  </div>
+                  <div class="academic-scale-pin" id="hhi-asn-pin"></div>
+                </div>
+              </div>
+            </div>
           </div>
+
+          <!-- GINI -->
+          <div class="academic-card">
+            <div class="academic-label">
+              Gini
+              <span class="tooltip-wrap">
+                <span class="tooltip-icon" aria-label="info"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
+                <span class="tooltip-box">Gini coefficient measures stake inequality across validators on a 0–1 scale. 0 means all validators equal, 1 means one holds everything.</span>
+              </span>
+            </div>
+            <div class="academic-tile-grid academic-tile-grid-1">
+              <div class="academic-tile" data-scale-tip="gini">
+                <div class="academic-tile-label">across validators</div>
+                <div class="academic-tile-num mono" id="gini-val">--</div>
+                <div class="academic-scale">
+                  <div class="academic-scale-track">
+                    <div class="academic-scale-seg good" style="width:40%"></div>
+                    <div class="academic-scale-seg warn" style="width:20%"></div>
+                    <div class="academic-scale-seg crit" style="width:40%"></div>
+                  </div>
+                  <div class="academic-scale-pin" id="gini-pin"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- SHANNON (NEW) -->
+          <div class="academic-card">
+            <div class="academic-label">
+              Shannon
+              <span class="tooltip-wrap">
+                <span class="tooltip-icon" aria-label="info"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
+                <span class="tooltip-box">Shannon entropy measures information-theoretic diversity. Normalized to 0–1: above 0.8 high diversity (green), 0.5–0.8 moderate, below 0.5 low diversity (red).</span>
+              </span>
+            </div>
+            <div class="academic-tile-grid academic-tile-grid-1" style="gap: 0.4rem;">
+              <div class="academic-tile" data-scale-tip="shannon-country">
+                <div class="academic-tile-row">
+                  <span class="academic-tile-label">country</span>
+                  <span class="academic-tile-num mono small" id="shannon-country">--</span>
+                </div>
+                <div class="academic-scale academic-scale-thin">
+                  <div class="academic-scale-track">
+                    <div class="academic-scale-seg crit" style="width:50%"></div>
+                    <div class="academic-scale-seg warn" style="width:30%"></div>
+                    <div class="academic-scale-seg good" style="width:20%"></div>
+                  </div>
+                  <div class="academic-scale-pin" id="shannon-country-pin"></div>
+                </div>
+              </div>
+              <div class="academic-tile" data-scale-tip="shannon-asn">
+                <div class="academic-tile-row">
+                  <span class="academic-tile-label">ASN</span>
+                  <span class="academic-tile-num mono small" id="shannon-asn">--</span>
+                </div>
+                <div class="academic-scale academic-scale-thin">
+                  <div class="academic-scale-track">
+                    <div class="academic-scale-seg crit" style="width:50%"></div>
+                    <div class="academic-scale-seg warn" style="width:30%"></div>
+                    <div class="academic-scale-seg good" style="width:20%"></div>
+                  </div>
+                  <div class="academic-scale-pin" id="shannon-asn-pin"></div>
+                </div>
+              </div>
+              <div class="academic-tile" data-scale-tip="shannon-validator">
+                <div class="academic-tile-row">
+                  <span class="academic-tile-label">validator</span>
+                  <span class="academic-tile-num mono small" id="shannon-validator">--</span>
+                </div>
+                <div class="academic-scale academic-scale-thin">
+                  <div class="academic-scale-track">
+                    <div class="academic-scale-seg crit" style="width:50%"></div>
+                    <div class="academic-scale-seg warn" style="width:30%"></div>
+                    <div class="academic-scale-seg good" style="width:20%"></div>
+                  </div>
+                  <div class="academic-scale-pin" id="shannon-validator-pin"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- NAKAMOTO -->
+          <div class="academic-card">
+            <div class="academic-label">
+              Nakamoto
+              <span class="tooltip-wrap">
+                <span class="tooltip-icon" aria-label="info"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
+                <span class="tooltip-box">Minimum number of independent entities that together control 33% of stake. Each ring shows the value as equal segments. Multiple concentric rings appear when the number exceeds 10. Higher is more decentralized.</span>
+              </span>
+            </div>
+            <div class="nak-grid">
+              <div class="nak-tile" data-dim="asn">
+                <div class="nak-tile-text">
+                  <div class="academic-tile-label">ASN</div>
+                  <div class="academic-tile-num mono" id="nak-asn">--</div>
+                </div>
+                <div class="nak-donut" id="nak-asn-donut"></div>
+              </div>
+              <div class="nak-tile" data-dim="country">
+                <div class="nak-tile-text">
+                  <div class="academic-tile-label">country</div>
+                  <div class="academic-tile-num mono" id="nak-country">--</div>
+                </div>
+                <div class="nak-donut" id="nak-country-donut"></div>
+              </div>
+              <div class="nak-tile" data-dim="city">
+                <div class="nak-tile-text">
+                  <div class="academic-tile-label">city</div>
+                  <div class="academic-tile-num mono" id="nak-city">--</div>
+                </div>
+                <div class="nak-donut" id="nak-city-donut"></div>
+              </div>
+              <div class="nak-tile" data-dim="validator">
+                <div class="nak-tile-text">
+                  <div class="academic-tile-label">validator</div>
+                  <div class="academic-tile-num mono" id="nak-validator">--</div>
+                </div>
+                <div class="nak-donut" id="nak-validator-donut"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- SUPERMINORITY -->
+          <div class="academic-card">
+            <div class="academic-label">
+              Superminority
+              <span class="tooltip-wrap">
+                <span class="tooltip-icon" aria-label="info"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
+                <span class="tooltip-box">Number of entities holding the given percent of stake. The 33% line is the liveness threshold (enough to halt the network), the 50% line is the safety threshold (enough to censor).</span>
+              </span>
+            </div>
+            <div class="sm-stack">
+              <div class="sm-block">
+                <div class="academic-tile-label">controls 33%</div>
+                <div class="sm-block-vals">
+                  <div class="sm-mini"><span class="academic-tile-num mono" id="sm33-v">--</span><span class="sm-tag">validators</span></div>
+                  <div class="sm-mini"><span class="academic-tile-num mono" id="sm33-c">--</span><span class="sm-tag">countries</span></div>
+                  <div class="sm-mini"><span class="academic-tile-num mono" id="sm33-a">--</span><span class="sm-tag">ASNs</span></div>
+                </div>
+              </div>
+              <div class="sm-block">
+                <div class="academic-tile-label">controls 50%</div>
+                <div class="sm-block-vals">
+                  <div class="sm-mini"><span class="academic-tile-num mono" id="sm50-v">--</span><span class="sm-tag">validators</span></div>
+                  <div class="sm-mini"><span class="academic-tile-num mono" id="sm50-c">--</span><span class="sm-tag">countries</span></div>
+                  <div class="sm-mini"><span class="academic-tile-num mono" id="sm50-a">--</span><span class="sm-tag">ASNs</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
         </div>
       </section>
 
-      <!-- ABOUT -->
-      <section class="section">
-        <h2 class="section-title">About SONDA</h2>
+      <!-- ABOUT + ROADMAP -->
+      <section class="section" id="about" style="scroll-margin-top: 110px;">
+        <div class="about-roadmap-card">
+          <div class="about-roadmap-grid">
 
-        <div class="cards-grid cards-2">
-          <div class="card about-card">
-            <h3 class="about-heading">What is SONDA?</h3>
-            <p class="about-text">
-              SONDA started as private scripts to cross-verify validator geolocation while choosing
-              a datacenter for the Solya validator. Existing tools reported conflicting locations,
-              so we built a multi-source verification pipeline instead.
-            </p>
-            <p class="about-text">
-              The result is an open-source observatory tracking where validators actually run,
-              how infrastructure coverage evolves over time, and what decentralization
-              looks like in practice.
-            </p>
-          </div>
+            <div class="about-block">
+              <div class="about-header">
+                <img src="/logo-500.png" alt="SONDA" class="about-logo" />
+                <h2 class="about-roadmap-title">About SONDA</h2>
+              </div>
+              <p class="about-text">
+                SONDA is an open-source observatory for the Solana network. It tracks where validators run, which infrastructure layers they use, and what decentralization looks like in practice. Live across mainnet, testnet, and devnet.
+              </p>
+              <p class="about-text">
+                Validators here are not just IPs. Each record cross-references geolocation across four independent providers (with discrepancies flagged), pulls staking and performance from Solana RPC, infrastructure participation from DoubleZero and Jito BAM, delegation status from the Solana Foundation, and historical movements from Jito Kobe and SFDP archives. Validator location history reaches back to 2021, across <span class="mono" id="about-epoch-count">700+</span> epochs.
+              </p>
+              <p class="about-text">
+                Built for assessing network effects and problems: the health of critical infrastructure layers, monitoring and research of datacenters, and a fresh look at decentralization. Data refreshes every <span class="mono">~60 seconds</span> across all three clusters and is free to use under attribution.
+              </p>
+              <div class="about-clusters" id="about-clusters">
+                <div class="about-cluster-row" data-cluster-color="mainnet-beta">
+                  <span class="about-cluster-tag">MAINNET</span>
+                  <span class="about-cluster-stat"><span class="num mono" id="ac-mn-validators">—</span><span class="lbl">validators</span></span>
+                  <span class="about-sep">·</span>
+                  <span class="about-cluster-stat"><span class="num mono" id="ac-mn-countries">—</span><span class="lbl">countries</span></span>
+                  <span class="about-sep">·</span>
+                  <span class="about-cluster-stat"><span class="num mono" id="ac-mn-asns">—</span><span class="lbl">providers</span></span>
+                </div>
+                <div class="about-cluster-row" data-cluster-color="testnet">
+                  <span class="about-cluster-tag">TESTNET</span>
+                  <span class="about-cluster-stat"><span class="num mono" id="ac-tn-validators">—</span><span class="lbl">validators</span></span>
+                  <span class="about-sep">·</span>
+                  <span class="about-cluster-stat"><span class="num mono" id="ac-tn-countries">—</span><span class="lbl">countries</span></span>
+                  <span class="about-sep">·</span>
+                  <span class="about-cluster-stat"><span class="num mono" id="ac-tn-asns">—</span><span class="lbl">providers</span></span>
+                </div>
+                <div class="about-cluster-row" data-cluster-color="devnet">
+                  <span class="about-cluster-tag">DEVNET</span>
+                  <span class="about-cluster-stat"><span class="num mono" id="ac-dn-validators">—</span><span class="lbl">validators</span></span>
+                  <span class="about-sep">·</span>
+                  <span class="about-cluster-stat"><span class="num mono" id="ac-dn-countries">—</span><span class="lbl">countries</span></span>
+                  <span class="about-sep">·</span>
+                  <span class="about-cluster-stat"><span class="num mono" id="ac-dn-asns">—</span><span class="lbl">providers</span></span>
+                </div>
+              </div>
+              <div class="about-tags">
+                <span class="about-tag">Open source</span>
+                <span class="about-tag">Free to use</span>
+                <span class="about-tag">Attribution appreciated</span>
+              </div>
+              <p class="about-built-by">
+                Built by the <a href="https://solya.studio" target="_blank" rel="noopener" class="link">Solya validator</a> team.
+              </p>
+            </div>
 
-          <div class="card about-card">
-            <h3 class="about-heading">What makes it different?</h3>
-            <ul class="about-list">
-              <li>4-source geo cross-verification per IP (DB-IP, IPInfo, GeoJS, ip-api)</li>
-              <li>Discrepancy detection - flags validators where sources disagree</li>
-              <li>Full location history since 2021 across 785+ epochs</li>
-              <li>DoubleZero and Jito BAM integration with live data</li>
-              <li>Three clusters: mainnet, testnet, devnet</li>
-              <li>Open source - <a href="https://github.com/SolyaUk/sonda" target="_blank" class="link">github.com/SolyaUk/sonda</a></li>
-            </ul>
+            <div class="roadmap-block">
+              <div class="about-roadmap-title-row">
+                <h2 class="about-roadmap-title">Roadmap</h2>
+                <a href="https://t.me/sonda_network_events" target="_blank" rel="noopener" class="tg-cta">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71L12.6 16.3l-1.99 1.93c-.23.23-.42.42-.83.42z"/></svg>
+                  Live network events
+                </a>
+              </div>
+
+              <div class="phases-list">
+
+                <div class="phase-block done">
+                  <div class="phase-block-head">
+                    <div class="phase-block-title-group">
+                      <span class="phase-name">Phase 0</span>
+                      <span class="phase-status-tag good">Done</span>
+                    </div>
+                    <span class="phase-date mono">2023–Mar 2026</span>
+                  </div>
+                  <div class="phase-block-bar">
+                    <div class="phase-block-bar-fill" style="width:100%; background: var(--status-good);"></div>
+                  </div>
+                  <div class="phase-block-desc">
+                    <strong>Backend pipeline.</strong> Validator analyzer with multi-source geolocation cross-verification, R2 distribution, automated snapshots, Telegram bot for live network events.
+                  </div>
+                </div>
+
+                <div class="phase-block active">
+                  <div class="phase-block-head">
+                    <div class="phase-block-title-group">
+                      <span class="phase-name">Phase 1</span>
+                      <span class="phase-status-tag info">In progress</span>
+                    </div>
+                    <span class="phase-date mono">Apr 2026 →</span>
+                  </div>
+                  <div class="phase-block-bar">
+                    <div class="phase-block-bar-fill" style="width:55%; background: var(--accent-blue);"></div>
+                  </div>
+                  <div class="phase-block-desc">
+                    <strong>Public dashboard.</strong> Live homepage with cluster switching, validators table, endpoints monitor, datacenter analysis.
+                  </div>
+                </div>
+
+                <div class="phase-block">
+                  <div class="phase-block-head">
+                    <div class="phase-block-title-group">
+                      <span class="phase-name">Phase 2</span>
+                      <span class="phase-status-tag muted">Planned</span>
+                    </div>
+                    <span class="phase-date mono">—</span>
+                  </div>
+                  <div class="phase-block-bar"><div class="phase-block-bar-fill" style="width:0%;"></div></div>
+                  <div class="phase-block-desc">
+                    <strong>Per-validator deep dives.</strong> Individual validator pages, location history timelines, cross-cluster identity linking, datacenter scoring.
+                  </div>
+                </div>
+
+                <div class="phase-block">
+                  <div class="phase-block-head">
+                    <div class="phase-block-title-group">
+                      <span class="phase-name">Phase 3</span>
+                      <span class="phase-status-tag muted">Planned</span>
+                    </div>
+                    <span class="phase-date mono">—</span>
+                  </div>
+                  <div class="phase-block-bar"><div class="phase-block-bar-fill" style="width:0%;"></div></div>
+                  <div class="phase-block-desc">
+                    <strong>Open data.</strong> Public API access, JSON exports, methodology documentation.
+                  </div>
+                </div>
+
+                <div class="phase-block">
+                  <div class="phase-block-head">
+                    <div class="phase-block-title-group">
+                      <span class="phase-name">Phase 4</span>
+                      <span class="phase-status-tag muted">Planned</span>
+                    </div>
+                    <span class="phase-date mono">—</span>
+                  </div>
+                  <div class="phase-block-bar"><div class="phase-block-bar-fill" style="width:0%;"></div></div>
+                  <div class="phase-block-desc">
+                    <strong>Historical analytics.</strong> Per-epoch snapshot pipeline, decentralization trends over time, network events archive.
+                  </div>
+                </div>
+
+                <div class="phase-block">
+                  <div class="phase-block-head">
+                    <div class="phase-block-title-group">
+                      <span class="phase-name">Phase 5</span>
+                      <span class="phase-status-tag muted">Vision</span>
+                    </div>
+                    <span class="phase-date mono">—</span>
+                  </div>
+                  <div class="phase-block-bar"><div class="phase-block-bar-fill" style="width:0%;"></div></div>
+                  <div class="phase-block-desc">
+                    <strong>Synthetic scores and beyond.</strong> Validator Score and Datacenter Score composite metrics combining performance, reliability, and infrastructure adoption. Validator and DC ratings derived from these. Embeddable widgets, custom alerts, watchlists, internationalization.
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
           </div>
         </div>
       </section>
@@ -433,7 +511,6 @@ const giniR = giniRating(gini);
     </div>
   </main>
 
-  <!-- FOOTER -->
   <footer class="site-footer">
     <div class="container">
       <div class="footer-top">
@@ -447,822 +524,2103 @@ const giniR = giniRating(gini);
         </div>
         <div class="footer-links">
           <a href="https://x.com/SondaNetwork" target="_blank" rel="noopener" class="footer-link">@SondaNetwork</a>
+          <a href="https://t.me/sonda_network_events" target="_blank" rel="noopener" class="footer-link">Telegram</a>
           <a href="https://github.com/SolyaUk/sonda-network" target="_blank" rel="noopener" class="footer-link">GitHub</a>
         </div>
       </div>
-
       <div class="footer-sources">
         <span class="footer-sources-label">Data sources:</span>
-        <span>Solana RPC</span><span class="sep">·</span>
-        <span>Jito Kobe</span><span class="sep">·</span>
-        <span>SFDP</span><span class="sep">·</span>
-        <span>StakeWiz</span><span class="sep">·</span>
-        <span>DB-IP</span><span class="sep">·</span>
-        <span>IPInfo</span><span class="sep">·</span>
-        <span>GeoJS</span><span class="sep">·</span>
-        <span>DoubleZero</span><span class="sep">·</span>
-        <span>Jito BAM</span><span class="sep">·</span>
-        <span>RIPE Stat</span>
+        <span>Solana RPC</span><span class="sep">·</span><span>Jito Kobe</span><span class="sep">·</span>
+        <span>SFDP</span><span class="sep">·</span><span>StakeWiz</span><span class="sep">·</span>
+        <span>DB-IP</span><span class="sep">·</span><span>IPInfo</span><span class="sep">·</span>
+        <span>GeoJS</span><span class="sep">·</span><span>DoubleZero</span><span class="sep">·</span>
+        <span>Jito BAM</span><span class="sep">·</span><span>RIPE Stat</span>
       </div>
-
       <div class="footer-bottom">
-        <span>Data updates every ~60 seconds. Last snapshot: <span class="mono">{updatedAt}</span></span>
+        <span>Data updates every ~60 seconds. Last snapshot: <span class="mono" id="footer-ts">--</span></span>
         <span class="footer-attribution">When using SONDA data, attribution is required.</span>
-      </div>
-
-      <div class="footer-dev-note">
-        SONDA is in active development. Features are incomplete and data may not reflect the latest network state.
       </div>
     </div>
   </footer>
-
-  <!-- Prod overlay - sonda.network only -->
-  <div id="prod-overlay" style="display:none;">
-    <div class="prod-overlay-content">
-      <img src="/logo-500.png" alt="SONDA" class="prod-overlay-logo" />
-      <h1 class="prod-overlay-title">SONDA</h1>
-      <p class="prod-overlay-sub">Solana Observatory for Network Decentralization Analysis</p>
-      <div class="prod-overlay-status">
-        <span class="dev-badge">IN DEVELOPMENT</span>
-      </div>
-      <p class="prod-overlay-text">
-        We are building a multi-source analytics dashboard for the Solana network.
-        Validator geolocation, decentralization metrics, infrastructure coverage,
-        and historical data across 785+ epochs.
-      </p>
-      <div class="prod-overlay-coming">
-        <div class="coming-item">Network Health</div>
-        <div class="coming-item">Decentralization Metrics (Nakamoto, HHI, Gini)</div>
-        <div class="coming-item">DoubleZero and Jito BAM Coverage</div>
-        <div class="coming-item">Geographic Distribution</div>
-        <div class="coming-item">Validators Table with Search</div>
-        <div class="coming-item">Per-validator Location History</div>
-        <div class="coming-item">Endpoint Health Monitor</div>
-        <div class="coming-item">Geo Discrepancy Analysis</div>
-      </div>
-      <div class="prod-overlay-links">
-        <a href="https://github.com/SolyaUk/sonda-network" target="_blank" rel="noopener" class="prod-overlay-btn">
-          View on GitHub
-        </a>
-        <a href="https://sonda-network.pages.dev" target="_blank" rel="noopener" class="prod-overlay-btn prod-overlay-btn-secondary">
-          Open Preview
-        </a>
-        <a href="https://x.com/SondaNetwork" target="_blank" rel="noopener" class="prod-overlay-link">
-          @SondaNetwork
-        </a>
-      </div>
-    </div>
-  </div>
 </BaseLayout>
 
-<style>
-/* ---- Dev banner ---- */
-.dev-banner {
-  background: rgba(59, 130, 246, 0.08);
-  border-bottom: 1px solid rgba(59, 130, 246, 0.2);
-  font-size: 0.78rem;
-  color: var(--text-secondary);
-}
+<style is:global>
+.dev-banner { background: rgba(59,130,246,0.08); border-bottom: 1px solid rgba(59,130,246,0.2); font-size: 0.78rem; color: var(--text-secondary); }
+.dev-banner-inner { max-width: 1280px; margin: 0 auto; padding: 0.5rem 1.5rem; display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+.dev-badge { font-family: var(--font-mono); font-size: 0.65rem; font-weight: 600; background: var(--accent-blue); color: #fff; padding: 0.15rem 0.45rem; border-radius: 4px; letter-spacing: 0.08em; flex-shrink: 0; }
+.dev-link { color: var(--accent-blue); text-decoration: none; margin-left: auto; }
 
-.dev-banner-inner {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 0.5rem 1.5rem;
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  flex-wrap: wrap;
-}
-
-.dev-badge {
-  font-family: var(--font-mono);
-  font-size: 0.65rem;
-  font-weight: 600;
-  background: var(--accent-blue);
-  color: #fff;
-  padding: 0.15rem 0.45rem;
-  border-radius: 4px;
-  letter-spacing: 0.08em;
-  flex-shrink: 0;
-}
-
-.dev-link {
-  color: var(--accent-blue);
-  text-decoration: none;
-  margin-left: auto;
-}
-.dev-link:hover { text-decoration: underline; }
-
-/* ---- Prod overlay ---- */
-#prod-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 999;
-  background: var(--bg-primary);
-  overflow-y: auto;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem 1.5rem;
-}
-
-.prod-overlay-content {
-  max-width: 560px;
-  width: 100%;
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
-}
-
-.prod-overlay-logo {
-  width: 56px;
-  height: 56px;
-  border-radius: 12px;
-}
-
-.prod-overlay-title {
-  font-family: var(--font-display);
-  font-size: 2rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0;
-  letter-spacing: 0.08em;
-}
-
-.prod-overlay-sub {
-  font-size: 0.82rem;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  margin: 0;
-}
-
-.prod-overlay-status { margin: 0.25rem 0; }
-
-.prod-overlay-text {
-  font-size: 0.92rem;
-  color: var(--text-secondary);
-  line-height: 1.7;
-  margin: 0;
-  max-width: 480px;
-}
-
-.prod-overlay-coming {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-  width: 100%;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 1rem 1.25rem;
-  text-align: left;
-  margin: 0.5rem 0;
-}
-
-.coming-item {
-  font-size: 0.82rem;
-  color: var(--text-secondary);
-  padding-left: 1rem;
-  position: relative;
-}
-.coming-item::before {
-  content: '+';
-  position: absolute;
-  left: 0;
-  color: var(--accent-blue);
-  font-weight: 600;
-}
-
-.prod-overlay-links {
-  display: flex;
-  align-items: center;
-  gap: 1.25rem;
-  margin-top: 0.5rem;
-}
-
-.prod-overlay-btn {
-  background: var(--accent-blue);
-  color: #fff;
-  padding: 0.6rem 1.25rem;
-  border-radius: 8px;
-  font-size: 0.85rem;
-  font-weight: 500;
-  text-decoration: none;
-  transition: opacity 0.15s ease;
-}
-.prod-overlay-btn:hover { opacity: 0.85; }
-
-.prod-overlay-btn-secondary {
-  background: transparent;
-  border: 1.5px solid var(--accent-blue);
-  color: var(--accent-blue);
-}
-
-.prod-overlay-btn-secondary:hover {
-  background: var(--accent-blue);
-  color: #fff;
-  opacity: 1;
-}
-
-.prod-overlay-link {
-  font-size: 0.82rem;
-  color: var(--text-muted);
-  text-decoration: none;
-}
-.prod-overlay-link:hover { color: var(--accent-blue); }
-
-/* ---- Layout ---- */
 .main-content { padding: 0 0 4rem; }
+.container { max-width: 1280px; margin: 0 auto; padding: 0 1.5rem; }
 
-.container {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 0 1.5rem;
+/* HERO */
+.hero-compact { padding: 1.5rem 0 1rem; }
+.hero-eyebrow { display: block; font-family: var(--font-mono); font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--cluster-accent); margin-bottom: 0.4rem; }
+.hero-title { font-family: var(--font-display); font-size: clamp(1.2rem, 2.2vw, 1.6rem); font-weight: 600; color: var(--text-primary); margin: 0; line-height: 1.3; }
+
+/* PULSE */
+.pulse-row {
+  display: flex; align-items: center; gap: 0;
+  margin: 1.5rem 0 2.5rem; padding: 1.25rem 0;
+  border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
 }
-
-/* ---- Compact hero ---- */
-.hero-compact {
-  padding: 1.5rem 0 1.25rem;
-  border-bottom: 1px solid var(--border);
-  margin-bottom: 2.5rem;
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-
-.hero-compact-left {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-}
-
-.hero-eyebrow {
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--accent-blue);
-}
-
-.hero-title-compact {
-  font-family: var(--font-display);
-  font-size: clamp(1.1rem, 2.5vw, 1.4rem);
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0;
-  line-height: 1.3;
-}
-
-.hero-compact-right {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 0.25rem;
-  flex-shrink: 0;
-}
-
-.epoch-badge, .updated-badge {
-  font-size: 0.78rem;
-  color: var(--text-muted);
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-}
-
-.epoch-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--status-good);
-  display: inline-block;
-  animation: pulse 2s infinite;
-  flex-shrink: 0;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
-}
-
-@media (max-width: 640px) {
-  .hero-compact { flex-direction: column; }
-  .hero-compact-right { align-items: flex-start; }
-}
-
-/* ---- Sections ---- */
-.section { margin-bottom: 3rem; }
-
-.section-title {
-  font-family: var(--font-display);
-  font-size: 1.4rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0 0 0.4rem;
-}
-
-.section-desc {
-  font-size: 0.9rem;
-  color: var(--text-secondary);
-  margin: 0 0 1.25rem;
-}
-
-.subsection-label {
-  font-size: 0.78rem;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text-muted);
-  margin-bottom: 0.75rem;
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-
-/* ---- Cards grid ---- */
-.cards-grid { display: grid; gap: 1rem; }
-.cards-4 { grid-template-columns: repeat(4, 1fr); }
-.cards-3 { grid-template-columns: repeat(3, 1fr); }
-.cards-2 { grid-template-columns: repeat(2, 1fr); }
-
-@media (max-width: 900px) {
-  .cards-4 { grid-template-columns: repeat(2, 1fr); }
-  .cards-3 { grid-template-columns: repeat(2, 1fr); }
-}
-@media (max-width: 560px) {
-  .cards-4, .cards-3, .cards-2 { grid-template-columns: 1fr; }
-}
-
-/* ---- Card ---- */
-.card {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 1.25rem;
-  transition: border-color 0.15s ease;
-}
-.card:hover { border-color: var(--border-accent); }
-
-.card-label {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  margin-bottom: 0.5rem;
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-}
-
-.card-value {
-  font-family: var(--font-mono);
-  font-size: 1.8rem;
-  font-weight: 600;
-  line-height: 1;
-  margin-bottom: 0.4rem;
-  color: var(--text-primary);
-}
-
-.card-value-big {
-  font-family: var(--font-mono);
-  font-size: 2.8rem;
-  font-weight: 700;
-  line-height: 1;
-  margin-bottom: 0.5rem;
-}
-
-.card-sub {
-  font-size: 0.78rem;
-  color: var(--text-muted);
-}
-
-/* ---- Status colors ---- */
-.violet   { color: var(--accent-violet); }
-.good     { color: var(--status-good); }
-.warning  { color: var(--status-warning); }
-.critical { color: var(--status-critical); }
-.neutral  { color: var(--status-neutral); }
-.good-text    { color: var(--status-good); }
-.warning-text { color: var(--status-warning); }
-
-/* ---- Status badge ---- */
-.status-badge {
-  display: inline-block;
-  font-size: 0.68rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  padding: 0.2rem 0.5rem;
-  border-radius: 4px;
-}
-.status-badge.good     { background: rgba(34, 197, 94, 0.15);  color: var(--status-good); }
-.status-badge.warning  { background: rgba(249, 115, 22, 0.15); color: var(--status-warning); }
-.status-badge.critical { background: rgba(239, 68, 68, 0.15);  color: var(--status-critical); }
-.status-badge.neutral  { background: rgba(107, 114, 128, 0.15); color: var(--status-neutral); }
-
-/* ---- Nakamoto card ---- */
-.card-nakamoto { text-align: center; }
-
-/* ---- Tooltip ---- */
-.tooltip-wrap {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-}
-
-.tooltip-icon {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: var(--bg-card-hover);
-  border: 1px solid var(--border);
-  font-size: 0.6rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-muted);
-  cursor: help;
-  flex-shrink: 0;
-}
-
-.tooltip-box {
-  display: none;
-  position: absolute;
-  bottom: calc(100% + 6px);
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--bg-secondary);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 0.6rem 0.8rem;
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-  width: 240px;
-  line-height: 1.55;
-  z-index: 50;
-  text-transform: none;
-  letter-spacing: 0;
-  font-weight: 400;
-  text-align: left;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
-}
-.tooltip-wrap:hover .tooltip-box { display: block; }
-
-/* ---- Decentralization explainer ---- */
-.dec-explainer {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-  margin-bottom: 1rem;
-}
+.pulse-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 0.3rem; padding: 0 1rem; text-align: center; min-width: 0; }
+.pulse-num { font-size: clamp(1.4rem, 2.8vw, 2rem); font-weight: 700; color: var(--text-primary); line-height: 1; }
+.pulse-label { font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.pulse-divider { width: 1px; height: 36px; background: var(--border); flex-shrink: 0; }
 @media (max-width: 700px) {
-  .dec-explainer { grid-template-columns: 1fr; }
+  .pulse-row { flex-wrap: wrap; padding: 1rem 0; }
+  .pulse-item { flex: 1 1 50%; padding: 0.6rem; }
+  .pulse-divider { display: none; }
 }
 
-.dec-explainer-item {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 1.25rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
+/* SECTIONS */
+.section { margin-bottom: 3rem; }
+.section-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
+.section-title { font-family: var(--font-display); font-size: 1.4rem; font-weight: 600; color: var(--text-primary); margin: 0 0 0.4rem; }
+.section-desc { font-size: 0.9rem; color: var(--text-secondary); margin: 0; }
+.section-link { font-size: 0.82rem; color: var(--cluster-accent); text-decoration: none; align-self: flex-end; padding-bottom: 0.2rem; }
+.section-link:hover { text-decoration: underline; }
+.watermark { font-size: 0.62rem; color: var(--text-muted); opacity: 0.7; text-align: right; font-weight: 400; align-self: flex-end; padding-bottom: 0.2rem; letter-spacing: 0.04em; max-width: 100%; word-wrap: break-word; }
+@media (max-width: 600px) { .watermark { font-size: 0.58rem; text-align: left; align-self: flex-start; } }
+
+/* STORIES */
+.stories-grid { display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: minmax(220px, auto); gap: 1rem; }
+@media (max-width: 768px) { .stories-grid { grid-template-columns: 1fr; } }
+
+.story {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px;
+  padding: 1.25rem; display: flex; flex-direction: column; gap: 0.5rem;
+  position: relative; transition: border-color 0.15s;
+}
+.story:hover { border-color: var(--border-accent); }
+
+/* Subtle background tints per card type */
+.story.tint-dz { background: linear-gradient(135deg, color-mix(in srgb, var(--accent-violet) 4%, var(--bg-card)), var(--bg-card)); }
+.story.tint-bam { background: linear-gradient(135deg, color-mix(in srgb, var(--accent-cyan) 4%, var(--bg-card)), var(--bg-card)); }
+.story.tint-sfdp { background: linear-gradient(135deg, color-mix(in srgb, var(--accent-blue) 4%, var(--bg-card)), var(--bg-card)); }
+.story.tint-cluster { background: linear-gradient(135deg, color-mix(in srgb, var(--cluster-accent) 4%, var(--bg-card)), var(--bg-card)); }
+.story.tint-both { background: linear-gradient(135deg, color-mix(in srgb, var(--accent-violet) 3%, var(--bg-card)), color-mix(in srgb, var(--accent-cyan) 3%, var(--bg-card))); }
+
+.story-header { display: flex; align-items: center; justify-content: space-between; }
+.story-tag { font-family: var(--font-mono); font-size: 0.6rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; padding: 0.2rem 0.5rem; border-radius: 4px; }
+.dz-tag { background: rgba(167,139,250,0.15); color: var(--accent-violet); }
+.bam-tag { background: rgba(34,211,238,0.15); color: var(--accent-cyan); }
+.both-tag { background: linear-gradient(90deg, rgba(167,139,250,0.15), rgba(34,211,238,0.15)); color: var(--accent-violet); }
+.sfdp-tag { background: rgba(59,130,246,0.15); color: var(--accent-blue); }
+.cluster-tag { background: color-mix(in srgb, var(--cluster-accent) 15%, transparent); color: var(--cluster-accent); }
+.neutral-tag { background: var(--bg-card-hover); color: var(--text-muted); }
+
+.story-title { font-size: 0.95rem; font-weight: 600; color: var(--text-primary); }
+.story-big { font-size: clamp(2rem, 4vw, 2.8rem); font-weight: 700; line-height: 1; margin: 0.25rem 0; }
+.story-sub { font-size: 0.85rem; color: var(--text-secondary); }
+.story-link { font-size: 0.78rem; color: var(--cluster-accent); text-decoration: none; margin-top: auto; padding-top: 0.5rem; }
+.story-link:hover { text-decoration: underline; }
+.story-dz .story-big { color: var(--accent-violet); }
+
+/* Generic stacked progress row — used by DZ breakdown, software versions, SFDP states */
+.bar-row { display: grid; grid-template-columns: 1fr 70px 38px; gap: 0.6rem; align-items: center; font-size: 0.78rem; padding: 0.15rem 0; }
+.bar-row-label { color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; cursor: help; }
+.bar-row-track { height: 5px; background: var(--bg-primary); border: 1px solid var(--border); border-radius: 3px; overflow: hidden; }
+.bar-row-fill { height: 100%; border-radius: 2px; transition: width 0.4s ease; min-width: 1px; }
+.bar-row-fill.violet { background: var(--accent-violet); }
+.bar-row-fill.violet-dim { background: var(--accent-violet); opacity: 0.45; }
+.bar-row-fill.cluster { background: var(--cluster-accent); }
+.bar-row-fill.good { background: var(--status-good); }
+.bar-row-fill.info { background: var(--accent-blue); }
+.bar-row-fill.muted { background: var(--text-muted); }
+.bar-row-fill.crit { background: var(--status-critical); }
+.bar-row-num { font-family: var(--font-mono); font-weight: 600; color: var(--text-primary); text-align: right; font-size: 0.78rem; }
+.bar-rows-wrap { display: flex; flex-direction: column; gap: 0.3rem; }
+.bar-rows-wrap.with-divider { padding-top: 0.5rem; margin-top: 0.5rem; border-top: 1px solid var(--border); }
+
+/* Matrix */
+.matrix-grid { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 0; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin: 0.5rem 0; }
+.matrix-cell { padding: 0.85rem 0.7rem; background: var(--bg-secondary); border: 1px solid var(--border); margin: -1px 0 0 -1px; display: flex; flex-direction: column; gap: 0.15rem; }
+.matrix-cell[data-cell="both"] { background: linear-gradient(135deg, rgba(167,139,250,0.1), rgba(34,211,238,0.1)); }
+.matrix-cell[data-cell="bam"] { background: rgba(34,211,238,0.06); }
+.matrix-cell[data-cell="dz"] { background: rgba(167,139,250,0.06); }
+.matrix-num { font-size: 1.5rem; font-weight: 700; color: var(--text-primary); line-height: 1; }
+.matrix-cell[data-cell="bam"] .matrix-num { color: var(--accent-cyan); }
+.matrix-cell[data-cell="dz"] .matrix-num { color: var(--accent-violet); }
+.matrix-cell-label { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+
+/* Stacked bar (clients/versions) */
+.stacked-bar { position: relative; height: 38px; border-radius: 6px; background: var(--bg-secondary); margin: 0.5rem 0; }
+.stacked-bar-inner { display: flex; height: 100%; width: 100%; border-radius: 6px; overflow: hidden; }
+.stacked-segment {
+  height: 100%; display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-mono); font-size: 0.78rem; font-weight: 600; color: #fff;
+  white-space: nowrap; overflow: hidden; transition: width 0.4s ease;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.4); cursor: help;
+}
+.stacked-tooltip {
+  pointer-events: none; position: absolute; bottom: calc(100% + 6px); left: 0;
+  background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 6px;
+  padding: 0.4rem 0.6rem; font-size: 0.72rem; font-weight: 500; color: var(--text-primary);
+  white-space: nowrap; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  text-shadow: none; opacity: 0; transition: opacity 0.15s;
+  transform: translateX(-50%);
+}
+.stacked-tooltip.show { opacity: 1; }
+
+.stacked-legend {
+  display: grid; grid-template-columns: repeat(2, 1fr);
+  gap: 0.4rem 1.25rem;
+  font-size: 0.78rem; color: var(--text-secondary);
+  margin-top: 0.7rem;
+}
+.stacked-legend-item {
+  display: flex; align-items: center; gap: 0.45rem;
+  min-width: 0;
+}
+.stacked-legend-dot { width: 9px; height: 9px; border-radius: 2px; flex-shrink: 0; }
+.stacked-legend-name {
+  color: var(--text-primary); font-weight: 500;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  flex: 0 1 auto; min-width: 0;
+}
+.stacked-legend-stat {
+  color: var(--text-muted); font-family: var(--font-mono); font-size: 0.7rem;
+  flex-shrink: 0; margin-left: auto;
+}
+@media (max-width: 480px) {
+  .stacked-legend { grid-template-columns: 1fr; }
 }
 
-.dec-explainer-label {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-}
+/* SFDP card content */
+.sfdp-grid { display: flex; flex-direction: column; gap: 0.6rem; }
+.sfdp-item { display: flex; align-items: baseline; gap: 0.6rem; }
+.sfdp-num { font-size: 2rem; font-weight: 700; color: var(--text-primary); line-height: 1; }
+.sfdp-sub { font-size: 0.82rem; color: var(--text-secondary); }
+.sfdp-geo { font-size: 0.85rem; color: var(--text-secondary); padding: 0.5rem 0.7rem; background: rgba(59,130,246,0.08); border-left: 2px solid var(--accent-blue); border-radius: 4px; }
+.sfdp-geo-num { color: var(--accent-blue); font-family: var(--font-mono); font-weight: 600; }
+.sfdp-overlap { display: flex; flex-direction: column; gap: 0.3rem; padding-top: 0.5rem; border-top: 1px solid var(--border); }
+.sfdp-overlap-row { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; font-size: 0.82rem; }
+.sfdp-overlap-label { color: var(--text-secondary); }
+.sfdp-overlap-val { font-family: var(--font-mono); font-weight: 600; }
+.sfdp-overlap-val.violet { color: var(--accent-violet); }
+.sfdp-overlap-val.cyan { color: var(--accent-cyan); }
+.sfdp-other { font-size: 0.72rem; color: var(--text-muted); padding-top: 0.4rem; border-top: 1px solid var(--border); }
 
-.dec-explainer-text {
-  font-size: 0.83rem;
-  color: var(--text-secondary);
-  line-height: 1.65;
-  margin: 0;
-}
+/* Performance card */
+.perf-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 0.5rem; }
+@media (max-width: 480px) { .perf-grid { grid-template-columns: 1fr 1fr; } }
+.perf-tile { background: var(--bg-secondary); border-radius: 6px; padding: 0.55rem 0.65rem; display: flex; flex-direction: column; gap: 0.15rem; }
+.perf-tile-num { font-family: var(--font-mono); font-size: 1.25rem; font-weight: 700; line-height: 1; }
+.perf-tile-num.good { color: var(--status-good); }
+.perf-tile-num.neutral { color: var(--text-secondary); }
+.perf-tile-num.crit { color: var(--status-critical); }
+.perf-tile-num.muted { color: var(--text-muted); }
+.perf-tile-label { font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.perf-bar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: var(--bg-secondary); margin-top: 0.6rem; }
+.perf-bar-seg { height: 100%; transition: width 0.4s; }
+.perf-bar-seg.good { background: var(--status-good); }
+.perf-bar-seg.neutral { background: var(--text-muted); opacity: 0.6; }
+.perf-bar-seg.crit { background: var(--status-critical); }
+.perf-bar-legend { display: flex; gap: 1rem; font-size: 0.7rem; color: var(--text-muted); margin-top: 0.4rem; flex-wrap: wrap; }
+.perf-bar-legend-dot { width: 8px; height: 8px; border-radius: 2px; display: inline-block; vertical-align: middle; margin-right: 0.3rem; }
 
-.dec-explainer-values {
-  display: flex;
-  gap: 1.5rem;
-  flex-wrap: wrap;
-  margin-top: 0.25rem;
-}
+/* WhatIs card */
+.whatis-text { font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6; margin: 0.25rem 0; flex: 1; }
+.whatis-stat-row { display: flex; gap: 1.25rem; flex-wrap: wrap; padding-top: 0.5rem; margin-top: auto; border-top: 1px solid var(--border); }
+.whatis-stat { display: flex; flex-direction: column; gap: 0.1rem; }
+.whatis-stat-num { font-family: var(--font-mono); font-size: 1.3rem; font-weight: 700; color: var(--cluster-accent); line-height: 1; }
+.whatis-stat-label { font-size: 0.68rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
 
-.dec-val-item {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-}
+/* Stake donut (devnet 4th card, RPC summary) */
+.donut-wrap { display: grid; grid-template-columns: auto 1fr; gap: 1rem; align-items: center; margin-top: 0.5rem; flex: 1; }
+.donut-svg { width: 130px; height: 130px; flex-shrink: 0; }
+.donut-svg svg { width: 100%; height: 100%; display: block; }
 
-.dec-val-num {
-  font-family: var(--font-mono);
-  font-size: 1.9rem;
-  font-weight: 700;
-  line-height: 1;
-}
-
-.dec-val-sub {
-  font-size: 0.72rem;
-  color: var(--text-muted);
-}
-
-/* ---- Version bar ---- */
-.version-bar-wrap {
-  margin-top: 1rem;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 1.25rem;
-}
-
-.version-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem 2rem;
-  margin-top: 0.5rem;
-}
-
-.version-item {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.version-name { font-size: 0.85rem; color: var(--accent-blue); }
-.version-validators { font-size: 0.8rem; color: var(--text-muted); }
-
-/* ---- Infrastructure ---- */
-.card-infra { display: flex; flex-direction: column; gap: 1rem; }
-
-.infra-header {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-
-.infra-name {
-  font-family: var(--font-display);
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.infra-stats {
-  display: flex;
-  gap: 1.5rem;
-  flex-wrap: wrap;
-}
-
-.infra-value {
-  font-family: var(--font-mono);
-  font-size: 1.6rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  line-height: 1;
-}
-
-.infra-label {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  margin-top: 0.2rem;
-}
-
-.infra-detail {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  font-size: 0.78rem;
-  color: var(--text-muted);
-  border-top: 1px solid var(--border);
-  padding-top: 0.75rem;
-}
-
-.sep-dot { opacity: 0.4; }
-
-/* ---- More coming banner ---- */
-.more-coming-banner {
-  background: var(--bg-card);
-  border: 1px dashed var(--border-accent);
-  border-radius: 10px;
-  padding: 0.75rem 1.25rem;
-  font-size: 0.8rem;
-  color: var(--text-muted);
-  display: flex;
-  align-items: flex-start;
-  gap: 0.5rem;
-  margin-bottom: 3rem;
-}
-
-.more-coming-icon {
-  color: var(--accent-blue);
-  font-weight: 700;
-  font-size: 1rem;
-  line-height: 1.2;
-  flex-shrink: 0;
-}
-
-/* ---- Geo chart ---- */
-.geo-chart { display: flex; flex-direction: column; gap: 0.65rem; }
-
-.geo-row {
+/* 2-column legend with shared grid alignment.
+   Six tracks: [dot] [label] [num]   [dot] [label] [num]
+   Items use display:contents so their three children flow directly into the
+   parent grid. Result: all dots align, all labels start at same x and END at
+   the longest-label width, all percents align right after labels. No more big
+   gaps between short names and their percentages. */
+.donut-legend-2col {
   display: grid;
-  grid-template-columns: 72px 1fr 55px 90px;
+  grid-template-columns: auto minmax(0, 1fr) auto auto minmax(0, 1fr) auto;
+  column-gap: 0.4rem;
+  row-gap: 0.32rem;
   align-items: center;
-  gap: 0.75rem;
+  font-size: 0.74rem;
+  min-width: 0;
+}
+.donut-legend-2col .donut-legend-item { display: contents; }
+/* Base item style for non-2col contexts (RPC summary). */
+.donut-legend-item { display: flex; align-items: center; gap: 0.4rem; min-width: 0; }
+/* Add visual breathing room between the two legend columns by indenting the
+   second column's dot. Only applies when there's actually a 2nd column item. */
+.donut-legend-2col > .donut-legend-item:nth-child(even) > .donut-legend-dot {
+  margin-left: 0.7rem;
 }
 
+.donut-legend-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.donut-legend-label {
+  color: var(--text-secondary);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  min-width: 0;
+}
+.donut-legend-num {
+  color: var(--text-muted); font-family: var(--font-mono); font-size: 0.7rem;
+  white-space: nowrap;
+}
+
+@media (max-width: 480px) {
+  /* Single visual column on narrow screens. Three sub-tracks. */
+  .donut-legend-2col {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+  .donut-legend-2col > .donut-legend-item:nth-child(even) > .donut-legend-dot {
+    margin-left: 0;
+  }
+  .donut-svg { width: 110px; height: 110px; }
+}
+
+/* SFDP linked card content (testnet 4th slot) */
+.sfdp-linked-content { display: flex; flex-direction: column; gap: 0.55rem; flex: 1; }
+.sfdp-linked-num { font-size: 2rem; font-weight: 700; color: var(--accent-blue); line-height: 1; }
+.sfdp-linked-states { display: flex; flex-direction: column; gap: 0.25rem; padding-top: 0.5rem; border-top: 1px solid var(--border); }
+
+/* Infra status grid */
+.infra-status-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; margin-bottom: 0.75rem; }
+@media (max-width: 768px) { .infra-status-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 480px) { .infra-status-grid { grid-template-columns: 1fr; } }
+.infra-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 1rem; display: flex; flex-direction: column; gap: 0.4rem; transition: border-color 0.15s; }
+.infra-card.healthy { border-color: rgba(34,197,94,0.25); }
+.infra-card.degraded { border-color: rgba(249,115,22,0.4); }
+.infra-card.down { border-color: rgba(239,68,68,0.4); }
+.infra-card.absent { opacity: 0.55; }
+.infra-card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.2rem; }
+.infra-card-name { font-size: 0.85rem; font-weight: 600; color: var(--text-primary); }
+.infra-card-status-dot { width: 8px; height: 8px; border-radius: 50%; }
+.infra-card-status-dot.ok { background: var(--status-good); box-shadow: 0 0 6px var(--status-good); }
+.infra-card-status-dot.warn { background: var(--status-warning); }
+.infra-card-status-dot.bad { background: var(--status-critical); }
+.infra-card-status-dot.neutral { background: var(--text-muted); }
+.infra-card-main { font-family: var(--font-mono); font-size: 1.4rem; font-weight: 600; color: var(--text-primary); line-height: 1; }
+.infra-card-sub { font-size: 0.75rem; color: var(--text-muted); }
+
+/* Infra summary lines (DZ + RPC) — side-by-side on desktop */
+.infra-summary-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem;
+  align-items: stretch;
+}
+@media (max-width: 900px) { .infra-summary-grid { grid-template-columns: 1fr; } }
+
+.infra-summary-line { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 0.95rem 1.1rem; }
+.infra-summary-line.absent { opacity: 0.55; }
+.infra-summary-head { display: flex; align-items: center; gap: 0.8rem; flex-wrap: wrap; }
+.infra-summary-label { font-size: 0.85rem; font-weight: 600; }
+.infra-summary-stats { font-size: 0.82rem; color: var(--text-secondary); }
+
+/* DZ link issues */
+.dz-issues { margin-top: 0.55rem; display: flex; flex-wrap: wrap; gap: 0.4rem 0.5rem; font-size: 0.72rem; font-family: var(--font-mono); }
+.dz-issue { color: var(--status-warning); padding: 0.18rem 0.45rem; background: rgba(249,115,22,0.1); border-radius: 4px; }
+.dz-issue.bad { color: var(--status-critical); background: rgba(239,68,68,0.1); }
+.dz-issue.ok { color: var(--status-good); background: rgba(34,197,94,0.1); }
+
+/* RPC summary content — donut on right, stats on left.
+   When DZ+RPC are side-by-side on desktop, RPC card has half width
+   so layout switches to vertical (text on top, donut+legend below). */
+.infra-summary-rpc-grid { display: flex; flex-direction: column; gap: 0.85rem; height: 100%; }
+.rpc-summary-text { display: flex; flex-direction: column; gap: 0.5rem; }
+.rpc-stats-row { display: flex; gap: 0.4rem 1.4rem; flex-wrap: wrap; font-size: 0.78rem; color: var(--text-secondary); }
+.rpc-stat-item { display: flex; align-items: baseline; gap: 0.35rem; }
+.rpc-stat-val { font-family: var(--font-mono); font-weight: 600; color: var(--text-primary); }
+
+.rpc-donut-wrap { display: flex; align-items: center; gap: 1.25rem; margin-top: auto; padding-top: 0.85rem; border-top: 1px solid var(--border); }
+.rpc-donut-mini { width: 92px; height: 92px; flex-shrink: 0; }
+.rpc-donut-mini svg { width: 100%; height: 100%; display: block; }
+/* RPC legend — tight per-row flex (final decision after iterating).
+   Three earlier attempts failed for different reasons:
+   1. flex with `flex: 1` on label → pushed num to right edge, huge gap for short labels
+   2. flex with `flex: 0 1 auto` → tight gaps but values didn't align across rows
+   3. grid display:contents → values aligned but column auto-sized to widest label,
+      leaving huge empty space within short-label cells (e.g. "OVH" in a 100px col)
+   ASN names vary too widely (OVH = 3 chars vs LATITUDE-SH = 11) for a clean
+   alignment pattern. Tight per-row eliminates the gap problem entirely.
+   Cross-row value alignment is sacrificed but each row reads as a clean unit. */
+.rpc-donut-legend {
+  flex: 0 1 auto; min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-size: 0.74rem;
+}
+.rpc-donut-legend .donut-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+.rpc-donut-legend .donut-legend-label {
+  flex: 0 1 auto; min-width: 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  color: var(--text-secondary);
+}
+.rpc-donut-legend .donut-legend-num {
+  font-size: 0.7rem;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 600px) {
+  .rpc-donut-wrap { gap: 0.85rem; }
+  .rpc-donut-mini { width: 78px; height: 78px; }
+}
+
+/* PATH */
+.path-list { display: flex; flex-direction: column; gap: 0.85rem; }
+.path-item { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.25rem; }
+.path-item-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem; }
+.path-name { font-size: 0.95rem; font-weight: 600; color: var(--text-primary); display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.path-met-badge {
+  font-family: var(--font-mono); font-size: 0.62rem; font-weight: 600;
+  background: rgba(34,197,94,0.15); color: var(--status-good);
+  padding: 0.18rem 0.5rem; border-radius: 4px;
+  text-transform: uppercase; letter-spacing: 0.06em;
+  display: inline-flex; align-items: center; gap: 0.3rem;
+}
+.path-current { font-family: var(--font-mono); font-size: 1rem; font-weight: 700; }
+.path-current.warn { color: var(--status-warning); }
+.path-current.crit { color: var(--status-critical); }
+.path-current.good { color: var(--status-good); }
+.path-bar-container { position: relative; height: 10px; background: var(--bg-primary); border: 1px solid var(--border); border-radius: 5px; overflow: visible; margin: 0.6rem 0 0.4rem; }
+.path-bar-target { position: absolute; height: 100%; background: rgba(34,197,94,0.18); border-right: 2px solid var(--status-good); border-radius: 5px 0 0 5px; left: 0; top: 0; }
+.path-bar-current { position: absolute; height: 100%; border-radius: 5px; left: 0; top: 0; transition: width 0.4s; opacity: 0.75; }
+.path-bar-current.warn { background: var(--status-warning); }
+.path-bar-current.crit { background: var(--status-critical); }
+.path-bar-current.good { background: var(--status-good); opacity: 0.55; }
+.path-explainer { font-size: 0.82rem; color: var(--text-secondary); margin-top: 0.4rem; }
+.path-target-line { font-size: 0.72rem; color: var(--text-muted); margin-top: 0.2rem; }
+
+/* GEO bar list */
+.geo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+@media (max-width: 768px) { .geo-grid { grid-template-columns: 1fr; } }
+.geo-block { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem; }
+.card-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.3rem; }
+.geo-chart { display: flex; flex-direction: column; gap: 0.5rem; }
+.geo-row { display: grid; grid-template-columns: 75px 1fr 50px 70px; align-items: center; gap: 0.6rem; }
+.geo-country { display: flex; align-items: center; gap: 0.35rem; min-width: 0; }
+.geo-flag { font-size: 0.95rem; line-height: 1; }
+.geo-cc { font-size: 0.72rem; color: var(--text-muted); font-family: var(--font-mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.geo-bar-wrap { height: 6px; background: var(--bg-primary); border: 1px solid var(--border); border-radius: 3px; overflow: hidden; }
+.geo-bar { height: 100%; border-radius: 3px; min-width: 1px; }
+.geo-bar.normal { background: var(--accent-blue); }
+.geo-bar.warn { background: var(--status-warning); }
+.geo-bar.crit { background: var(--status-critical); }
+.geo-count { font-size: 0.78rem; color: var(--text-primary); text-align: right; font-family: var(--font-mono); }
+.geo-stake { font-size: 0.72rem; color: var(--text-muted); text-align: right; font-family: var(--font-mono); }
 @media (max-width: 480px) {
   .geo-row { grid-template-columns: 60px 1fr 45px; }
   .geo-stake { display: none; }
 }
 
-.geo-country {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
+/* ACADEMIC METRICS — 5 cards. HHI gets more width (its "BY COUNTRY" / "BY ASN"
+   labels were wrapping). Nakamoto trimmed slightly to compensate. */
+.academic-grid { display: grid; grid-template-columns: 1.3fr 1fr 1fr 1.4fr 1.5fr; gap: 0.75rem; align-items: stretch; }
+@media (max-width: 1100px) { .academic-grid { grid-template-columns: 1fr 1fr 1fr; } }
+@media (max-width: 700px) { .academic-grid { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 480px) { .academic-grid { grid-template-columns: 1fr; } }
+
+.academic-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
+.academic-label { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.07em; display: flex; align-items: center; gap: 0.3rem; }
+.academic-tile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; flex: 1; }
+.academic-tile-grid-1 { grid-template-columns: 1fr; }
+.academic-tile { display: flex; flex-direction: column; gap: 0.3rem; padding: 0.55rem 0.7rem; background: var(--bg-secondary); border-radius: 6px; justify-content: space-between; position: relative; cursor: help; }
+.academic-tile-row { display: flex; align-items: baseline; justify-content: space-between; gap: 0.4rem; }
+.academic-tile-label { font-size: 0.62rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.academic-tile-num { font-size: 1.4rem; font-weight: 700; color: var(--text-primary); line-height: 1; }
+.academic-tile-num.small { font-size: 1rem; }
+.academic-tile-num.good { color: var(--status-good); }
+.academic-tile-num.warning { color: var(--status-warning); }
+.academic-tile-num.critical { color: var(--status-critical); }
+.academic-tile-num.neutral { color: var(--text-secondary); }
+
+/* HHI/Gini/Shannon scales */
+.academic-scale { position: relative; height: 10px; margin-top: 0.4rem; cursor: help; }
+.academic-scale.academic-scale-thin { height: 7px; margin-top: 0.25rem; }
+.academic-scale-track { display: flex; height: 100%; border-radius: 4px; overflow: hidden; }
+.academic-scale-seg { height: 100%; }
+.academic-scale-seg.good { background: var(--status-good); opacity: 0.45; }
+.academic-scale-seg.warn { background: var(--status-warning); opacity: 0.45; }
+.academic-scale-seg.crit { background: var(--status-critical); opacity: 0.45; }
+.academic-scale-pin { position: absolute; top: -3px; width: 3px; height: 16px; background: var(--text-primary); border-radius: 1.5px; transform: translateX(-50%); box-shadow: 0 0 4px rgba(0,0,0,0.6); transition: left 0.4s ease; pointer-events: none; }
+.academic-scale.academic-scale-thin .academic-scale-pin { top: -3px; height: 13px; }
+
+/* Floating tooltip for academic tiles (positioned by JS using viewport coords).
+   Uses position:fixed so clientX/clientY map directly without scroll offset issues. */
+.academic-tip {
+  pointer-events: none; position: fixed; z-index: 1000;
+  background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 6px;
+  padding: 0.5rem 0.7rem; font-size: 0.76rem; color: var(--text-primary);
+  white-space: nowrap; box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  text-shadow: none; opacity: 0; transition: opacity 0.12s;
+  font-family: var(--font-body); font-weight: 400; letter-spacing: 0;
+  text-transform: none; left: 0; top: 0;
 }
+.academic-tip.show { opacity: 1; }
+.academic-tip strong { color: var(--text-primary); font-weight: 600; }
+.academic-tip .tip-rating { display: block; font-size: 0.7rem; color: var(--text-muted); margin-top: 0.2rem; }
 
-.geo-flag { font-size: 1rem; line-height: 1; }
-.geo-cc { font-size: 0.75rem; color: var(--text-muted); font-family: var(--font-mono); }
-
-.geo-bar-wrap {
-  height: 6px;
-  background: var(--border);
-  border-radius: 3px;
-  overflow: hidden;
+/* Nakamoto donuts grid */
+.nak-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; flex: 1; }
+.nak-tile {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0.55rem 0.7rem; background: var(--bg-secondary); border-radius: 6px; gap: 0.5rem;
 }
+.nak-tile-text { display: flex; flex-direction: column; gap: 0.2rem; min-width: 0; }
+.nak-donut { width: 60px; height: 60px; flex-shrink: 0; }
+.nak-donut svg { width: 100%; height: 100%; display: block; }
 
-.geo-bar {
-  height: 100%;
-  background: var(--accent-blue);
-  border-radius: 3px;
+/* Superminority */
+.sm-stack { display: flex; flex-direction: column; gap: 0.5rem; flex: 1; }
+.sm-block { display: flex; flex-direction: column; gap: 0.3rem; padding: 0.55rem 0.7rem; background: var(--bg-secondary); border-radius: 6px; }
+.sm-block-vals { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.3rem; align-items: baseline; }
+.sm-mini { display: flex; flex-direction: column; gap: 0.05rem; }
+.sm-tag { font-size: 0.6rem; color: var(--text-muted); text-transform: uppercase; }
+
+/* About + Roadmap */
+.about-roadmap-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 1.75rem; }
+.about-roadmap-grid { display: grid; grid-template-columns: 1fr 1.15fr; gap: 2rem; align-items: start; }
+@media (max-width: 900px) { .about-roadmap-grid { grid-template-columns: 1fr; gap: 2rem; } }
+.about-roadmap-title { font-family: var(--font-display); font-size: 1.25rem; font-weight: 600; color: var(--text-primary); margin: 0; }
+.about-roadmap-title-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.1rem; flex-wrap: wrap; gap: 0.5rem; }
+
+.about-block { display: flex; flex-direction: column; gap: 0.75rem; }
+.about-header { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.25rem; }
+.about-logo { width: 36px; height: 36px; border-radius: 8px; }
+.about-block .about-text { font-size: 0.9rem; color: var(--text-secondary); line-height: 1.7; margin: 0; }
+
+/* About — 3 cluster rows (mainnet / testnet / devnet) in their own colors.
+   Grid layout aligns all rows: tag column, validators column, countries column,
+   providers column. Each row's numbers are tinted by its cluster's accent. */
+.about-clusters {
+  display: grid;
+  grid-template-columns: auto auto auto auto;
+  column-gap: 1.5rem;
+  row-gap: 0.55rem;
+  padding: 0.85rem 0;
+  margin: 0.25rem 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  align-items: baseline;
 }
+.about-cluster-row { display: contents; }
 
-.geo-count { font-size: 0.82rem; color: var(--text-primary); text-align: right; }
-.geo-stake { font-size: 0.75rem; color: var(--text-muted); text-align: right; }
-
-/* ---- About ---- */
-.about-card { display: flex; flex-direction: column; gap: 0.75rem; }
-
-.about-heading {
-  font-family: var(--font-display);
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0;
+.about-cluster-tag {
+  font-family: var(--font-mono); font-size: 0.62rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.08em;
+  padding: 0.2rem 0.55rem; border-radius: 4px;
+  text-align: center; align-self: center;
+  white-space: nowrap;
 }
-
-.about-text {
-  font-size: 0.88rem;
-  color: var(--text-secondary);
-  line-height: 1.7;
-  margin: 0;
-}
-
-.about-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.about-list li {
-  font-size: 0.88rem;
-  color: var(--text-secondary);
-  padding-left: 1rem;
-  position: relative;
-}
-
-.about-list li::before {
-  content: '-';
-  position: absolute;
-  left: 0;
+.about-cluster-row[data-cluster-color="mainnet-beta"] .about-cluster-tag {
   color: var(--accent-blue);
+  background: color-mix(in srgb, var(--accent-blue) 15%, transparent);
+}
+.about-cluster-row[data-cluster-color="testnet"] .about-cluster-tag {
+  color: var(--accent-magenta, #e879f9);
+  background: color-mix(in srgb, var(--accent-magenta, #e879f9) 15%, transparent);
+}
+.about-cluster-row[data-cluster-color="devnet"] .about-cluster-tag {
+  color: var(--accent-amber, #fbbf24);
+  background: color-mix(in srgb, var(--accent-amber, #fbbf24) 15%, transparent);
 }
 
-/* ---- Links ---- */
-.link { color: var(--accent-blue); text-decoration: none; }
+.about-cluster-stat {
+  display: inline-flex; align-items: baseline; gap: 0.4rem;
+  white-space: nowrap;
+}
+.about-cluster-stat .num {
+  font-family: var(--font-mono); font-weight: 700;
+  font-size: 1rem;
+}
+.about-cluster-stat .lbl {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
+/* Numbers tinted per cluster */
+.about-cluster-row[data-cluster-color="mainnet-beta"] .about-cluster-stat .num { color: var(--accent-blue); }
+.about-cluster-row[data-cluster-color="testnet"]      .about-cluster-stat .num { color: var(--accent-magenta, #e879f9); }
+.about-cluster-row[data-cluster-color="devnet"]       .about-cluster-stat .num { color: var(--accent-amber, #fbbf24); }
+
+/* Separators (·) hidden — grid columns provide the visual rhythm. */
+.about-sep { display: none; }
+
+@media (max-width: 520px) {
+  /* Per-cluster block: tag spans full width on top, 3 stats in 3 cols below.
+     Each stat stacks num/lbl vertically so it stays compact. */
+  .about-clusters {
+    display: flex; flex-direction: column;
+    gap: 0; padding: 0.55rem 0;
+  }
+  .about-cluster-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 0.45rem 0.6rem;
+    padding: 0.65rem 0;
+    border-bottom: 1px dashed var(--border);
+    align-items: start;
+  }
+  .about-cluster-row:last-child { border-bottom: 0; }
+  .about-cluster-tag {
+    grid-column: 1 / -1;  /* span all 3 cols */
+    width: auto; min-width: auto;
+    text-align: left;
+    padding: 0.1rem 0;
+    background: transparent !important;
+  }
+  .about-cluster-stat {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.1rem;
+  }
+  .about-cluster-stat .num { font-size: 0.95rem; }
+  .about-cluster-stat .lbl { font-size: 0.65rem; }
+}
+
+.about-tags { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.4rem; }
+.about-tag { font-family: var(--font-mono); font-size: 0.65rem; font-weight: 500; color: var(--text-muted); background: var(--bg-secondary); padding: 0.25rem 0.55rem; border-radius: 4px; letter-spacing: 0.04em; }
+.about-built-by { font-size: 0.82rem; color: var(--text-muted); margin: 0.25rem 0 0; }
+
+.roadmap-block { border-left: 1px solid var(--border); padding-left: 2rem; }
+@media (max-width: 900px) { .roadmap-block { border-left: none; padding-left: 0; padding-top: 1.5rem; border-top: 1px solid var(--border); } }
+
+.tg-cta { display: flex; align-items: center; gap: 0.4rem; font-size: 0.78rem; color: var(--cluster-accent); text-decoration: none; padding: 0.35rem 0.7rem; border-radius: 6px; background: color-mix(in srgb, var(--cluster-accent) 12%, transparent); transition: background 0.15s; }
+.tg-cta:hover { background: color-mix(in srgb, var(--cluster-accent) 20%, transparent); }
+
+/* Roadmap phase blocks (Variant C) */
+.phases-list { display: flex; flex-direction: column; gap: 0.6rem; }
+.phase-block {
+  background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 10px;
+  padding: 0.85rem 1rem; transition: border-color 0.15s;
+  display: flex; flex-direction: column; gap: 0.5rem;
+}
+.phase-block:hover { border-color: var(--border-accent); }
+.phase-block.done { opacity: 0.85; }
+.phase-block.active { border-color: rgba(59,130,246,0.35); background: linear-gradient(135deg, rgba(59,130,246,0.04), var(--bg-secondary)); }
+
+.phase-block-head { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; flex-wrap: wrap; }
+.phase-block-title-group { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+.phase-name { font-size: 0.92rem; font-weight: 600; color: var(--text-primary); }
+.phase-status-tag {
+  font-family: var(--font-mono); font-size: 0.6rem; font-weight: 600;
+  padding: 0.15rem 0.45rem; border-radius: 4px;
+  text-transform: uppercase; letter-spacing: 0.07em;
+}
+.phase-status-tag.good { background: rgba(34,197,94,0.15); color: var(--status-good); }
+.phase-status-tag.info { background: rgba(59,130,246,0.15); color: var(--accent-blue); }
+.phase-status-tag.muted { background: var(--bg-card); color: var(--text-muted); border: 1px solid var(--border); }
+.phase-date { font-size: 0.7rem; color: var(--text-muted); letter-spacing: 0.03em; }
+
+.phase-block-bar { height: 6px; background: var(--bg-primary); border: 1px solid var(--border); border-radius: 3px; overflow: hidden; }
+.phase-block-bar-fill { height: 100%; border-radius: 2px; transition: width 0.4s; min-width: 0; }
+.phase-block-desc { font-size: 0.8rem; color: var(--text-secondary); line-height: 1.55; }
+.phase-block-desc strong { color: var(--text-primary); font-weight: 600; }
+
+/* Helpers */
+.link { color: var(--cluster-accent); text-decoration: none; }
 .link:hover { text-decoration: underline; }
 .mono { font-family: var(--font-mono); }
+.violet { color: var(--accent-violet); }
+.cyan { color: var(--accent-cyan); }
+.good { color: var(--status-good); }
+.warning { color: var(--status-warning); }
+.critical { color: var(--status-critical); }
 
-/* ---- Footer ---- */
-.site-footer {
-  border-top: 1px solid var(--border);
-  padding: 2rem 0;
-  margin-top: 2rem;
+/* Disabled / stub links — pages that don't exist yet (Phase 1 ongoing).
+   Visible in the navigation and section CTAs to signal planned scope, but
+   click is prevented via JS delegation. Hover shows a small "in development"
+   note so the user knows why the link looks dimmer. */
+[data-stub] {
+  cursor: not-allowed;
+  opacity: 0.45;
+  position: relative;
+}
+[data-stub]:hover {
+  background: transparent !important;
+  color: inherit !important;
+  text-decoration: none !important;
+}
+[data-stub]:hover::after {
+  content: 'in development';
+  position: absolute;
+  top: 100%; left: 50%;
+  transform: translateX(-50%);
+  margin-top: 4px;
+  background: var(--bg-secondary); border: 1px solid var(--border);
+  padding: 0.18rem 0.45rem; border-radius: 4px;
+  font-family: var(--font-mono); font-size: 0.6rem; color: var(--text-muted);
+  white-space: nowrap; pointer-events: none; z-index: 100;
+  font-weight: 400; letter-spacing: 0.04em;
+}
+@media (max-width: 600px) {
+  [data-stub]:hover::after { display: none; } /* Tooltip hover is unreliable on touch */
 }
 
-.footer-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-  flex-wrap: wrap;
-  gap: 0.5rem;
+/* Tooltip (info-icon hover) */
+.tooltip-wrap { position: relative; display: inline-flex; align-items: center; }
+.tooltip-icon {
+  width: 15px; height: 15px; border-radius: 50%;
+  background: var(--bg-card-hover); border: 1px solid var(--border);
+  color: var(--text-muted); cursor: help; flex-shrink: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  user-select: none;
+}
+.tooltip-icon:hover { color: var(--text-secondary); border-color: var(--text-muted); }
+.tooltip-icon svg { display: block; }
+.tooltip-box {
+  display: none; position: absolute; bottom: calc(100% + 6px); right: 0;
+  background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px;
+  padding: 0.55rem 0.75rem; font-size: 0.74rem; color: var(--text-secondary);
+  width: 260px; line-height: 1.55; z-index: 50;
+  text-transform: none; letter-spacing: 0; font-weight: 400; text-align: left;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+}
+.tooltip-wrap:hover .tooltip-box { display: block; }
+@media (max-width: 600px) {
+  .tooltip-box {
+    /* JS positions via inline styles on focus; these are fallbacks. */
+    max-width: calc(100vw - 1rem);
+  }
+  /* Disable hover-on-tap (sticks until next tap, ugly during scroll). Use
+     focus-within instead — tap icon = focus on icon = tooltip shows. JS
+     handles position; scroll handler in JS clears focus to dismiss. */
+  .tooltip-wrap:hover .tooltip-box { display: none; }
+  .tooltip-wrap:focus-within .tooltip-box { display: block; }
 }
 
-.footer-brand {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.footer-sonda-name {
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 0.9rem;
-  color: var(--text-primary);
-}
-
-.footer-by-text {
-  font-size: 0.8rem;
-  color: var(--text-muted);
-}
-
-.footer-solya-link {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  text-decoration: none;
-  color: var(--text-secondary);
-  font-size: 0.82rem;
-  transition: color 0.15s ease;
-}
-.footer-solya-link:hover { color: var(--accent-blue); }
-
-.footer-solya-logo {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-.footer-links {
-  display: flex;
-  gap: 1.25rem;
-}
-
-.footer-link {
-  font-size: 0.82rem;
-  color: var(--text-secondary);
-  text-decoration: none;
-}
-.footer-link:hover { color: var(--accent-blue); }
-
-.footer-sources {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.3rem;
-  align-items: center;
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  margin-bottom: 0.75rem;
-}
-
-.footer-sources-label {
-  color: var(--text-secondary);
-  font-weight: 500;
-  margin-right: 0.2rem;
-}
-
+/* Footer */
+.site-footer { border-top: 1px solid var(--border); padding: 2rem 0; margin-top: 2rem; }
+.footer-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem; }
+.footer-brand { display: flex; align-items: center; gap: 0.5rem; }
+.footer-sonda-name { font-family: var(--font-display); font-weight: 700; font-size: 0.9rem; color: var(--text-primary); }
+.footer-by-text { font-size: 0.8rem; color: var(--text-muted); }
+.footer-solya-link { display: flex; align-items: center; gap: 0.35rem; text-decoration: none; color: var(--text-secondary); font-size: 0.82rem; }
+.footer-solya-link:hover { color: var(--cluster-accent); }
+.footer-solya-logo { width: 20px; height: 20px; border-radius: 50%; object-fit: cover; }
+.footer-links { display: flex; gap: 1.25rem; }
+.footer-link { font-size: 0.82rem; color: var(--text-secondary); text-decoration: none; }
+.footer-link:hover { color: var(--cluster-accent); }
+.footer-sources { display: flex; flex-wrap: wrap; gap: 0.3rem; align-items: center; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.75rem; }
+.footer-sources-label { color: var(--text-secondary); font-weight: 500; margin-right: 0.2rem; }
 .sep { opacity: 0.4; }
+.footer-bottom { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; font-size: 0.75rem; color: var(--text-muted); }
 
-.footer-bottom {
-  display: flex;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  font-size: 0.75rem;
-  color: var(--text-muted);
-}
-
-.footer-attribution {
-  color: var(--text-muted);
-}
-
-.footer-dev-note {
-  margin-top: 0.75rem;
-  font-size: 0.72rem;
-  color: var(--text-muted);
-  opacity: 0.7;
-}
+/* Prod overlay */
+/* (Prod overlay removed in v2.4 — sonda.network now shows the dashboard directly,
+   with the BETA dev-banner at top providing the "still in development" signal.) */
 </style>
 
+
 <script>
-  document.addEventListener('DOMContentLoaded', () => {
-    const hostname = window.location.hostname;
-    if (hostname === 'sonda.network' || hostname === 'www.sonda.network') {
-      const overlay = document.getElementById('prod-overlay');
-      if (overlay) overlay.style.display = 'flex';
+import { fetchSummary, fetchValidators, fetchValidatorsCached, fetchMainnetSummaryCached, bootstrapCluster } from '../lib/data.js';
+import { fmt, pct, flag, fmtTimestamp, hhiRating, giniRating, nakRating, smRating, shannonRating, versionColor } from '../lib/formatters.js';
+import { savePreviousFetch } from '../lib/compare.js';
+
+// ───────── Constants ─────────
+
+const CLIENT_COLORS: Record<string, string> = {
+  'Jito_BAM': '#22d3ee', 'Jito_Labs': '#3b82f6', 'Frankendancer': '#a78bfa',
+  'Harmonic': '#06b6d4', 'FD_Harmonic': '#0891b2', 'Harmonic_Major': '#0e7490',
+  'Firedancer': '#f97316', 'Rakurai': '#eab308', 'Agave': '#6b7280',
+};
+
+const PIE_PALETTE = ['#3b82f6', '#a78bfa', '#22d3ee', '#f97316', '#22c55e', '#eab308', '#ef4444', '#e879f9', '#06b6d4', '#fbbf24', '#8b5cf6', '#10b981'];
+
+// Different palettes per donut type so they don't all look identical at a glance.
+// Stake palette leads with violet+amber+green (matches "asset" feel).
+// RPC palette leads with cyan+blue+orange (matches "endpoint/network" feel).
+const PIE_PALETTE_STAKE = ['#a78bfa', '#fbbf24', '#22c55e', '#3b82f6', '#e879f9', '#10b981', '#f97316', '#06b6d4', '#eab308', '#8b5cf6'];
+const PIE_PALETTE_RPC   = ['#22d3ee', '#3b82f6', '#f97316', '#a78bfa', '#22c55e', '#ef4444', '#fbbf24', '#06b6d4', '#e879f9', '#10b981'];
+
+function pickPalette(kind: 'stake' | 'rpc' | 'default'): string[] {
+  if (kind === 'stake') return PIE_PALETTE_STAKE;
+  if (kind === 'rpc') return PIE_PALETTE_RPC;
+  return PIE_PALETTE;
+}
+
+// ───────── Helpers ─────────
+
+function getClientColor(name: string): string {
+  const base = name.replace(/\s*\(\d+\)\s*$/, '').trim();
+  return CLIENT_COLORS[base] || '#6b7280';
+}
+function cleanClientName(name: string): string {
+  return name.replace(/\s*\(\d+\)\s*$/, '').trim();
+}
+function setText(id: string, val: string) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = val;
+  el.classList.remove('sk-val');
+}
+function setTextColored(id: string, val: string, cls: string) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = val;
+  el.classList.remove('sk-val');
+  el.classList.remove('good', 'warning', 'critical', 'neutral');
+  if (cls) el.classList.add(cls);
+}
+function setPin(id: string, leftPct: number) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.style.left = `${Math.max(0, Math.min(100, leftPct))}%`;
+}
+function escapeHtml(s: any): string {
+  return String(s).replace(/[&<>"']/g, c =>
+    ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c] || c));
+}
+function infoIcon(): string {
+  return `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`;
+}
+
+// ───────── Pulse ─────────
+
+function renderPulse(d: any, records: any[], cluster: string) {
+  const m = d?.metrics || {};
+  const v = m.validators || {};
+  const ch = m.cluster_health || {};
+  const dz = m.doublezero;
+
+  let items: { num: string; label: string }[] = [];
+  if (cluster === 'mainnet-beta') {
+    items = [
+      { num: fmt(v.total), label: 'active validators' },
+      { num: pct(ch.average_stake_weighted_skip_rate, 2), label: 'stake-weighted skip' },
+      { num: dz?.multicast_publishers?.stake_percent != null ? pct(dz.multicast_publishers.stake_percent, 1) : '—', label: 'stake on DZ multicast' },
+      { num: fmt(v.decentralization?.current?.superminority_validator_33?.value), label: 'superminority validators' },
+    ];
+  } else {
+    const active = records.filter(r => !r.delinquent);
+    const delinq = records.length - active.length;
+    const countries = new Set<string>();
+    records.forEach(r => {
+      const cc = r.geolocation?.country_code;
+      if (cc && cc !== '??') countries.add(cc);
+    });
+    items = [
+      { num: fmt(active.length), label: 'active validators' },
+      { num: pct(ch.average_stake_weighted_skip_rate, 2), label: 'stake-weighted skip' },
+      { num: fmt(delinq), label: 'delinquent validators' },
+      { num: fmt(countries.size), label: 'countries' },
+    ];
+  }
+
+  const row = document.getElementById('pulse-row');
+  if (!row) return;
+  const html: string[] = [];
+  items.forEach((item, i) => {
+    if (i > 0) html.push('<div class="pulse-divider"></div>');
+    html.push(`<div class="pulse-item"><div class="pulse-num mono">${escapeHtml(item.num)}</div><div class="pulse-label">${escapeHtml(item.label)}</div></div>`);
+  });
+  row.innerHTML = html.join('');
+}
+
+// ───────── Donut renderer (generic) ─────────
+// Used by: devnet validators-by-stake, RPC summary mini-donut, future donuts.
+// items: { label, value, color? }[]
+function renderDonut(items: { label: string; value: number; color?: string }[], opts: { size?: number; ringR?: number; innerR?: number } = {}): { svg: string; legend: string } {
+  if (items.length === 0) return { svg: '<div style="color:var(--text-muted); font-size:0.78rem;">No data</div>', legend: '' };
+  const total = items.reduce((s, it) => s + it.value, 0) || 1;
+  const size = opts.size ?? 130;
+  const cx = size/2, cy = size/2;
+  const r = opts.ringR ?? 56;
+  const ir = opts.innerR ?? 36;
+  let angle = -Math.PI/2;
+  const segs: string[] = [];
+  const legendItems: string[] = [];
+  items.forEach((it, i) => {
+    const frac = it.value / total;
+    if (frac === 0) return;
+    let pathD: string;
+    if (frac >= 0.999) {
+      pathD = `M ${cx} ${cy - r} A ${r} ${r} 0 1 1 ${cx - 0.001} ${cy - r} L ${cx - 0.001} ${cy - ir} A ${ir} ${ir} 0 1 0 ${cx} ${cy - ir} Z`;
+    } else {
+      const a2 = angle + frac * Math.PI * 2;
+      const x1 = cx + r * Math.cos(angle), y1 = cy + r * Math.sin(angle);
+      const x2 = cx + r * Math.cos(a2), y2 = cy + r * Math.sin(a2);
+      const ix1 = cx + ir * Math.cos(a2), iy1 = cy + ir * Math.sin(a2);
+      const ix2 = cx + ir * Math.cos(angle), iy2 = cy + ir * Math.sin(angle);
+      const large = frac > 0.5 ? 1 : 0;
+      pathD = `M ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} L ${ix1} ${iy1} A ${ir} ${ir} 0 ${large} 0 ${ix2} ${iy2} Z`;
+      angle = a2;
+    }
+    const color = it.color || PIE_PALETTE[i % PIE_PALETTE.length];
+    segs.push(`<path d="${pathD}" fill="${color}"><title>${escapeHtml(it.label)}: ${fmt(it.value)} (${(frac*100).toFixed(1)}%)</title></path>`);
+    legendItems.push(`<div class="donut-legend-item">
+      <span class="donut-legend-dot" style="background:${color}"></span>
+      <span class="donut-legend-label">${it.label}</span>
+      <span class="donut-legend-num">${(frac*100).toFixed(1)}%</span>
+    </div>`);
+  });
+  return {
+    svg: `<svg viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">${segs.join('')}</svg>`,
+    legend: legendItems.join(''),
+  };
+}
+
+// ───────── Nakamoto donut (multi-ring concentric) ─────────
+// n ≤ 10: single ring. n 11-20: 2 rings. n 21-30: 3 rings. n > 30: 3 rings + "+N" label.
+function renderNakDonut(n: number | null, dim: string): string {
+  if (n == null || n < 1) {
+    return `<svg viewBox="0 0 60 60"><circle cx="30" cy="30" r="22" fill="none" stroke="var(--text-muted)" stroke-width="5" opacity="0.2"/></svg>`;
+  }
+  const rating = nakRating(dim, n);
+  const color = rating.cls === 'good' ? 'var(--status-good)'
+              : rating.cls === 'warning' ? 'var(--status-warning)'
+              : rating.cls === 'critical' ? 'var(--status-critical)'
+              : 'var(--text-muted)';
+
+  const size = 60, cx = size/2, cy = size/2;
+  // Determine ring count and per-ring counts
+  const PER_RING = 10;
+  let rings: number[] = []; // segment count for each ring (outer to inner)
+  let extraLabel = '';
+
+  if (n <= PER_RING) {
+    rings = [n];
+  } else if (n <= 2 * PER_RING) {
+    rings = [PER_RING, n - PER_RING];
+  } else if (n <= 3 * PER_RING) {
+    rings = [PER_RING, PER_RING, n - 2 * PER_RING];
+  } else {
+    rings = [PER_RING, PER_RING, PER_RING];
+    extraLabel = `+${n - 3 * PER_RING}`;
+  }
+
+  // n=1 special case
+  if (n === 1) {
+    return `<svg viewBox="0 0 ${size} ${size}">
+      <circle cx="${cx}" cy="${cy}" r="22" fill="none" stroke="var(--bg-primary)" stroke-width="6" opacity="0.25"/>
+      <circle cx="${cx}" cy="${cy}" r="22" fill="none" stroke="${color}" stroke-width="5"/>
+    </svg>`;
+  }
+
+  // Geometry: rings spaced by ~7px radii, stroke ~4px
+  const ringRadii = [22, 15, 8].slice(0, rings.length);
+  const strokeW = 4;
+  const ringEls: string[] = [];
+
+  rings.forEach((segCount, idx) => {
+    const r = ringRadii[idx];
+    const circ = 2 * Math.PI * r;
+    const gap = segCount >= 8 ? 1.6 : 2.5;
+    const segLen = (circ / segCount) - gap;
+
+    if (segLen <= 0) {
+      ringEls.push(`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${color}" stroke-width="${strokeW}"/>`);
+    } else {
+      ringEls.push(`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--bg-primary)" stroke-width="${strokeW + 1}" opacity="0.35"/>`);
+      ringEls.push(`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${color}" stroke-width="${strokeW}"
+        stroke-dasharray="${segLen} ${gap}" transform="rotate(-90 ${cx} ${cy})" stroke-linecap="butt"/>`);
     }
   });
+
+  const labelEl = extraLabel
+    ? `<text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central" font-family="var(--font-mono)" font-size="9" fill="${color}" font-weight="700">${extraLabel}</text>`
+    : '';
+
+  return `<svg viewBox="0 0 ${size} ${size}">${ringEls.join('')}${labelEl}</svg>`;
+}
+
+// ───────── Stories — cluster-aware ─────────
+
+async function renderStories(d: any, records: any[], cluster: string) {
+  const grid = document.getElementById('stories-grid');
+  if (!grid) return;
+
+  if (cluster === 'mainnet-beta') {
+    grid.innerHTML = renderMainnetStories(records, d);
+    setupStackedBarTooltip('.stacked-bar', '#stacked-tooltip-clients');
+  } else if (cluster === 'testnet') {
+    // Render synchronously with placeholder for SFDP linked, then async fill it
+    grid.innerHTML = renderTestnetDevnetStories(records, d, 'testnet', /* sfdpPlaceholder */ true);
+    setupStackedBarTooltip('.stacked-bar', '#stacked-tooltip-versions');
+    // Fill SFDP linked card with cross-cluster lookup
+    renderTestnetSfdpLinkedCard(records).catch(e => console.warn('[SONDA] SFDP cross-cluster:', e));
+  } else {
+    grid.innerHTML = renderTestnetDevnetStories(records, d, 'devnet', false);
+    setupStackedBarTooltip('.stacked-bar', '#stacked-tooltip-versions');
+  }
+}
+
+function renderMainnetStories(records: any[], d: any): string {
+  const m = d?.metrics || {};
+  const dz = m.doublezero;
+  const dzInfo = dz?.multicast_publishers || {};
+  const mcCount = dzInfo.total ?? 0;
+  const mcStake = dzInfo.stake_percent ?? 0;
+
+  const dzConnected = records.filter(r => r?.dz_connected);
+  const ibrlMc = dzConnected.filter(r => r?.dz_connection_type === 'ibrl+multicast').length;
+  const mcOnly = dzConnected.filter(r => r?.dz_connection_type === 'multicast').length;
+  const ibrlOnly = dzConnected.filter(r => r?.dz_connection_type === 'ibrl').length;
+  const dzTotal = Math.max(1, dzConnected.length);
+
+  // Matrix — active only
+  const active = records.filter(r => !r.delinquent);
+  let both = 0, bam = 0, dz_only = 0, neither = 0;
+  for (const r of active) {
+    const hb = !!r.bam_node, hd = !!r.dz_connected;
+    if (hb && hd) both++;
+    else if (hb) bam++;
+    else if (hd) dz_only++;
+    else neither++;
+  }
+
+  // SFDP
+  const sfdp = records.filter(r => r?.sfdp_state === 'Approved');
+  const approved = sfdp.length;
+  const dzCount = sfdp.filter(r => r.dz_connected).length;
+  const bamCount = sfdp.filter(r => r.bam_node).length;
+  const sfdpMc = sfdp.filter(r => r.dz_multicast_publisher).length;
+  const sfdpCountries = new Set<string>();
+  const sfdpAsns = new Set<string>();
+  for (const r of sfdp) {
+    const geo = r.geolocation || {};
+    if (geo.country_code && geo.country_code !== '??') sfdpCountries.add(geo.country_code);
+    if (geo.asn_name && geo.asn_name !== 'Unknown') sfdpAsns.add(geo.asn_name);
+  }
+  const retired = records.filter(r => r?.sfdp_state === 'Retired').length;
+  const onboarded = records.filter(r => r?.sfdp_state === 'TestnetOnboarded').length;
+  const rejected = records.filter(r => r?.sfdp_state === 'Rejected').length;
+
+  // Client distribution (stacked bar)
+  const clientCounts: Record<string, number> = {};
+  let totalClient = 0;
+  for (const r of records) {
+    if (!r?.client_type) continue;
+    const name = cleanClientName(r.client_type);
+    clientCounts[name] = (clientCounts[name] || 0) + 1;
+    totalClient++;
+  }
+  const sortedClients = Object.entries(clientCounts).sort((a, b) => b[1] - a[1]);
+  const clientSegments = sortedClients.map(([name, count]) => {
+    const w = (count / totalClient) * 100;
+    const color = getClientColor(name);
+    const showLabel = w >= 8;
+    return `<div class="stacked-segment" data-seg-name="${escapeHtml(name)}" data-seg-count="${count}" data-seg-pct="${w.toFixed(1)}" style="width:${w}%; background:${color};">${showLabel ? `${w.toFixed(0)}%` : ''}</div>`;
+  }).join('');
+  const clientLegend = sortedClients.map(([name, count]) => {
+    const w = (count / totalClient) * 100;
+    const color = getClientColor(name);
+    return `<span class="stacked-legend-item">
+      <span class="stacked-legend-dot" style="background:${color};"></span>
+      <span class="stacked-legend-name">${escapeHtml(name)}</span>
+      <span class="stacked-legend-stat">${count} · ${w.toFixed(1)}%</span>
+    </span>`;
+  }).join('');
+
+  return `
+    <!-- DZ multicast -->
+    <div class="story story-dz tint-dz">
+      <div class="story-header">
+        <span class="story-tag dz-tag">DoubleZero</span>
+        <span class="tooltip-wrap">
+          <span class="tooltip-icon" aria-label="info">${infoIcon()}</span>
+          <span class="tooltip-box">Multicast lets a validator broadcast new block fragments (shreds) to many peers at once over DoubleZero's private fiber. Faster propagation, less wasted bandwidth.</span>
+        </span>
+      </div>
+      <div class="story-title">Validators broadcasting shreds via multicast</div>
+      <div class="story-big mono violet">${fmt(mcCount)}</div>
+      <div class="story-sub">${pct(mcStake, 1)} of network stake</div>
+      <div class="bar-rows-wrap with-divider">
+        <div class="bar-row">
+          <span class="bar-row-label" title="ibrl + multicast">ibrl + multicast</span>
+          <div class="bar-row-track"><div class="bar-row-fill violet" style="width:${(ibrlMc/dzTotal*100)}%"></div></div>
+          <span class="bar-row-num">${fmt(ibrlMc)}</span>
+        </div>
+        <div class="bar-row">
+          <span class="bar-row-label" title="multicast only">multicast only</span>
+          <div class="bar-row-track"><div class="bar-row-fill violet" style="width:${(mcOnly/dzTotal*100)}%"></div></div>
+          <span class="bar-row-num">${fmt(mcOnly)}</span>
+        </div>
+        <div class="bar-row">
+          <span class="bar-row-label" title="ibrl only (not publishing)">ibrl only (not publishing)</span>
+          <div class="bar-row-track"><div class="bar-row-fill violet-dim" style="width:${(ibrlOnly/dzTotal*100)}%"></div></div>
+          <span class="bar-row-num">${fmt(ibrlOnly)}</span>
+        </div>
+      </div>
+      <a href="/endpoints" data-stub class="story-link">DoubleZero infrastructure →</a>
+    </div>
+
+    <!-- Coverage matrix -->
+    <div class="story tint-both">
+      <div class="story-header">
+        <span class="story-tag both-tag">Coverage Matrix</span>
+        <span class="tooltip-wrap">
+          <span class="tooltip-icon" aria-label="info">${infoIcon()}</span>
+          <span class="tooltip-box">Active validators grouped by Jito BAM and DoubleZero adoption. Both together is the cutting-edge configuration. Counts active validators only.</span>
+        </span>
+      </div>
+      <div class="story-title">BAM × DoubleZero adoption</div>
+      <div class="matrix-grid">
+        <div class="matrix-cell" data-cell="both"><div class="matrix-num mono">${fmt(both)}</div><div class="matrix-cell-label">Both</div></div>
+        <div class="matrix-cell" data-cell="bam"><div class="matrix-num mono">${fmt(bam)}</div><div class="matrix-cell-label">BAM only</div></div>
+        <div class="matrix-cell" data-cell="dz"><div class="matrix-num mono">${fmt(dz_only)}</div><div class="matrix-cell-label">DZ only</div></div>
+        <div class="matrix-cell" data-cell="neither"><div class="matrix-num mono">${fmt(neither)}</div><div class="matrix-cell-label">Neither</div></div>
+      </div>
+      <a href="/validators" data-stub class="story-link">View all validators →</a>
+    </div>
+
+    <!-- Software (clients) -->
+    <div class="story">
+      <div class="story-header">
+        <span class="story-tag neutral-tag">Software</span>
+        <span class="tooltip-wrap">
+          <span class="tooltip-icon" aria-label="info">${infoIcon()}</span>
+          <span class="tooltip-box">Most validator clients are based on Agave (originally Solana Labs, now maintained by Anza). Jito, BAM, Frankendancer, Rakurai, and Harmonic are forks adding specific features. Firedancer is the only fully independent implementation, by Jump Crypto.</span>
+        </span>
+      </div>
+      <div class="story-title">Validator client distribution</div>
+      <div class="stacked-bar"><div class="stacked-bar-inner">${clientSegments}</div><div class="stacked-tooltip" id="stacked-tooltip-clients"></div></div>
+      <div class="stacked-legend">${clientLegend}</div>
+    </div>
+
+    <!-- SFDP -->
+    <div class="story tint-sfdp">
+      <div class="story-header">
+        <span class="story-tag sfdp-tag">SFDP</span>
+        <span class="tooltip-wrap">
+          <span class="tooltip-icon" aria-label="info">${infoIcon()}</span>
+          <span class="tooltip-box">Solana Foundation Delegation Program. Validators in Approved status receive delegation from the Foundation. The TestnetOnboarded queue is now closed but some who completed it are still active on mainnet.</span>
+        </span>
+      </div>
+      <div class="story-title">Foundation delegation state</div>
+      <div class="sfdp-grid">
+        <div class="sfdp-item">
+          <div class="sfdp-num mono">${fmt(approved)}</div>
+          <div class="sfdp-sub">approved validators</div>
+        </div>
+        <div class="sfdp-geo">across <span class="sfdp-geo-num">${fmt(sfdpCountries.size)}</span> countries and <span class="sfdp-geo-num">${fmt(sfdpAsns.size)}</span> network providers</div>
+        <div class="sfdp-overlap">
+          <div class="sfdp-overlap-row"><span class="sfdp-overlap-label">DoubleZero connected</span><span class="sfdp-overlap-val violet">${fmt(dzCount)} / ${fmt(approved)}</span></div>
+          <div class="sfdp-overlap-row"><span class="sfdp-overlap-label">Multicast publishers</span><span class="sfdp-overlap-val violet">${fmt(sfdpMc)} / ${fmt(approved)}</span></div>
+          <div class="sfdp-overlap-row"><span class="sfdp-overlap-label">Jito BAM</span><span class="sfdp-overlap-val cyan">${fmt(bamCount)} / ${fmt(approved)}</span></div>
+        </div>
+        <div class="sfdp-other">Other: ${retired} retired · ${onboarded} from former testnet queue · ${rejected} rejected</div>
+      </div>
+    </div>
+  `;
+}
+
+// ───────── Performance brackets (Variant D) ─────────
+// Top: ≥97% of max credits | Mid: 65–97% | Lagging: <65%
+function computePerformanceBrackets(records: any[]) {
+  const active = records.filter(r => !r.delinquent);
+  const credits = active.map(r => r.epoch_credits || 0).filter(c => c > 0);
+  if (credits.length === 0) return { top: 0, mid: 0, lagging: 0, max: 0, total: active.length, delinq: records.length - active.length };
+  const max = Math.max(...credits);
+  let top = 0, mid = 0, lagging = 0;
+  for (const c of credits) {
+    const ratio = c / max;
+    if (ratio >= 0.97) top++;
+    else if (ratio >= 0.65) mid++;
+    else lagging++;
+  }
+  return { top, mid, lagging, max, total: active.length, delinq: records.length - active.length };
+}
+
+function renderTestnetDevnetStories(records: any[], d: any, cluster: 'testnet' | 'devnet', sfdpPlaceholder: boolean): string {
+  const overall = d?.metrics?.overall || {};
+  const totalNodes = (overall.total ?? 0) - (d?.record_counts?.['unknown-node'] ?? 0);
+  const activeValidators = d?.metrics?.validators?.total ?? records.filter(r => !r.delinquent).length;
+  const activeRpcs = d?.metrics?.rpc?.total ?? 0;
+
+  const perf = computePerformanceBrackets(records);
+  const perfTotal = perf.top + perf.mid + perf.lagging;
+  const perfTopW = perfTotal ? (perf.top / perfTotal) * 100 : 0;
+  const perfMidW = perfTotal ? (perf.mid / perfTotal) * 100 : 0;
+  const perfLagW = perfTotal ? (perf.lagging / perfTotal) * 100 : 0;
+
+  // Software versions — use cluster_health.stake_by_version for full picture (count + stake share).
+  // Bar segments are sized by validator count (more informative on testnet/devnet where stake is artificial),
+  // but legend shows stake share too — important context (one version may dominate stake while others test fixes).
+  const sbv = d?.metrics?.cluster_health?.stake_by_version || {};
+  const totalActiveStake = d?.metrics?.cluster_health?.total_active_stake || 0;
+  const versionRows = Object.entries(sbv).map(([v, info]: [string, any]) => ({
+    version: v,
+    current: info.currentValidators || 0,
+    stake: info.currentActiveStake || 0,
+  })).filter(r => r.current > 0).sort((a, b) => b.current - a.current);
+
+  // Fallback to record-based counting if cluster_health not available
+  const versionsForRender = versionRows.length > 0 ? versionRows : (() => {
+    const counts: Record<string, number> = {};
+    records.forEach(r => { const v = r.version || 'unknown'; counts[v] = (counts[v] || 0) + 1; });
+    return Object.entries(counts).sort((a, b) => b[1] - a[1])
+      .map(([version, current]) => ({ version, current, stake: 0 }));
+  })();
+
+  const totalVer = versionsForRender.reduce((s, r) => s + r.current, 0) || 1;
+  const versionSegments = versionsForRender.map(r => {
+    const w = (r.current / totalVer) * 100;
+    const color = versionColor(r.version);
+    const showLabel = w >= 10;
+    const stakePct = totalActiveStake ? (r.stake / totalActiveStake) * 100 : 0;
+    return `<div class="stacked-segment" data-seg-name="${escapeHtml(r.version)}" data-seg-count="${r.current}" data-seg-pct="${w.toFixed(1)}" data-seg-stake="${stakePct.toFixed(2)}" style="width:${w}%; background:${color};">${showLabel ? `${w.toFixed(0)}%` : ''}</div>`;
+  }).join('');
+  const versionLegend = versionsForRender.slice(0, 8).map(r => {
+    const w = (r.current / totalVer) * 100;
+    const color = versionColor(r.version);
+    const stakePct = totalActiveStake ? (r.stake / totalActiveStake) * 100 : 0;
+    // Legend: 2 numbers (count + stake%). The bar already shows count-share visually,
+    // and stake% reveals dominance — e.g. one version may run on a few validators
+    // but hold most of the stake. Tooltip on hover keeps all three.
+    const secondary = totalActiveStake ? `${stakePct.toFixed(1)}% stake` : `${w.toFixed(1)}%`;
+    return `<span class="stacked-legend-item">
+      <span class="stacked-legend-dot" style="background:${color};"></span>
+      <span class="stacked-legend-name">${escapeHtml(r.version)}</span>
+      <span class="stacked-legend-stat">${r.current} · ${secondary}</span>
+    </span>`;
+  }).join('');
+
+  const whatIsTitle = cluster === 'testnet' ? 'What is testnet?' : 'What is devnet?';
+  const whatIsText = cluster === 'testnet'
+    ? 'Solana testnet is where new client releases get stress-tested before reaching mainnet. SFDP-approved validators are required to run a testnet node alongside their mainnet one. Stake here has no real economic value.'
+    : 'Solana devnet is a sandbox for application developers. It runs the same protocol as mainnet but with simulated activity and no real value. Network resets and chain forks are possible. Validators here support the developer ecosystem.';
+
+  // 4th card content depends on cluster
+  let fourthCard: string;
+  if (cluster === 'testnet') {
+    fourthCard = sfdpPlaceholder
+      ? `<div class="story tint-sfdp" id="testnet-sfdp-card">
+           <div class="story-header">
+             <span class="story-tag sfdp-tag">SFDP linked</span>
+             <span class="tooltip-wrap">
+               <span class="tooltip-icon" aria-label="info">${infoIcon()}</span>
+               <span class="tooltip-box">Cross-cluster lookup. Maps testnet validators to mainnet SFDP identities through the testnet_pubkey field.</span>
+             </span>
+           </div>
+           <div class="story-title">Testnet validators linked to SFDP mainnet identities</div>
+           <div class="sfdp-linked-content">
+             <div class="sk-line" style="width:60%; height:32px"></div>
+             <div class="sk-line" style="width:80%"></div>
+             <div class="sk-line" style="width:70%"></div>
+           </div>
+         </div>`
+      : '';
+  } else {
+    // Devnet — Validators by stake donut (top 7 + Other)
+    const valsSorted = [...records].sort((a, b) => (b.activated_stake_lamports || 0) - (a.activated_stake_lamports || 0));
+    const TOP_N = 7;
+    const top = valsSorted.slice(0, TOP_N);
+    const rest = valsSorted.slice(TOP_N);
+    const totalLamports = valsSorted.reduce((s, v) => s + (v.activated_stake_lamports || 0), 0) || 1;
+    const items: { label: string; value: number; color?: string }[] = top.map((v, i) => ({
+      // Names if present, otherwise 10-char pubkey prefix (was 6, too aggressive)
+      label: v.name || (v.identity_pubkey ? v.identity_pubkey.slice(0, 10) + '…' : 'Unknown'),
+      value: v.activated_stake_lamports || 0,
+      color: pickPalette('stake')[i % pickPalette('stake').length],
+    }));
+    if (rest.length > 0) {
+      const otherStake = rest.reduce((s, v) => s + (v.activated_stake_lamports || 0), 0);
+      items.push({ label: `Other (${rest.length})`, value: otherStake, color: 'var(--text-muted)' });
+    }
+    const donut = renderDonut(items);
+    fourthCard = `<div class="story tint-cluster">
+      <div class="story-header">
+        <span class="story-tag cluster-tag">Stake distribution</span>
+        <span class="tooltip-wrap">
+          <span class="tooltip-icon" aria-label="info">${infoIcon()}</span>
+          <span class="tooltip-box">Stake share by validator. Top ${TOP_N} are shown individually, the rest aggregated as Other.</span>
+        </span>
+      </div>
+      <div class="story-title">Validators by stake</div>
+      <div class="donut-wrap">
+        <div class="donut-svg">${donut.svg}</div>
+        <div class="donut-legend-2col">${donut.legend}</div>
+      </div>
+    </div>`;
+  }
+
+  return `
+    <!-- What is -->
+    <div class="story tint-cluster">
+      <div class="story-header">
+        <span class="story-tag cluster-tag">About</span>
+      </div>
+      <div class="story-title">${whatIsTitle}</div>
+      <p class="whatis-text">${whatIsText}</p>
+      <div class="whatis-stat-row">
+        <div class="whatis-stat"><div class="whatis-stat-num mono">${fmt(totalNodes)}</div><div class="whatis-stat-label">total nodes</div></div>
+        <div class="whatis-stat"><div class="whatis-stat-num mono">${fmt(activeValidators)}</div><div class="whatis-stat-label">active validators</div></div>
+        <div class="whatis-stat"><div class="whatis-stat-num mono">${fmt(activeRpcs)}</div><div class="whatis-stat-label">public RPCs</div></div>
+      </div>
+    </div>
+
+    <!-- Performance (Variant D — brackets) -->
+    <div class="story">
+      <div class="story-header">
+        <span class="story-tag cluster-tag">Performance</span>
+        <span class="tooltip-wrap">
+          <span class="tooltip-icon" aria-label="info">${infoIcon()}</span>
+          <span class="tooltip-box">Validators bracketed by epoch credits earned, relative to the cluster maximum. Top: at least 97% of the leader. Mid: 65–97%. Lagging: under 65%. Delinquent: not voting.</span>
+        </span>
+      </div>
+      <div class="story-title">Network performance</div>
+      <div class="perf-grid">
+        <div class="perf-tile"><div class="perf-tile-num good">${fmt(perf.top)}</div><div class="perf-tile-label">top performers</div></div>
+        <div class="perf-tile"><div class="perf-tile-num neutral">${fmt(perf.mid)}</div><div class="perf-tile-label">mid</div></div>
+        <div class="perf-tile"><div class="perf-tile-num crit">${fmt(perf.lagging)}</div><div class="perf-tile-label">lagging</div></div>
+        <div class="perf-tile"><div class="perf-tile-num muted">${fmt(perf.delinq)}</div><div class="perf-tile-label">delinquent</div></div>
+      </div>
+      <div class="perf-bar">
+        <div class="perf-bar-seg good" style="width:${perfTopW}%"></div>
+        <div class="perf-bar-seg neutral" style="width:${perfMidW}%"></div>
+        <div class="perf-bar-seg crit" style="width:${perfLagW}%"></div>
+      </div>
+      <div class="perf-bar-legend">
+        <span><span class="perf-bar-legend-dot" style="background:var(--status-good)"></span>≥97% of max</span>
+        <span><span class="perf-bar-legend-dot" style="background:var(--text-muted); opacity:0.6"></span>65–97%</span>
+        <span><span class="perf-bar-legend-dot" style="background:var(--status-critical)"></span>&lt;65%</span>
+      </div>
+    </div>
+
+    <!-- Software (versions stacked bar) -->
+    <div class="story">
+      <div class="story-header">
+        <span class="story-tag neutral-tag">Software</span>
+        <span class="tooltip-wrap">
+          <span class="tooltip-icon" aria-label="info">${infoIcon()}</span>
+          <span class="tooltip-box">${cluster === 'testnet' ? 'Validator versions on testnet. Variety here is expected — testnet is where new releases get tested.' : 'Validator versions on devnet. Often runs the most recent betas, release candidates, or experimental builds.'}</span>
+        </span>
+      </div>
+      <div class="story-title">Validator versions</div>
+      <div class="stacked-bar"><div class="stacked-bar-inner">${versionSegments}</div><div class="stacked-tooltip" id="stacked-tooltip-versions"></div></div>
+      <div class="stacked-legend">${versionLegend}</div>
+    </div>
+
+    ${fourthCard}
+  `;
+}
+
+// ───────── SFDP linked card (testnet, async cross-cluster) ─────────
+
+async function renderTestnetSfdpLinkedCard(testnetRecords: any[]) {
+  const card = document.getElementById('testnet-sfdp-card');
+  if (!card) return;
+
+  let mainnetData: any;
+  try {
+    mainnetData = await fetchValidatorsCached('mainnet-beta');
+  } catch (e) {
+    card.innerHTML = `<div class="story-header"><span class="story-tag sfdp-tag">SFDP linked</span></div>
+      <div class="story-title">Testnet validators linked to SFDP mainnet identities</div>
+      <div class="whatis-text" style="color:var(--text-muted);">Could not load mainnet data for cross-cluster lookup.</div>`;
+    return;
+  }
+
+  const mainnetRecords = (mainnetData?.records || []).filter((r: any) => r != null);
+  const testnetPubkeyToMain = new Map<string, any>();
+  for (const m of mainnetRecords) {
+    if (m.testnet_pubkey && m.sfdp_state) {
+      testnetPubkeyToMain.set(m.testnet_pubkey, m);
+    }
+  }
+
+  const linkedPairs: { testnet: any; mainnet: any }[] = [];
+  for (const t of testnetRecords) {
+    const main = testnetPubkeyToMain.get(t.identity_pubkey);
+    if (main) linkedPairs.push({ testnet: t, mainnet: main });
+  }
+
+  if (linkedPairs.length === 0) {
+    card.innerHTML = `<div class="story-header"><span class="story-tag sfdp-tag">SFDP linked</span></div>
+      <div class="story-title">Testnet validators linked to SFDP mainnet identities</div>
+      <div class="whatis-text" style="color:var(--text-muted);">No cross-cluster matches found.</div>`;
+    return;
+  }
+
+  const linkedCount = linkedPairs.length;
+  const approvedLinked = linkedPairs.filter(p => p.mainnet.sfdp_state === 'Approved').length;
+
+  const countries = new Set<string>();
+  const asns = new Set<string>();
+  for (const { testnet } of linkedPairs) {
+    const geo = testnet.geolocation || {};
+    if (geo.country_code && geo.country_code !== '??') countries.add(geo.country_code);
+    if (geo.asn_name && geo.asn_name !== 'Unknown') asns.add(geo.asn_name);
+  }
+
+  const stateCounts: Record<string, number> = {};
+  for (const { mainnet } of linkedPairs) {
+    const s = mainnet.sfdp_state || 'Unknown';
+    stateCounts[s] = (stateCounts[s] || 0) + 1;
+  }
+  const stateOrder = ['Approved', 'TestnetOnboarded', 'Retired', 'Rejected', 'Unknown'];
+  const stateLabels: Record<string, string> = {
+    'Approved': 'Approved on mainnet',
+    'TestnetOnboarded': 'Former testnet queue',
+    'Retired': 'Retired on mainnet',
+    'Rejected': 'Rejected on mainnet',
+    'Unknown': 'Unknown',
+  };
+  const stateClass: Record<string, string> = {
+    'Approved': 'good', 'TestnetOnboarded': 'info', 'Retired': 'muted', 'Rejected': 'crit', 'Unknown': 'muted',
+  };
+
+  const statesHtml = stateOrder.filter(s => stateCounts[s]).map(s => {
+    const c = stateCounts[s];
+    const w = (c / linkedCount) * 100;
+    return `<div class="bar-row">
+      <span class="bar-row-label" title="${escapeHtml(stateLabels[s])}">${escapeHtml(stateLabels[s])}</span>
+      <div class="bar-row-track"><div class="bar-row-fill ${stateClass[s]}" style="width:${w}%"></div></div>
+      <span class="bar-row-num">${c}</span>
+    </div>`;
+  }).join('');
+
+  card.innerHTML = `
+    <div class="story-header">
+      <span class="story-tag sfdp-tag">SFDP linked</span>
+      <span class="tooltip-wrap">
+        <span class="tooltip-icon" aria-label="info">${infoIcon()}</span>
+        <span class="tooltip-box">Cross-cluster lookup: testnet validators whose identity_pubkey matches the testnet_pubkey field on a mainnet SFDP record. The mainnet sfdp_state shows where each one currently stands.</span>
+      </span>
+    </div>
+    <div class="story-title">Testnet validators linked to mainnet SFDP identities</div>
+    <div class="sfdp-linked-content">
+      <div style="display:flex; align-items:baseline; gap:0.6rem;">
+        <span class="sfdp-linked-num mono">${fmt(approvedLinked)}</span>
+        <span class="sfdp-sub">approved on mainnet, also active on testnet</span>
+      </div>
+      <div class="sfdp-geo">across <span class="sfdp-geo-num">${fmt(countries.size)}</span> countries and <span class="sfdp-geo-num">${fmt(asns.size)}</span> network providers</div>
+      <div class="sfdp-linked-states">${statesHtml}</div>
+      <div class="sfdp-other">${linkedCount} total linked · ${approvedLinked} currently in good standing</div>
+    </div>
+  `;
+}
+
+// ───────── Stacked bar tooltip setup ─────────
+
+function setupStackedBarTooltip(barSelector: string, tooltipSelector: string) {
+  const bar = document.querySelector(barSelector);
+  const tooltip = document.querySelector(tooltipSelector) as HTMLElement | null;
+  if (!bar || !tooltip) return;
+
+  const segments = bar.querySelectorAll('.stacked-segment');
+  segments.forEach(seg => {
+    seg.addEventListener('mouseenter', (e) => {
+      const el = e.currentTarget as HTMLElement;
+      const name = el.dataset.segName || '';
+      const count = el.dataset.segCount || '';
+      const pctV = el.dataset.segPct || '';
+      const stakeV = el.dataset.segStake;
+      const stakeStr = (stakeV && parseFloat(stakeV) > 0) ? ` · ${stakeV}% stake` : '';
+      tooltip.innerHTML = `<strong>${escapeHtml(name)}</strong> · ${count} (${pctV}%)${stakeStr}`;
+      tooltip.classList.add('show');
+      const segRect = el.getBoundingClientRect();
+      const barRect = (bar as HTMLElement).getBoundingClientRect();
+      const left = segRect.left - barRect.left + segRect.width / 2;
+      tooltip.style.left = `${left}px`;
+    });
+    seg.addEventListener('mouseleave', () => {
+      tooltip.classList.remove('show');
+    });
+  });
+}
+
+// ───────── INFRA ─────────
+
+function renderInfra(d: any) {
+  const ep = d?.metrics?.endpoints || {};
+  const dz = d?.metrics?.doublezero;
+  const bam = d?.metrics?.bam;
+  const grid = document.getElementById('infra-grid');
+  if (!grid) return;
+
+  const cards: any[] = [];
+
+  if (bam && bam.node_count != null) {
+    cards.push({ name: 'Jito BAM', main: `${fmt(bam.node_count)} nodes`,
+      sub: `${fmt(bam.total_connected_validators ?? 0)} validators · ${pct(bam.stake_percentage, 1)} stake`,
+      status: 'ok', cls: 'healthy' });
+  } else {
+    cards.push({ name: 'Jito BAM', main: '—', sub: 'not deployed on this cluster', status: 'neutral', cls: 'absent' });
+  }
+
+  if (ep.jito && ep.jito.total != null) {
+    const e = ep.jito;
+    const status = e.unreachable > 0 ? (e.unreachable >= 3 ? 'bad' : 'warn') : 'ok';
+    const cls = e.unreachable > 0 ? (e.unreachable >= 3 ? 'down' : 'degraded') : 'healthy';
+    cards.push({ name: 'Jito Endpoints', main: `${fmt(e.reachable)} / ${fmt(e.total)}`,
+      sub: `${fmt(e.unreachable ?? 0)} down · ${fmt(e.unverifiable ?? 0)} unverified`, status, cls });
+  } else {
+    cards.push({ name: 'Jito Endpoints', main: '—', sub: 'no data', status: 'neutral', cls: 'absent' });
+  }
+
+  if (ep.solana && ep.solana.total != null) {
+    const e = ep.solana;
+    cards.push({ name: 'Solana RPC', main: `${fmt(e.reachable)} / ${fmt(e.total)}`,
+      sub: e.unreachable === 0 ? 'all operational' : `${fmt(e.unreachable)} down`,
+      status: e.unreachable > 0 ? 'bad' : 'ok', cls: e.unreachable > 0 ? 'down' : 'healthy' });
+  } else {
+    cards.push({ name: 'Solana RPC', main: '—', sub: 'no data', status: 'neutral', cls: 'absent' });
+  }
+
+  if (ep.harmonic && ep.harmonic.total != null) {
+    const e = ep.harmonic;
+    cards.push({ name: 'Harmonic', main: `${fmt(e.reachable)} / ${fmt(e.total)}`,
+      sub: `${fmt(e.unverifiable ?? 0)} unverified`, status: e.unreachable > 0 ? 'warn' : 'ok', cls: 'healthy' });
+  } else {
+    cards.push({ name: 'Harmonic', main: '—', sub: 'not deployed on this cluster', status: 'neutral', cls: 'absent' });
+  }
+
+  grid.innerHTML = cards.map(c => `
+    <div class="infra-card ${c.cls}">
+      <div class="infra-card-head"><span class="infra-card-name">${escapeHtml(c.name)}</span><span class="infra-card-status-dot ${c.status}"></span></div>
+      <div class="infra-card-main">${c.main}</div>
+      <div class="infra-card-sub">${escapeHtml(c.sub)}</div>
+    </div>`).join('');
+
+  // DZ summary line
+  const dzCard = document.getElementById('dz-summary-card');
+  if (!dz || !dz.network_health) {
+    if (dzCard) dzCard.classList.add('absent');
+    setText('dz-summary-stats', 'not deployed on this cluster');
+    const issuesEl = document.getElementById('dz-issues');
+    if (issuesEl) issuesEl.innerHTML = '';
+  } else {
+    if (dzCard) dzCard.classList.remove('absent');
+    const nh = dz.network_health;
+    setText('dz-summary-stats', `${fmt(nh.devices_reporting)}/${fmt(nh.devices_total)} devices · ${fmt(nh.links_healthy)}/${fmt(nh.links_total)} links healthy`);
+    const issuesEl = document.getElementById('dz-issues');
+    if (issuesEl) {
+      const linkIssues = nh.link_issues || [];
+      const devIssues = nh.devices_issues || [];
+      const items: string[] = [];
+      for (const i of linkIssues) {
+        const cls = i.quality === 'unavailable' ? 'bad' : '';
+        items.push(`<span class="dz-issue ${cls}">${escapeHtml(i.source_target)}: ${escapeHtml(i.quality)}${i.packet_loss ? ` (${i.packet_loss}% loss)` : ''}</span>`);
+      }
+      for (const i of devIssues) {
+        items.push(`<span class="dz-issue">${escapeHtml(i.device_id)} (${escapeHtml(i.location)}): ${escapeHtml(i.status)}</span>`);
+      }
+      issuesEl.innerHTML = items.length > 0 ? items.join('') : '<span class="dz-issue ok">All systems operational</span>';
+    }
+  }
+}
+
+// ───────── RPC summary line ─────────
+
+function renderRpcSummary(d: any) {
+  const rpc = d?.metrics?.rpc;
+  const sol = d?.metrics?.endpoints?.solana;
+  const card = document.getElementById('rpc-summary-card');
+  if (!card) return;
+
+  if (!rpc || rpc.total == null) {
+    card.classList.add('absent');
+    setText('rpc-summary-stats', 'no public RPC data on this cluster');
+    const sr = document.getElementById('rpc-stats-row');
+    if (sr) sr.innerHTML = '';
+    const dw = document.getElementById('rpc-donut-wrap');
+    if (dw) dw.innerHTML = '';
+    return;
+  }
+
+  card.classList.remove('absent');
+
+  const total = rpc.total;
+  const officialReachable = sol?.reachable ?? 0;
+  const officialTotal = sol?.total ?? 0;
+  const countries = Object.keys(rpc.country_distribution || {}).length;
+  const cities = Object.keys(rpc.city_distribution || {}).length;
+  const uniqueAsns = Object.keys(rpc.asn_distribution || {}).length;
+
+  setText('rpc-summary-stats', `${fmt(total)} public RPCs · ${fmt(officialReachable)}/${fmt(officialTotal)} official endpoints reachable`);
+
+  const statsRow = document.getElementById('rpc-stats-row');
+  if (statsRow) {
+    statsRow.innerHTML = `
+      <span class="rpc-stat-item"><span class="rpc-stat-val mono">${fmt(countries)}</span> countries</span>
+      <span class="rpc-stat-item"><span class="rpc-stat-val mono">${fmt(cities)}</span> cities</span>
+      <span class="rpc-stat-item"><span class="rpc-stat-val mono">${fmt(uniqueAsns)}</span> network providers</span>
+    `;
+  }
+
+  // Mini donut: top 5 ASNs + Other
+  const asnEntries = Object.entries(rpc.asn_distribution || {})
+    .sort((a, b) => (b[1] as number) - (a[1] as number));
+  const TOP = 5;
+  const top = asnEntries.slice(0, TOP);
+  const rest = asnEntries.slice(TOP);
+  const items: { label: string; value: number; color?: string }[] = top.map(([asn, c], i) => ({
+    label: asn, value: c as number, color: pickPalette('rpc')[i % pickPalette('rpc').length],
+  }));
+  if (rest.length > 0) {
+    const otherTotal = rest.reduce((s, [, c]) => s + (c as number), 0);
+    items.push({ label: `Other (${rest.length})`, value: otherTotal, color: 'var(--text-muted)' });
+  }
+  const donut = renderDonut(items, { size: 80, ringR: 34, innerR: 22 });
+
+  const wrap = document.getElementById('rpc-donut-wrap');
+  if (wrap) {
+    wrap.innerHTML = `
+      <div class="rpc-donut-mini">${donut.svg}</div>
+      <div class="rpc-donut-legend">${donut.legend}</div>
+    `;
+  }
+}
+
+// ───────── Path to decentralization ─────────
+
+function renderPath(d: any) {
+  const v = d?.metrics?.validators || {};
+  const stakeByAsn = v.stake_by_asn || {};
+  const stakeByCountry = v.stake_by_country || {};
+  const stakeByCity = v.stake_by_city || {};
+
+  const list = document.getElementById('path-list');
+  if (!list) return;
+
+  if (Object.keys(stakeByAsn).length === 0) {
+    list.innerHTML = '<div class="path-item"><div class="path-explainer" style="color:var(--text-muted);">No distribution data available for this cluster.</div></div>';
+    return;
+  }
+
+  const topAsnEntries = Object.entries(stakeByAsn).filter(([k]) => k !== 'OFFLINE').sort((a, b) => (b[1] as number) - (a[1] as number));
+  const topAsn = topAsnEntries[0];
+  const topAsnName = topAsn ? topAsn[0] : '--';
+  const topAsnPct = topAsn ? Number(topAsn[1]) : 0;
+
+  const topCountries = Object.entries(stakeByCountry).filter(([k]) => k !== 'OFFLINE').sort((a, b) => (b[1] as number) - (a[1] as number)).slice(0, 3);
+  const top3CountryPct = topCountries.reduce((acc, [, val]) => acc + Number(val), 0);
+  const top3CountryNames = topCountries.map(([cc]) => cc).join(' + ');
+
+  const topCities = Object.entries(stakeByCity).filter(([k]) => k !== 'OFFLINE').sort((a, b) => (b[1] as number) - (a[1] as number)).slice(0, 2);
+  const top2CityPct = topCities.reduce((acc, [, val]) => acc + Number(val), 0);
+  const top2CityNames = topCities.map(([c]) => c.split(',')[0]).join(' + ');
+
+  const items = [
+    {
+      name: `${topAsnName} concentration`, current: topAsnPct, target: 25,
+      severity: topAsnPct > 25 ? 'crit' : topAsnPct > 15 ? 'warn' : 'good',
+      explainer: topAsnPct > 25
+        ? `${(topAsnPct - 25).toFixed(1)}% of network stake would need to migrate from ${topAsnName} to other providers.`
+        : `Within healthy threshold. To stay safe as the network grows, keep ASN concentration below 25%.`,
+      target_label: 'SFDP threshold (May 2026): under 25%',
+    },
+    {
+      name: `Top 3 countries combined`, current: top3CountryPct, target: 50,
+      severity: top3CountryPct > 50 ? 'warn' : 'good',
+      explainer: top3CountryPct > 50
+        ? `${(top3CountryPct - 50).toFixed(1)}% of network stake would need to relocate from ${top3CountryNames} to other countries.`
+        : `Within reasonable diversification range.`,
+      target_label: 'Target: under 50% (geographic diversification)',
+    },
+    {
+      name: `Top 2 cities combined`, current: top2CityPct, target: 25,
+      severity: top2CityPct > 25 ? 'crit' : top2CityPct > 15 ? 'warn' : 'good',
+      explainer: top2CityPct > 25
+        ? `${(top2CityPct - 25).toFixed(1)}% of network stake would need to relocate out of ${top2CityNames}.`
+        : `Distribution across cities is healthy.`,
+      target_label: 'Target: under 25%',
+    },
+  ];
+
+  list.innerHTML = items.map(item => {
+    const currentW = Math.min(item.current, 100);
+    const targetW = Math.min(item.target, 100);
+    const metBadge = item.severity === 'good' ? `<span class="path-met-badge">✓ within target</span>` : '';
+    return `<div class="path-item">
+      <div class="path-item-header">
+        <span class="path-name">${escapeHtml(item.name)}${metBadge}</span>
+        <span class="path-current ${item.severity}">${item.current.toFixed(1)}%</span>
+      </div>
+      <div class="path-bar-container">
+        <div class="path-bar-target" style="width:${targetW}%"></div>
+        <div class="path-bar-current ${item.severity}" style="width:${currentW}%"></div>
+      </div>
+      <div class="path-explainer">${escapeHtml(item.explainer)}</div>
+      <div class="path-target-line">${escapeHtml(item.target_label)}</div>
+    </div>`;
+  }).join('');
+}
+
+// ───────── Geographic distribution ─────────
+
+function renderGeo(d: any) {
+  const v = d?.metrics?.validators || {};
+
+  const countries = Object.entries(v.country_distribution || {})
+    .filter(([cc]) => cc !== '??').slice(0, 10);
+  const maxC = Math.max(1, ...countries.map(e => e[1] as number));
+  const geoCountries = document.getElementById('geo-countries');
+  if (geoCountries) {
+    if (countries.length === 0) {
+      geoCountries.innerHTML = '<span style="color:var(--text-muted); font-size:0.85rem;">No data</span>';
+    } else {
+      geoCountries.innerHTML = countries.map(([cc, count]) => {
+        const w = Math.round((count as number / maxC) * 100);
+        const stake = v.stake_by_country?.[cc as string];
+        return `<div class="geo-row">
+          <div class="geo-country"><span class="geo-flag">${flag(cc as string)}</span><span class="geo-cc">${escapeHtml(cc as string)}</span></div>
+          <div class="geo-bar-wrap"><div class="geo-bar normal" style="width:${w}%"></div></div>
+          <div class="geo-count">${fmt(count)}</div>
+          <div class="geo-stake">${stake != null ? pct(Number(stake), 1) : ''}</div>
+        </div>`;
+      }).join('');
+    }
+  }
+
+  const asns = Object.entries(v.asn_distribution || {}).slice(0, 10);
+  const maxA = Math.max(1, ...asns.map(e => e[1] as number));
+  const geoAsns = document.getElementById('geo-asns');
+  if (geoAsns) {
+    if (asns.length === 0) {
+      geoAsns.innerHTML = '<span style="color:var(--text-muted); font-size:0.85rem;">No data</span>';
+    } else {
+      geoAsns.innerHTML = asns.map(([asn, count]) => {
+        const stake = v.stake_by_asn?.[asn as string];
+        const stakeNum = stake ? Number(stake) : 0;
+        const cls = stakeNum > 25 ? 'crit' : stakeNum > 15 ? 'warn' : 'normal';
+        const w = Math.round((count as number / maxA) * 100);
+        return `<div class="geo-row">
+          <div class="geo-country"><span class="geo-cc" title="${escapeHtml(asn as string)}">${escapeHtml(asn as string)}</span></div>
+          <div class="geo-bar-wrap"><div class="geo-bar ${cls}" style="width:${w}%"></div></div>
+          <div class="geo-count">${fmt(count)}</div>
+          <div class="geo-stake">${stake != null ? pct(stakeNum, 1) : ''}</div>
+        </div>`;
+      }).join('');
+    }
+  }
+
+  const geoDesc = document.getElementById('geo-desc');
+  if (geoDesc) {
+    const cc = Object.keys(v.country_distribution || {}).filter(c => c !== '??').length;
+    const an = Object.keys(v.asn_distribution || {}).length;
+    geoDesc.textContent = `${fmt(cc)} countries and ${fmt(an)} network providers represented.`;
+  }
+}
+
+// ───────── Decentralization metrics (5 cards) ─────────
+
+function renderAcademic(d: any) {
+  const dec = d?.metrics?.validators?.decentralization?.current;
+  if (!dec) return;
+
+  const hhic = dec.hhi_country?.value;
+  const hhia = dec.hhi_asn?.value;
+  const gini = dec.gini_validators?.value;
+
+  setTextColored('hhi-country', hhic != null ? hhic.toFixed(0) : '--', hhiRating(hhic).cls);
+  setTextColored('hhi-asn', hhia != null ? hhia.toFixed(0) : '--', hhiRating(hhia).cls);
+  setTextColored('gini-val', gini != null ? gini.toFixed(3) : '--', giniRating(gini).cls);
+
+  if (hhic != null) setPin('hhi-country-pin', (hhic / 10000) * 100);
+  if (hhia != null) setPin('hhi-asn-pin', (hhia / 10000) * 100);
+  if (gini != null) setPin('gini-pin', gini * 100);
+
+  // Shannon (3 dimensions)
+  const shc = dec.shannon_country?.normalized;
+  const sha = dec.shannon_asn?.normalized;
+  const shv = dec.shannon_validator?.normalized;
+  setTextColored('shannon-country', shc != null ? shc.toFixed(2) : '--', shannonRating(shc).cls);
+  setTextColored('shannon-asn', sha != null ? sha.toFixed(2) : '--', shannonRating(sha).cls);
+  setTextColored('shannon-validator', shv != null ? shv.toFixed(2) : '--', shannonRating(shv).cls);
+  if (shc != null) setPin('shannon-country-pin', shc * 100);
+  if (sha != null) setPin('shannon-asn-pin', sha * 100);
+  if (shv != null) setPin('shannon-validator-pin', shv * 100);
+
+  // Nakamoto donuts
+  const nakDims = [
+    { id: 'nak-asn', val: dec.nakamoto_asn?.value, dim: 'asn' },
+    { id: 'nak-country', val: dec.nakamoto_country?.value, dim: 'country' },
+    { id: 'nak-city', val: dec.nakamoto_city?.value, dim: 'city' },
+    { id: 'nak-validator', val: dec.nakamoto_validator?.value, dim: 'validator' },
+  ];
+  for (const { id, val, dim } of nakDims) {
+    const r = nakRating(dim, val);
+    setTextColored(id, val != null ? String(val) : '--', r.cls);
+    const donutEl = document.getElementById(`${id}-donut`);
+    if (donutEl) donutEl.innerHTML = renderNakDonut(val, dim);
+  }
+
+  // Superminority
+  setTextColored('sm33-v', fmt(dec.superminority_validator_33?.value), smRating(dec.superminority_validator_33?.value, 'validator'));
+  setTextColored('sm33-c', fmt(dec.superminority_country_33?.value), smRating(dec.superminority_country_33?.value, 'country'));
+  setTextColored('sm33-a', fmt(dec.superminority_asn_33?.value), smRating(dec.superminority_asn_33?.value, 'asn'));
+  setTextColored('sm50-v', fmt(dec.superminority_validator_50?.value), smRating(dec.superminority_validator_50?.value, 'validator'));
+  setTextColored('sm50-c', fmt(dec.superminority_country_50?.value), smRating(dec.superminority_country_50?.value, 'country'));
+  setTextColored('sm50-a', fmt(dec.superminority_asn_50?.value), smRating(dec.superminority_asn_50?.value, 'asn'));
+
+  // Setup floating tooltips for HHI/Gini/Shannon tiles
+  setupAcademicTooltips(dec);
+}
+
+// Floating tooltip on HHI/Gini/Shannon tiles
+let _academicTip: HTMLElement | null = null;
+
+function ensureAcademicTip(): HTMLElement {
+  if (_academicTip) return _academicTip;
+  const tip = document.createElement('div');
+  tip.className = 'academic-tip';
+  document.body.appendChild(tip);
+  _academicTip = tip;
+  return tip;
+}
+
+function setupAcademicTooltips(dec: any) {
+  const tip = ensureAcademicTip();
+  const tiles = document.querySelectorAll('.academic-tile[data-scale-tip]');
+
+  const tipDataMap: Record<string, () => string> = {
+    'hhi-country': () => {
+      const v = dec.hhi_country?.value;
+      const r = hhiRating(v);
+      return v != null ? `<strong>HHI by country: ${v.toFixed(0)}</strong><span class="tip-rating">${r.label} · scale 0–10000</span>` : '<strong>No data</strong>';
+    },
+    'hhi-asn': () => {
+      const v = dec.hhi_asn?.value;
+      const r = hhiRating(v);
+      return v != null ? `<strong>HHI by ASN: ${v.toFixed(0)}</strong><span class="tip-rating">${r.label} · scale 0–10000</span>` : '<strong>No data</strong>';
+    },
+    'gini': () => {
+      const v = dec.gini_validators?.value;
+      const r = giniRating(v);
+      return v != null ? `<strong>Gini: ${v.toFixed(3)}</strong><span class="tip-rating">${r.label} · scale 0–1</span>` : '<strong>No data</strong>';
+    },
+    'shannon-country': () => {
+      const v = dec.shannon_country?.normalized;
+      const r = shannonRating(v);
+      return v != null ? `<strong>Shannon (country): ${v.toFixed(3)}</strong><span class="tip-rating">${r.label} · scale 0–1</span>` : '<strong>No data</strong>';
+    },
+    'shannon-asn': () => {
+      const v = dec.shannon_asn?.normalized;
+      const r = shannonRating(v);
+      return v != null ? `<strong>Shannon (ASN): ${v.toFixed(3)}</strong><span class="tip-rating">${r.label} · scale 0–1</span>` : '<strong>No data</strong>';
+    },
+    'shannon-validator': () => {
+      const v = dec.shannon_validator?.normalized;
+      const r = shannonRating(v);
+      return v != null ? `<strong>Shannon (validator): ${v.toFixed(3)}</strong><span class="tip-rating">${r.label} · scale 0–1</span>` : '<strong>No data</strong>';
+    },
+  };
+
+  tiles.forEach(tile => {
+    const key = (tile as HTMLElement).dataset.scaleTip || '';
+    const getContent = tipDataMap[key];
+    if (!getContent) return;
+
+    tile.addEventListener('mouseenter', () => {
+      tip.innerHTML = getContent();
+      tip.classList.add('show');
+    });
+    tile.addEventListener('mousemove', (e) => {
+      const ev = e as MouseEvent;
+      // position:fixed → clientX/clientY map directly to viewport coords
+      const tipW = tip.offsetWidth || 220;
+      const tipH = tip.offsetHeight || 60;
+      let x = ev.clientX + 14;
+      let y = ev.clientY + 14;
+      if (x + tipW > window.innerWidth - 8) x = ev.clientX - tipW - 14;
+      if (y + tipH > window.innerHeight - 8) y = ev.clientY - tipH - 14;
+      if (x < 8) x = 8;
+      if (y < 8) y = 8;
+      tip.style.left = `${x}px`;
+      tip.style.top = `${y}px`;
+    });
+    tile.addEventListener('mouseleave', () => {
+      tip.classList.remove('show');
+    });
+  });
+}
+
+// ───────── About epoch (always mainnet) ─────────
+
+async function renderAboutEpoch() {
+  const el = document.getElementById('about-epoch-count');
+  if (!el) return;
+  try {
+    const mainnet = await fetchMainnetSummaryCached();
+    const epoch = mainnet?.epoch;
+    if (epoch != null) {
+      const bucketed = Math.floor((epoch - 200) / 50) * 50;
+      el.textContent = `${bucketed}+`;
+      el.classList.remove('sk-val');
+    }
+  } catch (e) { console.warn('[SONDA] mainnet epoch fetch:', e); }
+}
+
+// About stats — 3 cluster rows in their own colors. Independent of selected cluster.
+// Fetches all 3 summaries in parallel; each cell falls back to "—" if a fetch fails.
+async function renderAboutStats() {
+  const fillRow = (prefix: string, summary: any) => {
+    const v = summary?.metrics?.validators;
+    const valEl = document.getElementById(`ac-${prefix}-validators`);
+    const ccEl = document.getElementById(`ac-${prefix}-countries`);
+    const asnEl = document.getElementById(`ac-${prefix}-asns`);
+    if (v) {
+      const validators = v.total ?? 0;
+      const countries = Object.keys(v.country_distribution || {}).filter(c => c !== '??').length;
+      const asns = Object.keys(v.asn_distribution || {}).length;
+      if (valEl) { valEl.textContent = fmt(validators); valEl.classList.remove('sk-val'); }
+      if (ccEl)  { ccEl.textContent = fmt(countries);  ccEl.classList.remove('sk-val'); }
+      if (asnEl) { asnEl.textContent = fmt(asns);      asnEl.classList.remove('sk-val'); }
+    }
+  };
+
+  // For mainnet we already have a cached fetch (fetchMainnetSummaryCached used by About epoch).
+  // For testnet/devnet, we fetch fresh once on mount; not cached by us, but the underlying
+  // fetchSummary is cheap (~one R2 GET ~50KB each).
+  try {
+    const [m, t, d] = await Promise.all([
+      fetchMainnetSummaryCached().catch(() => null),
+      fetchSummary('testnet').catch(() => null),
+      fetchSummary('devnet').catch(() => null),
+    ]);
+    fillRow('mn', m);
+    fillRow('tn', t);
+    fillRow('dn', d);
+  } catch (e) {
+    console.warn('[SONDA] about stats:', e);
+  }
+}
+
+// ───────── Hero / strip / watermark ─────────
+
+let lastSnapshotMs: number | null = null;
+
+function updateFooterTs() {
+  const el = document.getElementById('footer-ts');
+  if (!el || !lastSnapshotMs) return;
+  const sec = Math.floor((Date.now() - lastSnapshotMs) / 1000);
+  let txt: string;
+  if (sec < 5) txt = 'just now';
+  else if (sec < 60) txt = `${sec}s ago`;
+  else if (sec < 3600) txt = `${Math.floor(sec/60)}m ago`;
+  else txt = `${Math.floor(sec/3600)}h ago`;
+  el.textContent = txt;
+}
+setInterval(updateFooterTs, 5000);
+
+function renderHeroAndStrip(d: any) {
+  if ((window as any).sondaUpdateStrip) (window as any).sondaUpdateStrip(d);
+  if ((window as any).sondaSetUpdateTime) (window as any).sondaSetUpdateTime(d.timestamp);
+
+  if (d?.timestamp) {
+    lastSnapshotMs = new Date(d.timestamp).getTime();
+    updateFooterTs();
+  }
+
+  const tsShort = new Date(d.timestamp).toISOString().slice(0, 16).replace('T', ' ');
+  const isMobile = window.innerWidth <= 600;
+  const clusterShort = d.cluster === 'mainnet-beta' ? 'mainnet' : d.cluster;
+  const wmText = isMobile
+    ? `SONDA · epoch ${d.epoch} · ${clusterShort} · ${tsShort.slice(11)} UTC`
+    : `SONDA · sonda.network · epoch ${d.epoch} · ${d.cluster} · ${tsShort} UTC`;
+  document.querySelectorAll<HTMLElement>('.watermark').forEach(el => {
+    el.textContent = wmText;
+  });
+}
+
+// ───────── Main load ─────────
+
+// Reset persistent academic/scale elements to placeholder before fetching new cluster.
+// Without this, on cluster switch the OLD values briefly carry the NEW color (the
+// global cluster-accent variable changes instantly, the data fetch takes ~200ms),
+// which reads as misleading. Stories/Pulse/Geo are fully replaced via innerHTML,
+// they don't need explicit reset.
+function resetDynamicValues() {
+  const ids = [
+    'hhi-country', 'hhi-asn', 'gini-val',
+    'shannon-country', 'shannon-asn', 'shannon-validator',
+    'nak-asn', 'nak-country', 'nak-city', 'nak-validator',
+    'sm33-v', 'sm33-c', 'sm33-a', 'sm50-v', 'sm50-c', 'sm50-a',
+    // about epoch — but NOT about cluster stats: those don't change on cluster switch
+    'about-epoch-count',
+  ];
+  for (const id of ids) {
+    const el = document.getElementById(id);
+    if (!el) continue;
+    el.textContent = '—';
+    el.classList.remove('good', 'warning', 'critical', 'neutral');
+    el.classList.add('sk-val');
+  }
+  // Reset scale pins to 0
+  ['hhi-country-pin', 'hhi-asn-pin', 'gini-pin',
+   'shannon-country-pin', 'shannon-asn-pin', 'shannon-validator-pin'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.left = '0%';
+  });
+  // Reset Nakamoto donuts to neutral empty state
+  ['nak-asn-donut', 'nak-country-donut', 'nak-city-donut', 'nak-validator-donut'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = `<svg viewBox="0 0 60 60"><circle cx="30" cy="30" r="22" fill="none" stroke="var(--text-muted)" stroke-width="5" opacity="0.15"/></svg>`;
+  });
+}
+
+async function loadAll(cluster: string, isClusterChange: boolean = false) {
+  console.log('[SONDA] loading data for cluster:', cluster, isClusterChange ? '(cluster switch)' : '');
+
+  // Reset persistent values only on cluster switch — not on periodic refresh,
+  // since steady-state refresh should update smoothly without a flash to placeholders.
+  if (isClusterChange) resetDynamicValues();
+
+  // Cluster banner (sticky, separately managed component)
+  if ((window as any).sondaSetClusterBanner) {
+    (window as any).sondaSetClusterBanner(cluster);
+  }
+
+  let summary: any = null;
+  try {
+    summary = await fetchSummary(cluster);
+    renderHeroAndStrip(summary);
+    try { renderInfra(summary); } catch (e) { console.warn('renderInfra:', e); }
+    try { renderRpcSummary(summary); } catch (e) { console.warn('renderRpcSummary:', e); }
+    try { renderPath(summary); } catch (e) { console.warn('renderPath:', e); }
+    try { renderGeo(summary); } catch (e) { console.warn('renderGeo:', e); }
+    try { renderAcademic(summary); } catch (e) { console.warn('renderAcademic:', e); }
+    savePreviousFetch(cluster, summary);
+  } catch (e) {
+    console.warn('[SONDA] summary fetch failed:', e);
+  }
+
+  try {
+    const validatorsData = await fetchValidators(cluster);
+    const records = (validatorsData?.records || []).filter((r: any) => r != null);
+    try { renderPulse(summary, records, cluster); } catch (e) { console.warn('renderPulse:', e); }
+    try { await renderStories(summary, records, cluster); } catch (e) { console.warn('renderStories:', e); }
+  } catch (e) {
+    console.warn('[SONDA] validators fetch failed:', e);
+  }
+
+  // About epoch (always mainnet, cached) + about stats for ALL 3 clusters
+  try { await renderAboutEpoch(); } catch (e) { console.warn('renderAboutEpoch:', e); }
+  try { await renderAboutStats(); } catch (e) { console.warn('renderAboutStats:', e); }
+}
+
+let currentCluster = bootstrapCluster();
+let refreshInterval: ReturnType<typeof setInterval> | null = null;
+
+function startLoop() {
+  loadAll(currentCluster);
+  if (refreshInterval) clearInterval(refreshInterval);
+  refreshInterval = setInterval(() => loadAll(currentCluster), 30000);
+}
+
+window.addEventListener('sonda:cluster-change', (e: Event) => {
+  const newCluster = (e as CustomEvent).detail.cluster;
+  console.log('[SONDA] cluster-change:', newCluster);
+  currentCluster = newCluster;
+  loadAll(currentCluster, /* isClusterChange */ true);
+  if (refreshInterval) clearInterval(refreshInterval);
+  refreshInterval = setInterval(() => loadAll(currentCluster), 30000);
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+  startLoop();
+  // Production overlay disabled (v2.4): the BETA dev-banner at the top of the page
+  // is sufficient signaling that we're still in active development. The full-screen
+  // "IN DEVELOPMENT" overlay was blocking sonda.network visitors from the dashboard,
+  // which is no longer the right tradeoff once Phase 1 stories are live.
+
+  setupMobileTooltips();
+  setupStubLinks();
+});
+
+// Prevent navigation on links pointing to pages that don't exist yet.
+// Event delegation catches dynamic links inside Stories too.
+function setupStubLinks() {
+  document.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement;
+    const link = target.closest('[data-stub]');
+    if (link) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  });
+}
+
+// Mobile tooltip behavior:
+// - tabindex on every .tooltip-icon (existing AND future ones inside Stories
+//   that get rendered later via innerHTML) so taps focus them.
+// - On focus (mobile only), measure the tooltip and position via JS so it
+//   sits near the icon AND stays fully on-screen. CSS-only positioning kept
+//   anchoring to fixed top/bottom and was either off-card or off-screen
+//   depending on icon position; JS clamping is the only reliable approach.
+// - On blur, reset inline styles so CSS retakes control.
+// - On scroll (>6px), blur any focused icon to dismiss.
+function setupMobileTooltips() {
+  const annotateIcons = () => {
+    document.querySelectorAll<HTMLElement>('.tooltip-icon').forEach(el => {
+      if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '0');
+    });
+  };
+  annotateIcons();
+  // Re-annotate after Stories render (innerHTML wipes attributes)
+  const obs = new MutationObserver(() => annotateIcons());
+  const grid = document.getElementById('stories-grid');
+  if (grid) obs.observe(grid, { childList: true, subtree: true });
+
+  // Position tooltip via JS on mobile focus
+  document.addEventListener('focusin', (e) => {
+    if (window.innerWidth > 600) return;
+    const target = e.target as HTMLElement;
+    if (!target.classList?.contains('tooltip-icon')) return;
+    const wrap = target.closest('.tooltip-wrap') as HTMLElement;
+    if (!wrap) return;
+    const tooltip = wrap.querySelector('.tooltip-box') as HTMLElement;
+    if (!tooltip) return;
+
+    // Tooltip is now visible via :focus-within. Measure and position.
+    requestAnimationFrame(() => {
+      const iconRect = target.getBoundingClientRect();
+      const tipW = tooltip.offsetWidth;
+      const tipH = tooltip.offsetHeight;
+
+      // Center tooltip horizontally on icon, then clamp into viewport.
+      let left = iconRect.left + iconRect.width / 2 - tipW / 2;
+      left = Math.max(8, Math.min(window.innerWidth - 8 - tipW, left));
+
+      // Prefer above icon; if not enough room, place below.
+      let top = iconRect.top - tipH - 10;
+      if (top < 8) top = iconRect.bottom + 10;
+
+      tooltip.style.position = 'fixed';
+      tooltip.style.left = `${left}px`;
+      tooltip.style.top = `${top}px`;
+      tooltip.style.right = 'auto';
+      tooltip.style.bottom = 'auto';
+      tooltip.style.transform = 'none';
+      tooltip.style.maxWidth = 'calc(100vw - 1rem)';
+    });
+  });
+
+  document.addEventListener('focusout', (e) => {
+    const target = e.target as HTMLElement;
+    if (!target.classList?.contains('tooltip-icon')) return;
+    const wrap = target.closest('.tooltip-wrap') as HTMLElement;
+    const tooltip = wrap?.querySelector('.tooltip-box') as HTMLElement;
+    if (tooltip) tooltip.style.cssText = '';
+  });
+
+  // Scroll dismisses focused tooltip (otherwise hover-via-tap state sticks)
+  let lastScrollY = window.scrollY;
+  window.addEventListener('scroll', () => {
+    const dy = Math.abs(window.scrollY - lastScrollY);
+    lastScrollY = window.scrollY;
+    if (dy < 6) return;
+    const a = document.activeElement;
+    if (a instanceof HTMLElement && a.classList.contains('tooltip-icon')) {
+      a.blur();
+    }
+  }, { passive: true });
+}
+
+// Re-render watermark on resize (mobile vs desktop)
+let _resizeT: any;
+window.addEventListener('resize', () => {
+  clearTimeout(_resizeT);
+  _resizeT = setTimeout(() => {
+    // Trigger watermark refresh via reading the latest summary from cache (skip — just re-trigger loadAll if needed)
+  }, 300);
+});
 </script>
