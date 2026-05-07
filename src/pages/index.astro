@@ -39,23 +39,6 @@ import ClusterBanner from '../components/ClusterBanner.astro';
         <div class="pulse-item"><div class="pulse-num mono sk-val">--</div><div class="pulse-label">loading</div></div>
       </section>
 
-      <!-- INSIGHTS -->
-      <section class="section">
-        <div class="section-header">
-          <div>
-            <h2 class="section-title">Insights</h2>
-            <p class="section-desc">Network signals at a glance.</p>
-          </div>
-          <div class="watermark mono" id="watermark-insights"></div>
-        </div>
-        <div class="stories-grid" id="stories-grid">
-          <div class="story sk-card"><div class="sk-line" style="width:60%"></div><div class="sk-line" style="width:40%"></div></div>
-          <div class="story sk-card"><div class="sk-line" style="width:60%"></div><div class="sk-line" style="width:40%"></div></div>
-          <div class="story sk-card"><div class="sk-line" style="width:60%"></div><div class="sk-line" style="width:40%"></div></div>
-          <div class="story sk-card"><div class="sk-line" style="width:60%"></div><div class="sk-line" style="width:40%"></div></div>
-        </div>
-      </section>
-
       <!-- LIVE INFRASTRUCTURE -->
       <section class="section">
         <div class="section-header">
@@ -72,77 +55,50 @@ import ClusterBanner from '../components/ClusterBanner.astro';
           <div class="infra-card sk-card"><div class="sk-line" style="width:60%"></div><div class="sk-line" style="width:40%"></div></div>
         </div>
 
-        <!-- RPC + DZ summary lines side-by-side on desktop. RPC first (left). -->
+        <!-- RPC + DZ (mainnet) / Endpoints distribution (testnet/devnet) summary cards. -->
         <div class="infra-summary-grid">
           <div class="infra-summary-line" id="rpc-summary-card">
-            <div class="infra-summary-rpc-grid">
-              <div class="rpc-summary-text">
-                <div class="infra-summary-head">
-                  <span class="infra-summary-label" style="color: var(--accent-blue);">Public RPC nodes</span>
-                  <span class="infra-summary-stats" id="rpc-summary-stats">loading...</span>
-                </div>
-                <div class="rpc-stats-row" id="rpc-stats-row"></div>
+            <div class="rpc-summary-text">
+              <div class="infra-summary-head">
+                <span class="infra-summary-label" style="color: var(--accent-blue);">Public RPC nodes</span>
+                <span class="infra-summary-stats" id="rpc-summary-stats">loading...</span>
               </div>
-              <div class="rpc-donut-wrap" id="rpc-donut-wrap"></div>
+              <div class="rpc-stats-row" id="rpc-stats-row"></div>
             </div>
+            <div class="rpc-donuts-row" id="rpc-donuts-row"></div>
           </div>
 
           <div class="infra-summary-line" id="dz-summary-card">
             <div class="infra-summary-head">
-              <span class="infra-summary-label" style="color: var(--accent-violet);">DoubleZero network</span>
+              <span class="infra-summary-label" id="dz-summary-label" style="color: var(--accent-violet);">DoubleZero network</span>
               <span class="infra-summary-stats" id="dz-summary-stats">loading...</span>
             </div>
-            <div class="dz-issues" id="dz-issues"></div>
+            <!-- 2nd line of header stats — mirrors RPC card's rpc-stats-row.
+                 mainnet: "X devices · Y multicast groups · Z contributors"
+                 testnet/devnet: "X countries · Y cities · Z providers · DoubleZero is mainnet-only" -->
+            <div class="rpc-stats-row dz-stats-row" id="dz-stats-row"></div>
+            <!-- DZ inner area is fully rendered by JS:
+                 - mainnet: 2-col row (donut left, issues right)
+                 - testnet/devnet: donuts row -->
+            <div class="dz-inner" id="dz-inner"></div>
           </div>
         </div>
       </section>
 
-      <!-- PATH -->
+      <!-- INSIGHTS -->
       <section class="section">
         <div class="section-header">
           <div>
-            <h2 class="section-title">Path to better decentralization</h2>
-            <p class="section-desc">How much stake would need to migrate to reach healthier thresholds.</p>
+            <h2 class="section-title">Insights</h2>
+            <p class="section-desc">Network signals at a glance.</p>
           </div>
-          <div class="watermark mono" id="watermark-path"></div>
+          <div class="watermark mono" id="watermark-insights"></div>
         </div>
-        <div class="path-list" id="path-list">
-          <div class="sk-line" style="width:80%; height:48px"></div>
-          <div class="sk-line" style="width:80%; height:48px"></div>
-          <div class="sk-line" style="width:80%; height:48px"></div>
-        </div>
-      </section>
-
-      <!-- GEOGRAPHIC -->
-      <section class="section">
-        <div class="section-header">
-          <div>
-            <h2 class="section-title">Geographic distribution</h2>
-            <p class="section-desc" id="geo-desc">Validator count and stake share.</p>
-          </div>
-          <a href="/validators" data-stub class="section-link">All validators →</a>
-        </div>
-        <div class="geo-grid">
-          <div class="geo-block">
-            <div class="card-label">By country</div>
-            <div class="geo-chart" id="geo-countries">
-              <div class="sk-line" style="width:100%"></div>
-              <div class="sk-line" style="width:80%"></div>
-            </div>
-          </div>
-          <div class="geo-block">
-            <div class="card-label">
-              By network provider (ASN)
-              <span class="tooltip-wrap">
-                <span class="tooltip-icon" aria-label="info"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
-                <span class="tooltip-box">SFDP requires validators to avoid ASNs holding more than 25% of stake (effective May 2026). ASNs above this threshold are highlighted.</span>
-              </span>
-            </div>
-            <div class="geo-chart" id="geo-asns">
-              <div class="sk-line" style="width:100%"></div>
-              <div class="sk-line" style="width:60%"></div>
-            </div>
-          </div>
+        <div class="stories-grid" id="stories-grid">
+          <div class="story sk-card"><div class="sk-line" style="width:60%"></div><div class="sk-line" style="width:40%"></div></div>
+          <div class="story sk-card"><div class="sk-line" style="width:60%"></div><div class="sk-line" style="width:40%"></div></div>
+          <div class="story sk-card"><div class="sk-line" style="width:60%"></div><div class="sk-line" style="width:40%"></div></div>
+          <div class="story sk-card"><div class="sk-line" style="width:60%"></div><div class="sk-line" style="width:40%"></div></div>
         </div>
       </section>
 
@@ -347,6 +303,55 @@ import ClusterBanner from '../components/ClusterBanner.astro';
         </div>
       </section>
 
+      <!-- PATH -->
+      <section class="section">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title">Path to better decentralization</h2>
+            <p class="section-desc">How much stake would need to migrate to reach healthier thresholds.</p>
+          </div>
+          <div class="watermark mono" id="watermark-path"></div>
+        </div>
+        <div class="path-list" id="path-list">
+          <div class="sk-line" style="width:80%; height:48px"></div>
+          <div class="sk-line" style="width:80%; height:48px"></div>
+          <div class="sk-line" style="width:80%; height:48px"></div>
+        </div>
+      </section>
+
+      <!-- GEOGRAPHIC -->
+      <section class="section">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title">Geographic distribution</h2>
+            <p class="section-desc" id="geo-desc">Validator count and stake share.</p>
+          </div>
+          <a href="/validators" data-stub class="section-link">All validators →</a>
+        </div>
+        <div class="geo-grid">
+          <div class="geo-block">
+            <div class="card-label">By country</div>
+            <div class="geo-chart" id="geo-countries">
+              <div class="sk-line" style="width:100%"></div>
+              <div class="sk-line" style="width:80%"></div>
+            </div>
+          </div>
+          <div class="geo-block">
+            <div class="card-label">
+              By network provider (ASN)
+              <span class="tooltip-wrap">
+                <span class="tooltip-icon" aria-label="info"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
+                <span class="tooltip-box">SFDP requires validators to avoid ASNs holding more than 25% of stake (effective May 2026). ASNs above this threshold are highlighted.</span>
+              </span>
+            </div>
+            <div class="geo-chart" id="geo-asns">
+              <div class="sk-line" style="width:100%"></div>
+              <div class="sk-line" style="width:60%"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- ABOUT + ROADMAP -->
       <section class="section" id="about" style="scroll-margin-top: 110px;">
         <div class="about-roadmap-card">
@@ -429,33 +434,35 @@ import ClusterBanner from '../components/ClusterBanner.astro';
                   </div>
                 </div>
 
-                <div class="phase-block active">
+                <div class="phase-block done">
                   <div class="phase-block-head">
                     <div class="phase-block-title-group">
                       <span class="phase-name">Phase 1</span>
-                      <span class="phase-status-tag info">In progress</span>
+                      <span class="phase-status-tag good">Done</span>
                     </div>
-                    <span class="phase-date mono">Apr 2026 →</span>
+                    <span class="phase-date mono">Apr–May 2026</span>
                   </div>
                   <div class="phase-block-bar">
-                    <div class="phase-block-bar-fill" style="width:55%; background: var(--accent-blue);"></div>
+                    <div class="phase-block-bar-fill" style="width:100%; background: var(--status-good);"></div>
                   </div>
                   <div class="phase-block-desc">
-                    <strong>Public dashboard.</strong> Live homepage with cluster switching, validators table, endpoints monitor, datacenter analysis.
+                    <strong>Public dashboard launched.</strong> Live homepage on all three clusters. Cluster switching, decentralization metrics, live infrastructure status, geographic distribution, Path to better decentralization, About + Roadmap. Twitter @SondaNetwork. Hosted on sonda.network.
                   </div>
                 </div>
 
-                <div class="phase-block">
+                <div class="phase-block active">
                   <div class="phase-block-head">
                     <div class="phase-block-title-group">
                       <span class="phase-name">Phase 2</span>
-                      <span class="phase-status-tag muted">Planned</span>
+                      <span class="phase-status-tag info">In progress</span>
                     </div>
-                    <span class="phase-date mono">—</span>
+                    <span class="phase-date mono">May 2026 →</span>
                   </div>
-                  <div class="phase-block-bar"><div class="phase-block-bar-fill" style="width:0%;"></div></div>
+                  <div class="phase-block-bar">
+                    <div class="phase-block-bar-fill" style="width:8%; background: var(--accent-blue);"></div>
+                  </div>
                   <div class="phase-block-desc">
-                    <strong>Per-validator deep dives.</strong> Individual validator pages, location history timelines, cross-cluster identity linking, datacenter scoring.
+                    <strong>Per-page deep dives.</strong> Validators table, per-validator profiles with location history since 2021, endpoints monitor, datacenter analysis for hosting choice, RPC nodes table, methodology page.
                   </div>
                 </div>
 
@@ -469,7 +476,7 @@ import ClusterBanner from '../components/ClusterBanner.astro';
                   </div>
                   <div class="phase-block-bar"><div class="phase-block-bar-fill" style="width:0%;"></div></div>
                   <div class="phase-block-desc">
-                    <strong>Open data.</strong> Public API access, JSON exports, methodology documentation.
+                    <strong>Historical analytics.</strong> Per-epoch snapshot pipeline, decentralization trends over time, network events archive.
                   </div>
                 </div>
 
@@ -483,7 +490,7 @@ import ClusterBanner from '../components/ClusterBanner.astro';
                   </div>
                   <div class="phase-block-bar"><div class="phase-block-bar-fill" style="width:0%;"></div></div>
                   <div class="phase-block-desc">
-                    <strong>Historical analytics.</strong> Per-epoch snapshot pipeline, decentralization trends over time, network events archive.
+                    <strong>Open data.</strong> Public API access, JSON exports, attribution program for downstream tools.
                   </div>
                 </div>
 
@@ -588,6 +595,17 @@ import ClusterBanner from '../components/ClusterBanner.astro';
 .stories-grid { display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: minmax(220px, auto); gap: 1rem; }
 @media (max-width: 768px) { .stories-grid { grid-template-columns: 1fr; } }
 
+/* Mainnet layout: 4-column grid with span-1 (25%) and span-2 (50%) cards.
+   Multicast and Jito BAM stories sit side-by-side at the top as related infrastructure
+   adoption stories; Coverage Matrix takes the remaining 50% of row 1; Software and SFDP
+   each span 50% in row 2. On mobile the grid collapses to 1 column. */
+.stories-grid.mainnet-layout { grid-template-columns: repeat(4, 1fr); }
+.stories-grid.mainnet-layout .story.span-2 { grid-column: span 2; }
+@media (max-width: 768px) {
+  .stories-grid.mainnet-layout { grid-template-columns: 1fr; }
+  .stories-grid.mainnet-layout .story.span-2 { grid-column: span 1; }
+}
+
 .story {
   background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px;
   padding: 1.25rem; display: flex; flex-direction: column; gap: 0.5rem;
@@ -617,6 +635,11 @@ import ClusterBanner from '../components/ClusterBanner.astro';
 .story-link { font-size: 0.78rem; color: var(--cluster-accent); text-decoration: none; margin-top: auto; padding-top: 0.5rem; }
 .story-link:hover { text-decoration: underline; }
 .story-dz .story-big { color: var(--accent-violet); }
+.story-bam .story-big { color: var(--accent-cyan); }
+.bam-stake { font-weight: 600; }
+.bam-stake.good { color: var(--status-good); }
+.bam-stake.warn { color: var(--accent-amber); }
+.bam-stake.crit { color: var(--status-critical); }
 
 /* Generic stacked progress row — used by DZ breakdown, software versions, SFDP states */
 .bar-row { display: grid; grid-template-columns: 1fr 70px 38px; gap: 0.6rem; align-items: center; font-size: 0.78rem; padding: 0.15rem 0; }
@@ -625,6 +648,8 @@ import ClusterBanner from '../components/ClusterBanner.astro';
 .bar-row-fill { height: 100%; border-radius: 2px; transition: width 0.4s ease; min-width: 1px; }
 .bar-row-fill.violet { background: var(--accent-violet); }
 .bar-row-fill.violet-dim { background: var(--accent-violet); opacity: 0.45; }
+.bar-row-fill.cyan { background: var(--accent-cyan); }
+.bar-row-fill.cyan-dim { background: var(--accent-cyan); opacity: 0.45; }
 .bar-row-fill.cluster { background: var(--cluster-accent); }
 .bar-row-fill.good { background: var(--status-good); }
 .bar-row-fill.info { background: var(--accent-blue); }
@@ -816,60 +841,158 @@ import ClusterBanner from '../components/ClusterBanner.astro';
 .infra-summary-label { font-size: 0.85rem; font-weight: 600; }
 .infra-summary-stats { font-size: 0.82rem; color: var(--text-secondary); }
 
-/* DZ link issues */
-.dz-issues { margin-top: 0.55rem; display: flex; flex-wrap: wrap; gap: 0.4rem 0.5rem; font-size: 0.72rem; font-family: var(--font-mono); }
+/* DZ link issues — compact aggregated row (v2.6) + chips with rounded loss values */
+.dz-issues-summary {
+  margin-top: 0.55rem;
+  display: flex; flex-wrap: wrap; gap: 0.4rem 1rem;
+  font-size: 0.78rem; color: var(--text-secondary);
+}
+.dz-issues-col .dz-issues-summary { margin-top: 0; }
+.dz-issues-summary .dz-summ-tag { font-family: var(--font-mono); font-weight: 600; }
+.dz-issues-summary .dz-summ-tag.warn { color: var(--status-warning); }
+.dz-issues-summary .dz-summ-tag.bad  { color: var(--status-critical); }
+.dz-issues-summary .dz-summ-tag.muted { color: var(--text-muted); }
+.dz-issues-summary .dz-summ-tag.ok   { color: var(--status-good); }
+.dz-issues { margin-top: 0.45rem; display: flex; flex-wrap: wrap; gap: 0.35rem 0.45rem; font-size: 0.7rem; font-family: var(--font-mono); }
 .dz-issue { color: var(--status-warning); padding: 0.18rem 0.45rem; background: rgba(249,115,22,0.1); border-radius: 4px; }
 .dz-issue.bad { color: var(--status-critical); background: rgba(239,68,68,0.1); }
-.dz-issue.ok { color: var(--status-good); background: rgba(34,197,94,0.1); }
+.dz-issue.muted { color: var(--text-muted); background: rgba(140,137,163,0.1); }
+.dz-issue.more { color: var(--text-muted); background: transparent; padding: 0.18rem 0.2rem; }
 
-/* RPC summary content — donut on right, stats on left.
-   When DZ+RPC are side-by-side on desktop, RPC card has half width
-   so layout switches to vertical (text on top, donut+legend below). */
-.infra-summary-rpc-grid { display: flex; flex-direction: column; gap: 0.85rem; height: 100%; }
-.rpc-summary-text { display: flex; flex-direction: column; gap: 0.5rem; }
-.rpc-stats-row { display: flex; gap: 0.4rem 1.4rem; flex-wrap: wrap; font-size: 0.78rem; color: var(--text-secondary); }
+/* Generic mini-donut + universal legend grid pattern (v2.6).
+   Used by every donut on the homepage:
+   - RPC ASN + RPC countries (mainnet) on RPC summary card
+   - DZ device-ASN (mainnet) on DZ summary card
+   - Solana / Jito endpoints (testnet/devnet) on Endpoints distribution card
+   - Devnet validators-by-stake story
+   The .donut-legend uses display:grid with auto max-content auto so the legend
+   width naturally fits the longest label, all numbers right-align in their own column,
+   and short labels do NOT create stretched empty space. On narrow viewports the
+   middle column collapses to minmax(0,1fr) with ellipsis. */
+.rpc-summary-text { display: flex; flex-direction: column; }
+.rpc-stats-row { display: flex; gap: 0.4rem 1.4rem; flex-wrap: wrap; font-size: 0.78rem; color: var(--text-secondary); margin-top: 0.5rem; }
 .rpc-stat-item { display: flex; align-items: baseline; gap: 0.35rem; }
 .rpc-stat-val { font-family: var(--font-mono); font-weight: 600; color: var(--text-primary); }
+/* DZ-only inline tag in the testnet/devnet stats row — sits next to country/city/provider counts */
+.dz-mainnet-only {
+  font-size: 0.74rem; color: var(--text-muted);
+  padding: 0.05rem 0.55rem; border: 1px dashed var(--border); border-radius: 6px;
+  align-self: center;
+}
 
-.rpc-donut-wrap { display: flex; align-items: center; gap: 1.25rem; margin-top: auto; padding-top: 0.85rem; border-top: 1px solid var(--border); }
-.rpc-donut-mini { width: 92px; height: 92px; flex-shrink: 0; }
-.rpc-donut-mini svg { width: 100%; height: 100%; display: block; }
-/* RPC legend — tight per-row flex (final decision after iterating).
-   Three earlier attempts failed for different reasons:
-   1. flex with `flex: 1` on label → pushed num to right edge, huge gap for short labels
-   2. flex with `flex: 0 1 auto` → tight gaps but values didn't align across rows
-   3. grid display:contents → values aligned but column auto-sized to widest label,
-      leaving huge empty space within short-label cells (e.g. "OVH" in a 100px col)
-   ASN names vary too widely (OVH = 3 chars vs LATITUDE-SH = 11) for a clean
-   alignment pattern. Tight per-row eliminates the gap problem entirely.
-   Cross-row value alignment is sacrificed but each row reads as a clean unit. */
-.rpc-donut-legend {
-  flex: 0 1 auto; min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
+/* Two-donut row inside RPC card; one donut inside DZ; donuts row for Endpoints distribution */
+.rpc-donuts-row,
+.dz-donuts-row {
+  display: grid; gap: 1.1rem 2rem;
+  margin-top: auto; padding-top: 0.85rem;
+  border-top: 1px solid var(--border);
+}
+.rpc-donuts-row { grid-template-columns: 1fr 1fr; }
+.dz-donuts-row  { grid-template-columns: 1fr; }
+.dz-donuts-row.cols-2 { grid-template-columns: 1fr 1fr; }
+.dz-donuts-row.cols-3 { grid-template-columns: repeat(3, 1fr); }
+@media (max-width: 760px) {
+  .rpc-donuts-row,
+  .dz-donuts-row.cols-2,
+  .dz-donuts-row.cols-3 { grid-template-columns: 1fr; gap: 1rem; }
+}
+
+/* DZ card content row (mainnet only): donut column on the left, issues column on the right.
+   Two equal columns keep DZ card height close to RPC card height (which has two donuts side-by-side).
+   Spacing (margin-top: 0 + padding-top: 0.85rem + border-top) matches .rpc-donuts-row exactly,
+   so the separator line sits at the same vertical distance from the stats row in both cards. */
+.dz-content-row {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 1rem 1.5rem;
+  margin-top: 0; padding-top: 0.85rem;
+  border-top: 1px solid var(--border);
+  align-items: start;
+}
+@media (max-width: 760px) {
+  .dz-content-row { grid-template-columns: 1fr; gap: 0.75rem; }
+}
+.dz-issues-col { display: flex; flex-direction: column; gap: 0.4rem; min-width: 0; }
+.dz-issues-col .dz-issues-summary { margin: 0; }
+.dz-issues-col .dz-issues { margin: 0; }
+
+.donut-block {
+  display: flex; flex-direction: column; gap: 0.5rem; min-width: 0;
+  padding: 0.7rem 0.85rem 0.8rem;
+  background: var(--bg-card-hover);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+/* Title gets a soft underline so the heading reads as the cap of the mini-card,
+   not as a separate label floating above. min-height keeps the title strip
+   the same vertical size for one- vs two-line titles, which keeps adjacent
+   donut bodies horizontally aligned. */
+.donut-block-title {
+  font-size: 0.7rem; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;
+  min-height: 2.1em;
+  display: flex; align-items: flex-end;
+  padding-bottom: 0.45rem;
+  border-bottom: 1px solid var(--border);
+}
+.donut-block-body { display: flex; align-items: center; gap: 0.7rem; min-width: 0; }
+.donut-block-body .donut-mini { flex-shrink: 0; }
+.donut-mini { width: 84px; height: 84px; }
+.donut-mini svg { width: 100%; height: 100%; display: block; }
+
+/* Universal legend grid: one parent grid, items use display:contents.
+   3 columns: dot (auto) | label (max-content with truncation fallback) | num (auto, right). */
+.donut-legend {
+  flex: 1 1 auto; min-width: 0;
+  display: grid;
+  grid-template-columns: auto max-content auto;
+  column-gap: 0.45rem; row-gap: 0.32rem;
+  /* width: fit-content prevents the grid from stretching across the entire flex parent.
+     With auto+max-content+auto, the columns are sized by their content, so any extra space
+     in the flex parent would otherwise sit BETWEEN columns as visible gaps. fit-content
+     pins the grid to its natural content width (= dot + longest label + widest number). */
+  width: fit-content;
+  max-width: 100%;
+  min-width: 0;
   font-size: 0.74rem;
-}
-.rpc-donut-legend .donut-legend-item {
-  display: flex;
   align-items: center;
-  gap: 0.45rem;
 }
-.rpc-donut-legend .donut-legend-label {
-  flex: 0 1 auto; min-width: 0;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+.donut-legend .donut-legend-item { display: contents; }
+.donut-legend .donut-legend-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+  align-self: center;
+}
+.donut-legend .donut-legend-label {
   color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis;
+  min-width: 0;
 }
-.rpc-donut-legend .donut-legend-num {
-  font-size: 0.7rem;
+.donut-legend .donut-legend-num {
   font-family: var(--font-mono);
+  font-size: 0.7rem;
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+/* On narrow viewports (mobile, narrow card columns), where the legend's natural width
+   would overflow its parent, switch to a flex-fill middle column with ellipsis truncation. */
+@media (max-width: 520px) {
+  .donut-legend {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    width: 100%;
+  }
+}
+.donut-mini-compact { width: 72px; height: 72px; }
+
+/* DZ footnote (testnet/devnet): "DoubleZero is mainnet-only" small caption */
+.dz-footnote {
+  font-size: 0.68rem; color: var(--text-muted); margin-top: 0.45rem;
+  font-style: italic; opacity: 0.85;
 }
 
 @media (max-width: 600px) {
-  .rpc-donut-wrap { gap: 0.85rem; }
-  .rpc-donut-mini { width: 78px; height: 78px; }
+  .donut-mini { width: 76px; height: 76px; }
+  .donut-mini-compact { width: 64px; height: 64px; }
 }
 
 /* PATH */
@@ -894,6 +1017,19 @@ import ClusterBanner from '../components/ClusterBanner.astro';
 .path-bar-current.warn { background: var(--status-warning); }
 .path-bar-current.crit { background: var(--status-critical); }
 .path-bar-current.good { background: var(--status-good); opacity: 0.55; }
+/* v2.6: bright green vertical tick marker on target threshold. Sits above .path-bar-current
+   so it's visible regardless of bar color. Slight glow to draw the eye. */
+.path-bar-target-tick {
+  position: absolute;
+  top: -3px; bottom: -3px;
+  width: 3px;
+  background: var(--status-good);
+  border-radius: 1.5px;
+  transform: translateX(-1.5px);
+  box-shadow: 0 0 6px 1px rgba(34,197,94,0.55);
+  pointer-events: none;
+  z-index: 2;
+}
 .path-explainer { font-size: 0.82rem; color: var(--text-secondary); margin-top: 0.4rem; }
 .path-target-line { font-size: 0.72rem; color: var(--text-muted); margin-top: 0.2rem; }
 
@@ -1235,12 +1371,23 @@ const PIE_PALETTE = ['#3b82f6', '#a78bfa', '#22d3ee', '#f97316', '#22c55e', '#ea
 // Different palettes per donut type so they don't all look identical at a glance.
 // Stake palette leads with violet+amber+green (matches "asset" feel).
 // RPC palette leads with cyan+blue+orange (matches "endpoint/network" feel).
+// RPC-SECONDARY: same palette set but rotated leading order — used for the country donut
+//   that sits next to the ASN donut on the RPC summary card. Two adjacent donuts must look
+//   visually distinct or they read as duplicates.
+// DZ palette leads with violet (matches DoubleZero accent identity).
+// JITO palette leads with cyan (matches Jito BAM accent identity).
 const PIE_PALETTE_STAKE = ['#a78bfa', '#fbbf24', '#22c55e', '#3b82f6', '#e879f9', '#10b981', '#f97316', '#06b6d4', '#eab308', '#8b5cf6'];
-const PIE_PALETTE_RPC   = ['#22d3ee', '#3b82f6', '#f97316', '#a78bfa', '#22c55e', '#ef4444', '#fbbf24', '#06b6d4', '#e879f9', '#10b981'];
+const PIE_PALETTE_RPC           = ['#22d3ee', '#3b82f6', '#f97316', '#a78bfa', '#22c55e', '#ef4444', '#fbbf24', '#06b6d4', '#e879f9', '#10b981'];
+const PIE_PALETTE_RPC_SECONDARY = ['#a78bfa', '#fbbf24', '#10b981', '#06b6d4', '#e879f9', '#3b82f6', '#22c55e', '#f97316', '#ef4444', '#22d3ee'];
+const PIE_PALETTE_DZ            = ['#a78bfa', '#22d3ee', '#fbbf24', '#22c55e', '#3b82f6', '#f97316', '#e879f9', '#06b6d4', '#10b981', '#ef4444'];
+const PIE_PALETTE_JITO          = ['#22d3ee', '#a78bfa', '#fbbf24', '#3b82f6', '#22c55e', '#f97316', '#ef4444', '#06b6d4', '#e879f9', '#10b981'];
 
-function pickPalette(kind: 'stake' | 'rpc' | 'default'): string[] {
-  if (kind === 'stake') return PIE_PALETTE_STAKE;
-  if (kind === 'rpc') return PIE_PALETTE_RPC;
+function pickPalette(kind: 'stake' | 'rpc' | 'rpc-secondary' | 'dz' | 'jito' | 'default'): string[] {
+  if (kind === 'stake')         return PIE_PALETTE_STAKE;
+  if (kind === 'rpc')           return PIE_PALETTE_RPC;
+  if (kind === 'rpc-secondary') return PIE_PALETTE_RPC_SECONDARY;
+  if (kind === 'dz')            return PIE_PALETTE_DZ;
+  if (kind === 'jito')          return PIE_PALETTE_JITO;
   return PIE_PALETTE;
 }
 
@@ -1435,16 +1582,18 @@ async function renderStories(d: any, records: any[], cluster: string) {
   const grid = document.getElementById('stories-grid');
   if (!grid) return;
 
+  // Toggle 4-column mainnet layout (1+1+2 / 2+2 cells) vs 2x2 default for testnet/devnet
   if (cluster === 'mainnet-beta') {
+    grid.classList.add('mainnet-layout');
     grid.innerHTML = renderMainnetStories(records, d);
     setupStackedBarTooltip('.stacked-bar', '#stacked-tooltip-clients');
   } else if (cluster === 'testnet') {
-    // Render synchronously with placeholder for SFDP linked, then async fill it
+    grid.classList.remove('mainnet-layout');
     grid.innerHTML = renderTestnetDevnetStories(records, d, 'testnet', /* sfdpPlaceholder */ true);
     setupStackedBarTooltip('.stacked-bar', '#stacked-tooltip-versions');
-    // Fill SFDP linked card with cross-cluster lookup
     renderTestnetSfdpLinkedCard(records).catch(e => console.warn('[SONDA] SFDP cross-cluster:', e));
   } else {
+    grid.classList.remove('mainnet-layout');
     grid.innerHTML = renderTestnetDevnetStories(records, d, 'devnet', false);
     setupStackedBarTooltip('.stacked-bar', '#stacked-tooltip-versions');
   }
@@ -1473,6 +1622,30 @@ function renderMainnetStories(records: any[], d: any): string {
     else if (hd) dz_only++;
     else neither++;
   }
+
+  // Jito BAM card data (mainnet-only — bam metrics live in network_summary).
+  // Bar-rows aggregate BAM-connected validators by global region (continent),
+  // not by individual country — gives a 3-row picture that fits the bar layout
+  // and reads more meaningfully (e.g. Europe vs Americas vs APAC) than top-3 nations.
+  const bamMetrics = m.bam || {};
+  const bamConnectedTotal = bamMetrics.total_connected_validators ?? 0;
+  const bamStakePct = bamMetrics.stake_percentage ?? 0;
+  const bamNodes = bamMetrics.node_count ?? 0;
+  const bamCountryDist: Record<string, number> = bamMetrics.validator_geo?.country_distribution || {};
+  // Aggregate by region
+  const regionCounts: Record<string, number> = {};
+  for (const [cc, count] of Object.entries(bamCountryDist)) {
+    if (cc === '??' || cc === 'OFFLINE') continue;
+    const region = getRegion(cc);
+    regionCounts[region] = (regionCounts[region] || 0) + (count as number);
+  }
+  const bamRegionEntries = Object.entries(regionCounts)
+    .sort((a, b) => (b[1] as number) - (a[1] as number))
+    .slice(0, 3);
+  const bamConnectedSafe = Math.max(1, bamConnectedTotal);
+  // BAM adoption color: ≥30% good (green) — strong adoption; 15–30% caution (amber);
+  // <15% crit (red) — low adoption signal. Higher BAM adoption is good for the network.
+  const bamStakeCls = bamStakePct >= 30 ? 'good' : (bamStakePct >= 15 ? 'warn' : 'crit');
 
   // SFDP
   const sfdp = records.filter(r => r?.sfdp_state === 'Approved');
@@ -1518,8 +1691,8 @@ function renderMainnetStories(records: any[], d: any): string {
   }).join('');
 
   return `
-    <!-- DZ multicast -->
-    <div class="story story-dz tint-dz">
+    <!-- DZ multicast (span-1, 25%) -->
+    <div class="story span-1 story-dz tint-dz">
       <div class="story-header">
         <span class="story-tag dz-tag">DoubleZero</span>
         <span class="tooltip-wrap">
@@ -1550,8 +1723,36 @@ function renderMainnetStories(records: any[], d: any): string {
       <a href="/endpoints" data-stub class="story-link">DoubleZero infrastructure →</a>
     </div>
 
-    <!-- Coverage matrix -->
-    <div class="story tint-both">
+    <!-- Jito BAM connectivity (span-1, 25%) -->
+    <div class="story span-1 story-bam tint-bam">
+      <div class="story-header">
+        <span class="story-tag bam-tag">Jito BAM</span>
+        <span class="tooltip-wrap">
+          <span class="tooltip-icon" aria-label="info">${infoIcon()}</span>
+          <span class="tooltip-box">Jito BAM (Block Assembly Marketplace) is Jito's auction-based block-building system. Connected validators delegate block construction to BAM nodes for higher MEV capture and reduced inclusion latency.</span>
+        </span>
+      </div>
+      <div class="story-title">Validators connected to Jito BAM block-builder</div>
+      <div class="story-big mono cyan">${fmt(bamConnectedTotal)}</div>
+      <div class="story-sub"><span class="bam-stake ${bamStakeCls}">${pct(bamStakePct, 2)}</span> of network stake · ${fmt(bamNodes)} BAM nodes</div>
+      <div class="bar-rows-wrap with-divider">
+        ${bamRegionEntries.length > 0 ? bamRegionEntries.map(([region, count], i) => {
+          const c = count as number;
+          const widthPct = (c / bamConnectedSafe) * 100;
+          const fillCls = i === 0 ? 'cyan' : (i === 1 ? 'cyan' : 'cyan-dim');
+          return `
+        <div class="bar-row">
+          <span class="bar-row-label" title="BAM-validator region">${escapeHtml(region)}</span>
+          <div class="bar-row-track"><div class="bar-row-fill ${fillCls}" style="width:${widthPct}%"></div></div>
+          <span class="bar-row-num">${fmt(c)}</span>
+        </div>`;
+        }).join('') : '<div style="font-size:0.78rem; color:var(--text-muted);">No BAM data</div>'}
+      </div>
+      <a href="/endpoints" data-stub class="story-link">Jito BAM endpoints →</a>
+    </div>
+
+    <!-- Coverage matrix (span-2, 50%) -->
+    <div class="story span-2 tint-both">
       <div class="story-header">
         <span class="story-tag both-tag">Coverage Matrix</span>
         <span class="tooltip-wrap">
@@ -1569,8 +1770,8 @@ function renderMainnetStories(records: any[], d: any): string {
       <a href="/validators" data-stub class="story-link">View all validators →</a>
     </div>
 
-    <!-- Software (clients) -->
-    <div class="story">
+    <!-- Software (clients) (span-2, 50%) -->
+    <div class="story span-2">
       <div class="story-header">
         <span class="story-tag neutral-tag">Software</span>
         <span class="tooltip-wrap">
@@ -1583,8 +1784,8 @@ function renderMainnetStories(records: any[], d: any): string {
       <div class="stacked-legend">${clientLegend}</div>
     </div>
 
-    <!-- SFDP -->
-    <div class="story tint-sfdp">
+    <!-- SFDP (span-2, 50%) -->
+    <div class="story span-2 tint-sfdp">
       <div class="story-header">
         <span class="story-tag sfdp-tag">SFDP</span>
         <span class="tooltip-wrap">
@@ -1979,32 +2180,253 @@ function renderInfra(d: any) {
       <div class="infra-card-sub">${escapeHtml(c.sub)}</div>
     </div>`).join('');
 
-  // DZ summary line
+  // DZ summary line (mainnet) / Endpoints distribution (testnet/devnet) — both share the same
+  // card slot but differ in inner layout. Both get a 2-line header (label+summary, then stats row)
+  // matching the RPC card's structure for visual symmetry.
+  const cluster = d?.cluster ?? 'mainnet-beta';
   const dzCard = document.getElementById('dz-summary-card');
-  if (!dz || !dz.network_health) {
-    if (dzCard) dzCard.classList.add('absent');
-    setText('dz-summary-stats', 'not deployed on this cluster');
-    const issuesEl = document.getElementById('dz-issues');
-    if (issuesEl) issuesEl.innerHTML = '';
-  } else {
+  const dzLabel = document.getElementById('dz-summary-label');
+  const dzStatsRow = document.getElementById('dz-stats-row');
+  const dzInner = document.getElementById('dz-inner');
+
+  if (cluster === 'mainnet-beta' && dz && dz.network_health) {
+    // ── Mainnet: DZ network health ──
     if (dzCard) dzCard.classList.remove('absent');
+    if (dzLabel) {
+      dzLabel.textContent = 'DoubleZero network';
+      dzLabel.style.color = 'var(--accent-violet)';
+    }
     const nh = dz.network_health;
     setText('dz-summary-stats', `${fmt(nh.devices_reporting)}/${fmt(nh.devices_total)} devices · ${fmt(nh.links_healthy)}/${fmt(nh.links_total)} links healthy`);
-    const issuesEl = document.getElementById('dz-issues');
-    if (issuesEl) {
-      const linkIssues = nh.link_issues || [];
-      const devIssues = nh.devices_issues || [];
-      const items: string[] = [];
-      for (const i of linkIssues) {
-        const cls = i.quality === 'unavailable' ? 'bad' : '';
-        items.push(`<span class="dz-issue ${cls}">${escapeHtml(i.source_target)}: ${escapeHtml(i.quality)}${i.packet_loss ? ` (${i.packet_loss}% loss)` : ''}</span>`);
+    const stMain = document.getElementById('dz-summary-stats');
+    if (stMain) stMain.style.fontStyle = '';
+
+    // 2nd line stats: devices · multicast groups · contributors
+    const dzDevices = dz.devices ?? 0;
+    const mcGroupsArr = Array.isArray(dz.multicast_groups) ? dz.multicast_groups : [];
+    const mcGroupsCount = mcGroupsArr.length;
+    const contribsCount = Array.isArray(dz.contributors) ? dz.contributors.length : 0;
+    if (dzStatsRow) {
+      dzStatsRow.innerHTML = `
+        <span class="rpc-stat-item"><span class="rpc-stat-val mono">${fmt(dzDevices)}</span> devices</span>
+        <span class="rpc-stat-item"><span class="rpc-stat-val mono">${fmt(mcGroupsCount)}</span> multicast groups</span>
+        <span class="rpc-stat-item"><span class="rpc-stat-val mono">${fmt(contribsCount)}</span> contributors</span>
+      `;
+    }
+
+    const linkIssues = nh.link_issues || [];
+    const devIssues = nh.devices_issues || [];
+
+    const unavailable = linkIssues.filter((i: any) => i.quality === 'unavailable');
+    const degraded    = linkIssues.filter((i: any) => i.quality !== 'unavailable');
+    const noTelemetry = devIssues.filter((i: any) => i.status === 'no_telemetry');
+    const otherDev    = devIssues.filter((i: any) => i.status !== 'no_telemetry');
+
+    const summParts: string[] = [];
+    if (unavailable.length > 0) summParts.push(`<span class="dz-summ-tag bad">${unavailable.length} unavailable</span>`);
+    if (degraded.length > 0)    summParts.push(`<span class="dz-summ-tag warn">${degraded.length} degraded</span>`);
+    if (noTelemetry.length > 0) summParts.push(`<span class="dz-summ-tag muted">${noTelemetry.length} no telemetry</span>`);
+    if (otherDev.length > 0)    summParts.push(`<span class="dz-summ-tag warn">${otherDev.length} device issues</span>`);
+    const summHtml = summParts.length > 0
+      ? summParts.join('')
+      : `<span class="dz-summ-tag ok">All systems operational</span>`;
+
+    const allDetail = [
+      ...unavailable.map((i: any) => ({ kind: 'bad' as const, txt: `${i.source_target}: unavailable${i.packet_loss != null ? ` (${Number(i.packet_loss).toFixed(1)}% loss)` : ''}` })),
+      ...degraded.map((i: any) => ({ kind: '' as const, txt: `${i.source_target}: ${i.quality}${i.packet_loss != null ? ` (${Number(i.packet_loss).toFixed(1)}% loss)` : ''}` })),
+      ...otherDev.map((i: any) => ({ kind: 'bad' as const, txt: `${i.device_id} (${i.location}): ${i.status}` })),
+      ...noTelemetry.map((i: any) => ({ kind: 'muted' as const, txt: `${i.device_id} (${i.location}): no_telemetry` })),
+    ];
+    const VISIBLE = 5;
+    const visible = allDetail.slice(0, VISIBLE);
+    const hidden = allDetail.length - visible.length;
+    const chipsHtml = visible.map(it => `<span class="dz-issue ${it.kind}">${escapeHtml(it.txt)}</span>`).join('')
+      + (hidden > 0 ? `<span class="dz-issue more">+${hidden} more</span>` : '');
+
+    const asn = dz.device_geo?.asn_distribution || {};
+    let donutHtml = '';
+    if (Object.keys(asn).length > 0) {
+      const items = makeDonutItems(asn, 5, pickPalette('dz'));
+      const donut = renderDonut(items, { size: 84, ringR: 36, innerR: 22 });
+      donutHtml = `
+        <div class="donut-block">
+          <div class="donut-block-title">DZ devices by network provider</div>
+          <div class="donut-block-body">
+            <div class="donut-mini">${donut.svg}</div>
+            <div class="donut-legend">${donut.legend}</div>
+          </div>
+        </div>`;
+    }
+
+    // Order: donut LEFT, issues RIGHT. Issues sit at the card edge, donut closer to center.
+    if (dzInner) {
+      dzInner.innerHTML = `
+        <div class="dz-content-row">
+          <div class="dz-donut-col">${donutHtml}</div>
+          <div class="dz-issues-col">
+            <div class="dz-issues-summary">${summHtml}</div>
+            <div class="dz-issues">${chipsHtml}</div>
+          </div>
+        </div>`;
+    }
+  } else {
+    // ── testnet/devnet: repurpose card as Endpoints distribution ──
+    if (dzCard) dzCard.classList.remove('absent');
+    if (dzLabel) {
+      dzLabel.textContent = 'Endpoints distribution';
+      dzLabel.style.color = 'var(--cluster-accent)';
+    }
+    setText('dz-summary-stats', '');
+    const stEl = document.getElementById('dz-summary-stats');
+    if (stEl) stEl.style.fontStyle = '';
+
+    const sol = ep.solana || {};
+    const jito = ep.jito || {};
+
+    // 2nd line stats: solana endpoints geography summary + DoubleZero is mainnet-only note
+    const solCountries = Object.keys(sol.country_distribution || {}).length;
+    const solCities    = Object.keys(sol.city_distribution || {}).length;
+    const solAsns      = Object.keys(sol.asn_distribution || {}).length;
+    if (dzStatsRow) {
+      const statsParts: string[] = [];
+      if (solCountries > 0) statsParts.push(`<span class="rpc-stat-item"><span class="rpc-stat-val mono">${fmt(solCountries)}</span> countries</span>`);
+      if (solCities > 0)    statsParts.push(`<span class="rpc-stat-item"><span class="rpc-stat-val mono">${fmt(solCities)}</span> cities</span>`);
+      if (solAsns > 0)      statsParts.push(`<span class="rpc-stat-item"><span class="rpc-stat-val mono">${fmt(solAsns)}</span> providers</span>`);
+      statsParts.push(`<span class="dz-mainnet-only">DoubleZero is mainnet-only</span>`);
+      dzStatsRow.innerHTML = statsParts.join('');
+    }
+
+    const blocks: string[] = [];
+
+    const solCountry = sol.country_distribution || {};
+    const solAsn     = sol.asn_distribution || {};
+    const jitoCity   = jito.city_distribution || {};
+
+    const hasJitoCity = Object.keys(jitoCity).length > 0;
+
+    // testnet: drop Solana country donut (data too sparse — usually just 2 countries),
+    //   keep ASN donut (renamed to "Solana endpoints by ASN") + Jito endpoints by city.
+    // devnet: keep both Solana country and Solana ASN (no Jito on devnet).
+    if (cluster === 'devnet') {
+      if (Object.keys(solCountry).length > 0) {
+        const items1 = makeDonutItems(solCountry, 4, pickPalette('rpc'));
+        const d1 = renderDonut(items1, { size: 80, ringR: 34, innerR: 22 });
+        blocks.push(`
+          <div class="donut-block">
+            <div class="donut-block-title">Solana endpoints by country</div>
+            <div class="donut-block-body">
+              <div class="donut-mini">${d1.svg}</div>
+              <div class="donut-legend">${d1.legend}</div>
+            </div>
+          </div>`);
       }
-      for (const i of devIssues) {
-        items.push(`<span class="dz-issue">${escapeHtml(i.device_id)} (${escapeHtml(i.location)}): ${escapeHtml(i.status)}</span>`);
+      if (Object.keys(solAsn).length > 0) {
+        const items2 = makeDonutItems(solAsn, 4, pickPalette('rpc-secondary'));
+        const d2 = renderDonut(items2, { size: 80, ringR: 34, innerR: 22 });
+        blocks.push(`
+          <div class="donut-block">
+            <div class="donut-block-title">Solana endpoints by ASN</div>
+            <div class="donut-block-body">
+              <div class="donut-mini">${d2.svg}</div>
+              <div class="donut-legend">${d2.legend}</div>
+            </div>
+          </div>`);
       }
-      issuesEl.innerHTML = items.length > 0 ? items.join('') : '<span class="dz-issue ok">All systems operational</span>';
+    } else {
+      // testnet
+      if (Object.keys(solAsn).length > 0) {
+        const items2 = makeDonutItems(solAsn, 4, pickPalette('rpc-secondary'));
+        const d2 = renderDonut(items2, { size: 80, ringR: 34, innerR: 22 });
+        blocks.push(`
+          <div class="donut-block">
+            <div class="donut-block-title">Solana endpoints by ASN</div>
+            <div class="donut-block-body">
+              <div class="donut-mini">${d2.svg}</div>
+              <div class="donut-legend">${d2.legend}</div>
+            </div>
+          </div>`);
+      }
+      if (hasJitoCity) {
+        const items3 = makeDonutItems(jitoCity, 4, pickPalette('jito'));
+        const d3 = renderDonut(items3, { size: 80, ringR: 34, innerR: 22 });
+        blocks.push(`
+          <div class="donut-block">
+            <div class="donut-block-title">Jito endpoints by city</div>
+            <div class="donut-block-body">
+              <div class="donut-mini">${d3.svg}</div>
+              <div class="donut-legend">${d3.legend}</div>
+            </div>
+          </div>`);
+      }
+    }
+
+    let cols = '';
+    if (blocks.length === 2) cols = ' cols-2';
+    else if (blocks.length === 3) cols = ' cols-3';
+
+    if (dzInner) {
+      dzInner.innerHTML = `<div class="dz-donuts-row${cols}">${blocks.join('')}</div>`;
     }
   }
+}
+
+// Build top-N donut items from a {label: count} distribution.
+// Filters out '??' (unknown country) and 'OFFLINE' from non-rpc data; keeps them but renamed for rpc.
+// Shortens overly-long ASN/provider names so they fit cleanly in donut legends.
+// Curated mapping for known long names; fallback truncation with ellipsis for the rest.
+const LABEL_SHORT: Record<string, string> = {
+  'GOOGLE-CLOUD-PLATFORM': 'Google Cloud',
+  'AMAZON-02': 'Amazon AWS',
+  'AMAZON-AES': 'Amazon AES',
+  'DTI-DC-PEERING': 'DTI-DC',
+  'CHERRYSERVERS5-AS': 'CherryServers',
+  'CHERRYSERVERS6-AS': 'CherryServers',
+  'CHERRYSERVERS1-AS': 'CherryServers',
+  'CHERRYSERVERS2-AS': 'CherryServers',
+  'MOMENTUM-ACCESS': 'MomentumAccess',
+  'TELECOM ITALIA SPARKLE S.p.A.': 'Telecom Italia',
+  'Cogent Communications, LLC': 'Cogent',
+  'COGENT-174': 'Cogent',
+  'TERASWITCH': 'TeraSwitch',
+  'GOOGLE-CLOUD-PL...': 'Google Cloud',
+};
+function shortenLabel(name: string): string {
+  if (LABEL_SHORT[name]) return LABEL_SHORT[name];
+  if (name.length > 17) return name.slice(0, 16) + '…';
+  return name;
+}
+
+// Map ISO 3166-1 alpha-2 country code → high-level region. Used in Insights BAM card
+// to aggregate validators by continent/region (Europe / Americas / Asia-Pacific / etc.)
+// instead of by individual country.
+const REGION_MAP: Record<string, string> = {};
+const _addRegion = (region: string, codes: string[]) => { for (const c of codes) REGION_MAP[c] = region; };
+_addRegion('Europe', ['AD','AL','AM','AT','AZ','BA','BE','BG','BY','CH','CY','CZ','DE','DK','EE','ES','FI','FO','FR','GB','GE','GI','GR','HR','HU','IE','IM','IS','IT','JE','LI','LT','LU','LV','MC','MD','ME','MK','MT','NL','NO','PL','PT','RO','RS','RU','SE','SI','SK','SM','UA','VA','XK']);
+_addRegion('Asia-Pacific', ['AF','AU','BD','BN','BT','CN','FJ','HK','ID','IN','JP','KH','KP','KR','KZ','LA','LK','MM','MN','MO','MV','MY','NC','NP','NZ','PG','PH','PK','SG','TH','TL','TW','UZ','VN','TJ','TM','KG']);
+_addRegion('Americas', ['AG','AR','BB','BO','BR','BS','BZ','CA','CL','CO','CR','CU','DM','DO','EC','GT','GY','HN','HT','JM','KN','LC','MX','NI','PA','PE','PR','PY','SR','SV','TT','UY','US','VC','VE']);
+_addRegion('Middle East / Africa', ['AE','AO','BH','BJ','BW','CD','CG','CI','CM','DJ','DZ','EG','ER','ET','GA','GH','GN','GQ','IL','IQ','IR','JO','KE','KW','LB','LR','LY','MA','MG','ML','MR','MU','MW','MZ','NE','NG','OM','PS','QA','RW','SA','SC','SD','SL','SN','SO','SY','TG','TN','TR','TZ','UG','YE','ZA','ZM','ZW']);
+function getRegion(cc: string): string {
+  return REGION_MAP[cc] || 'Other';
+}
+
+function makeDonutItems(
+  dist: Record<string, number>,
+  topN: number,
+  palette: string[],
+): { label: string; value: number; color?: string }[] {
+  const entries = Object.entries(dist).sort((a, b) => (b[1] as number) - (a[1] as number));
+  const top = entries.slice(0, topN);
+  const rest = entries.slice(topN);
+  const items = top.map(([k, v], i) => ({
+    label: k === '??' ? 'Unknown' : shortenLabel(k),
+    value: v as number,
+    color: palette[i % palette.length],
+  }));
+  if (rest.length > 0) {
+    const otherTotal = rest.reduce((s, [, c]) => s + (c as number), 0);
+    items.push({ label: `Other (${rest.length})`, value: otherTotal, color: 'var(--text-muted)' });
+  }
+  return items;
 }
 
 // ───────── RPC summary line ─────────
@@ -2012,6 +2434,7 @@ function renderInfra(d: any) {
 function renderRpcSummary(d: any) {
   const rpc = d?.metrics?.rpc;
   const sol = d?.metrics?.endpoints?.solana;
+  const dzRpcConnected = d?.metrics?.doublezero?.rpc;
   const card = document.getElementById('rpc-summary-card');
   if (!card) return;
 
@@ -2020,8 +2443,8 @@ function renderRpcSummary(d: any) {
     setText('rpc-summary-stats', 'no public RPC data on this cluster');
     const sr = document.getElementById('rpc-stats-row');
     if (sr) sr.innerHTML = '';
-    const dw = document.getElementById('rpc-donut-wrap');
-    if (dw) dw.innerHTML = '';
+    const dr = document.getElementById('rpc-donuts-row');
+    if (dr) dr.innerHTML = '';
     return;
   }
 
@@ -2034,7 +2457,12 @@ function renderRpcSummary(d: any) {
   const cities = Object.keys(rpc.city_distribution || {}).length;
   const uniqueAsns = Object.keys(rpc.asn_distribution || {}).length;
 
-  setText('rpc-summary-stats', `${fmt(total)} public RPCs · ${fmt(officialReachable)}/${fmt(officialTotal)} official endpoints reachable`);
+  // Header line: total + official + DZ-connected (mainnet only)
+  let summaryStr = `${fmt(total)} public RPCs · ${fmt(officialReachable)}/${fmt(officialTotal)} official endpoints reachable`;
+  if (typeof dzRpcConnected === 'number' && dzRpcConnected > 0) {
+    summaryStr += ` · ${fmt(dzRpcConnected)} on DoubleZero`;
+  }
+  setText('rpc-summary-stats', summaryStr);
 
   const statsRow = document.getElementById('rpc-stats-row');
   if (statsRow) {
@@ -2045,26 +2473,31 @@ function renderRpcSummary(d: any) {
     `;
   }
 
-  // Mini donut: top 5 ASNs + Other
-  const asnEntries = Object.entries(rpc.asn_distribution || {})
-    .sort((a, b) => (b[1] as number) - (a[1] as number));
-  const TOP = 5;
-  const top = asnEntries.slice(0, TOP);
-  const rest = asnEntries.slice(TOP);
-  const items: { label: string; value: number; color?: string }[] = top.map(([asn, c], i) => ({
-    label: asn, value: c as number, color: pickPalette('rpc')[i % pickPalette('rpc').length],
-  }));
-  if (rest.length > 0) {
-    const otherTotal = rest.reduce((s, [, c]) => s + (c as number), 0);
-    items.push({ label: `Other (${rest.length})`, value: otherTotal, color: 'var(--text-muted)' });
-  }
-  const donut = renderDonut(items, { size: 80, ringR: 34, innerR: 22 });
+  // Two donuts side-by-side: ASN distribution (left) + Country distribution (right)
+  // Different palette ordering on the two donuts so they read as visually distinct.
+  const asnItems = makeDonutItems(rpc.asn_distribution || {}, 5, pickPalette('rpc'));
+  const cyItems  = makeDonutItems(rpc.country_distribution || {}, 5, pickPalette('rpc-secondary'));
 
-  const wrap = document.getElementById('rpc-donut-wrap');
+  const dAsn = renderDonut(asnItems, { size: 88, ringR: 38, innerR: 24 });
+  const dCy  = renderDonut(cyItems,  { size: 88, ringR: 38, innerR: 24 });
+
+  const wrap = document.getElementById('rpc-donuts-row');
   if (wrap) {
     wrap.innerHTML = `
-      <div class="rpc-donut-mini">${donut.svg}</div>
-      <div class="rpc-donut-legend">${donut.legend}</div>
+      <div class="donut-block">
+        <div class="donut-block-title">RPC nodes by ASN</div>
+        <div class="donut-block-body">
+          <div class="donut-mini">${dAsn.svg}</div>
+          <div class="donut-legend">${dAsn.legend}</div>
+        </div>
+      </div>
+      <div class="donut-block">
+        <div class="donut-block-title">RPC nodes by country</div>
+        <div class="donut-block-body">
+          <div class="donut-mini">${dCy.svg}</div>
+          <div class="donut-legend">${dCy.legend}</div>
+        </div>
+      </div>
     `;
   }
 }
@@ -2128,7 +2561,12 @@ function renderPath(d: any) {
   list.innerHTML = items.map(item => {
     const currentW = Math.min(item.current, 100);
     const targetW = Math.min(item.target, 100);
-    const metBadge = item.severity === 'good' ? `<span class="path-met-badge">✓ within target</span>` : '';
+    // v2.6: badge "within target" shows whenever current ≤ target, not only severity==='good'.
+    // This makes the warn-but-still-within state read clearly.
+    const withinTarget = item.current <= item.target;
+    const metBadge = withinTarget ? `<span class="path-met-badge">✓ within target</span>` : '';
+    // v2.6: bright vertical tick at the exact target percentage on the bar.
+    const tickMarker = `<div class="path-bar-target-tick" style="left:${targetW}%"></div>`;
     return `<div class="path-item">
       <div class="path-item-header">
         <span class="path-name">${escapeHtml(item.name)}${metBadge}</span>
@@ -2137,6 +2575,7 @@ function renderPath(d: any) {
       <div class="path-bar-container">
         <div class="path-bar-target" style="width:${targetW}%"></div>
         <div class="path-bar-current ${item.severity}" style="width:${currentW}%"></div>
+        ${tickMarker}
       </div>
       <div class="path-explainer">${escapeHtml(item.explainer)}</div>
       <div class="path-target-line">${escapeHtml(item.target_label)}</div>
