@@ -943,7 +943,11 @@ import ClusterBanner from '../components/ClusterBanner.astro';
 .donut-legend {
   flex: 1 1 auto; min-width: 0;
   display: grid;
-  grid-template-columns: auto max-content auto;
+  /* minmax(0, max-content) on the middle column: labels take natural width when room allows,
+     and gracefully shrink with ellipsis when the legend's natural width exceeds its container
+     (e.g. narrow cards with long ASN names like "LIMESTONENETWORKS"). Without the min:0 floor,
+     max-content stays rigid and the right-aligned percentages overflow the card edge. */
+  grid-template-columns: auto minmax(0, max-content) auto;
   column-gap: 0.45rem; row-gap: 0.32rem;
   /* width: fit-content prevents the grid from stretching across the entire flex parent.
      With auto+max-content+auto, the columns are sized by their content, so any extra space
@@ -2389,6 +2393,12 @@ const LABEL_SHORT: Record<string, string> = {
   'COGENT-174': 'Cogent',
   'TERASWITCH': 'TeraSwitch',
   'GOOGLE-CLOUD-PL...': 'Google Cloud',
+  'LIMESTONENETWORKS': 'Limestone',
+  'LIMESTONE-NETWORKS-INC': 'Limestone',
+  'LIMESTONENETWORKS-INC': 'Limestone',
+  'DIGITALOCEAN-ASN': 'DigitalOcean',
+  'AS-CHOOPA': 'Vultr',
+  'AS-VULTR': 'Vultr',
 };
 function shortenLabel(name: string): string {
   if (LABEL_SHORT[name]) return LABEL_SHORT[name];
