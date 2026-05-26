@@ -132,6 +132,9 @@ if (banner) {
   } else if (cluster === 'devnet') {
     titleEl.textContent = 'DEVNET CLUSTER';
     textEl.textContent = 'A sandbox for application developers. Smaller validator set, network resets are possible, no real economic value at stake.';
+  } else if (cluster === 'alpenglow-community') {
+    titleEl.textContent = 'ALPENGLOW COMMUNITY CLUSTER';
+    textEl.textContent = 'Experimental network testing the new Alpenglow consensus algorithm. Regenesis events and short epochs are expected during the pre-rollout phase.';
   }
 
   // Sync shrunk state with current scroll position right after showing

@@ -27,6 +27,7 @@ const { activePage = 'overview' } = Astro.props;
         <button class="cluster-btn" data-cluster="mainnet-beta">mainnet</button>
         <button class="cluster-btn" data-cluster="testnet">testnet</button>
         <button class="cluster-btn" data-cluster="devnet">devnet</button>
+        <button class="cluster-btn" data-cluster="alpenglow-community" title="Alpenglow community cluster">alpenglow</button>
       </div>
 
       <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
@@ -131,22 +132,65 @@ const { activePage = 'overview' } = Astro.props;
 .mobile-link { font-size: 0.92rem; font-weight: 500; color: var(--text-secondary); text-decoration: none; padding: 0.7rem 0.5rem; border-radius: 6px; }
 .mobile-link.active { color: var(--cluster-accent); background: color-mix(in srgb, var(--cluster-accent) 10%, transparent); }
 
-@media (max-width: 1024px) { .updated-pill { display: none; } }
 @media (max-width: 900px) {
   .site-nav { display: none; }
   .mobile-menu-toggle { display: flex; }
 }
 @media (max-width: 600px) {
   .logo-text { display: none; }
-  .cluster-btn { padding: 0.2rem 0.4rem; font-size: 0.65rem; }
-  .header-inner { padding: 0 1rem; gap: 0.75rem; }
+  /* Allow header to grow when cluster-switcher wraps to row 2.
+     align-items: flex-start keeps the logo at the top of row 1 alongside the
+     controls — without it, the logo centers vertically across the full
+     2-row height of header-controls and visually drifts toward the middle. */
+  .header-inner {
+    min-height: 60px; height: auto;
+    padding: 0.5rem 0.85rem;
+    gap: 0.45rem;
+    align-items: flex-start;
+  }
+  .logo-link { padding-top: 0.15rem; }
+  /* Tighter icons + pill so everything fits on 360-412px viewports without hiding socials */
   .icon-link { width: 32px; height: 32px; }
-  .header-controls { gap: 0.35rem; }
+  .updated-pill { font-size: 0.62rem; padding: 0.18rem 0.4rem; }
+  .theme-toggle .toggle-track { width: 44px; height: 24px; }
+  .theme-toggle .toggle-thumb { width: 18px; height: 18px; }
+  :global([data-theme="light"]) .toggle-thumb { left: 22px; }
+  .toggle-icon { width: 20px; height: 20px; }
+  /* Controls flex container ITSELF wraps. cluster-switcher inside it
+     gets order: 99 + flex-basis: 100% so it becomes a full second row beneath
+     the theme-toggle and icons (which stay on the first row). */
+  .header-controls {
+    gap: 0.3rem;
+    flex: 1;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .cluster-switcher {
+    order: 99; flex-basis: 100%;
+    width: 100%;
+    margin-top: 0.5rem; margin-bottom: 0;
+    padding: 4px;
+  }
+  .cluster-switcher .cluster-btn {
+    flex: 1 1 0; min-width: 0;
+    padding: 0.4rem 0.3rem; font-size: 0.7rem;
+    text-align: center;
+  }
 }
-@media (max-width: 480px) {
-  .header-controls .icon-link[aria-label="@SondaNetwork on X"],
-  .header-controls .icon-link[aria-label="GitHub"] { display: none; }
+
+/* Very narrow viewports (≤360px — small Android phones).
+   updated-pill drops out (same info shown one scroll down on StatusStrip).
+   Padding tightens further so "alpenglow" button doesn't get clipped. */
+@media (max-width: 360px) {
+  .updated-pill { display: none; }
+  .header-inner { padding: 0.5rem 0.6rem; gap: 0.35rem; }
+  .header-controls { gap: 0.25rem; }
+  .cluster-switcher .cluster-btn { padding: 0.35rem 0.18rem; font-size: 0.65rem; }
 }
+/* Note: X (Twitter), Telegram, and GitHub icons are kept visible on all screen sizes.
+   Earlier we hid X and GitHub at ≤480px to save space; now we keep them and rely on
+   the compact mobile sizing above to fit everything on 360px viewports. */
 </style>
 
 <script>

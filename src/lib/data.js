@@ -1,6 +1,6 @@
 // src/lib/data.js
 export const R2_BASE = 'https://data.sonda.network';
-export const CLUSTERS = ['mainnet-beta', 'testnet', 'devnet'];
+export const CLUSTERS = ['mainnet-beta', 'testnet', 'devnet', 'alpenglow-community'];
 export const DEFAULT_CLUSTER = 'mainnet-beta';
 
 // Apply cluster to <html data-cluster=...> for global tinting

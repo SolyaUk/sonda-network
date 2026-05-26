@@ -23,8 +23,7 @@ import ClusterBanner from '../components/ClusterBanner.astro';
 
       <section class="hero-compact">
         <div>
-          <span class="hero-eyebrow">Solana Observatory for Network Decentralization Analysis</span>
-          <h1 class="hero-title">The Solana network, mapped and verified.</h1>
+          <h1 class="hero-title">SONDA: Solana Observatory for Network Decentralization Analysis</h1>
         </div>
       </section>
 
@@ -44,7 +43,7 @@ import ClusterBanner from '../components/ClusterBanner.astro';
         <div class="section-header">
           <div>
             <h2 class="section-title">Live infrastructure status</h2>
-            <p class="section-desc">Reachability of critical Solana infrastructure endpoints.</p>
+            <p class="section-desc">Reachability of critical Solana infrastructure endpoints</p>
           </div>
           <a href="/endpoints" data-stub class="section-link">Explore all endpoints →</a>
         </div>
@@ -90,7 +89,7 @@ import ClusterBanner from '../components/ClusterBanner.astro';
         <div class="section-header">
           <div>
             <h2 class="section-title">Insights</h2>
-            <p class="section-desc">Network signals at a glance.</p>
+            <p class="section-desc">Network signals at a glance</p>
           </div>
           <div class="watermark mono" id="watermark-insights"></div>
         </div>
@@ -107,7 +106,7 @@ import ClusterBanner from '../components/ClusterBanner.astro';
         <div class="section-header">
           <div>
             <h2 class="section-title">Decentralization metrics</h2>
-            <p class="section-desc">Academic indicators of network distribution.</p>
+            <p class="section-desc">Academic indicators of network distribution</p>
           </div>
         </div>
 
@@ -308,7 +307,7 @@ import ClusterBanner from '../components/ClusterBanner.astro';
         <div class="section-header">
           <div>
             <h2 class="section-title">Path to better decentralization</h2>
-            <p class="section-desc">How much stake would need to migrate to reach healthier thresholds.</p>
+            <p class="section-desc">How much stake would need to migrate to reach healthier thresholds</p>
           </div>
           <div class="watermark mono" id="watermark-path"></div>
         </div>
@@ -369,7 +368,7 @@ import ClusterBanner from '../components/ClusterBanner.astro';
                 Validators here are not just IPs. Each record cross-references geolocation across four independent providers (with discrepancies flagged), pulls staking and performance from Solana RPC, infrastructure participation from DoubleZero and Jito BAM, delegation status from the Solana Foundation, and historical movements from Jito Kobe and SFDP archives. Validator location history reaches back to 2021, across <span class="mono" id="about-epoch-count">700+</span> epochs.
               </p>
               <p class="about-text">
-                Built for assessing network effects and problems: the health of critical infrastructure layers, monitoring and research of datacenters, and a fresh look at decentralization. Data refreshes every <span class="mono">~60 seconds</span> across all three clusters and is free to use under attribution.
+                Built for assessing network effects and problems: the health of critical infrastructure layers, monitoring and research of datacenters, and a fresh look at decentralization. Data refreshes every <span class="mono">~60 seconds</span> across all four clusters and is free to use under attribution.
               </p>
               <div class="about-clusters" id="about-clusters">
                 <div class="about-cluster-row" data-cluster-color="mainnet-beta">
@@ -395,6 +394,14 @@ import ClusterBanner from '../components/ClusterBanner.astro';
                   <span class="about-cluster-stat"><span class="num mono" id="ac-dn-countries">—</span><span class="lbl">countries</span></span>
                   <span class="about-sep">·</span>
                   <span class="about-cluster-stat"><span class="num mono" id="ac-dn-asns">—</span><span class="lbl">providers</span></span>
+                </div>
+                <div class="about-cluster-row" data-cluster-color="alpenglow-community" id="about-row-alpenglow" style="display:none;">
+                  <span class="about-cluster-tag">ALPENGLOW</span>
+                  <span class="about-cluster-stat"><span class="num mono" id="ac-ag-validators">—</span><span class="lbl">validators</span></span>
+                  <span class="about-sep">·</span>
+                  <span class="about-cluster-stat"><span class="num mono" id="ac-ag-countries">—</span><span class="lbl">countries</span></span>
+                  <span class="about-sep">·</span>
+                  <span class="about-cluster-stat"><span class="num mono" id="ac-ag-asns">—</span><span class="lbl">providers</span></span>
                 </div>
               </div>
               <div class="about-tags">
@@ -562,8 +569,25 @@ import ClusterBanner from '../components/ClusterBanner.astro';
 
 /* HERO */
 .hero-compact { padding: 1.5rem 0 1rem; }
-.hero-eyebrow { display: block; font-family: var(--font-mono); font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--cluster-accent); margin-bottom: 0.4rem; }
-.hero-title { font-family: var(--font-display); font-size: clamp(1.2rem, 2.2vw, 1.6rem); font-weight: 600; color: var(--text-primary); margin: 0; line-height: 1.3; }
+/* Eyebrow-style mono publication label. Slightly larger than the original 0.65rem
+   eyebrow but still subordinate to the page content — opacity softens its presence
+   so it reads as "publication identifier" rather than "main heading". */
+.hero-title {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: clamp(0.72rem, 1.05vw, 0.88rem);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--cluster-accent);
+  opacity: 0.85;
+  margin: 0;
+  line-height: 1.4;
+}
+@media (max-width: 600px) {
+  .hero-compact { padding: 1.1rem 0 0.6rem; }
+  .hero-title { letter-spacing: 0.06em; }
+}
 
 /* PULSE */
 .pulse-row {
@@ -573,6 +597,15 @@ import ClusterBanner from '../components/ClusterBanner.astro';
 }
 .pulse-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 0.3rem; padding: 0 1rem; text-align: center; min-width: 0; }
 .pulse-num { font-size: clamp(1.4rem, 2.8vw, 2rem); font-weight: 700; color: var(--text-primary); line-height: 1; }
+/* Text variant (used for consensus name on alpenglow): smaller font + accent color
+   so the slot reads as informational rather than numerical. Emoji sits inline. */
+.pulse-num.pulse-num-text {
+  font-size: clamp(1rem, 1.7vw, 1.35rem);
+  font-weight: 600;
+  color: var(--cluster-accent);
+  display: inline-flex; align-items: center; gap: 0.35rem;
+}
+.pulse-num-emoji { font-size: 0.9em; }
 .pulse-label { font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
 .pulse-divider { width: 1px; height: 36px; background: var(--border); flex-shrink: 0; }
 @media (max-width: 700px) {
@@ -595,15 +628,59 @@ import ClusterBanner from '../components/ClusterBanner.astro';
 .stories-grid { display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: minmax(220px, auto); gap: 1rem; }
 @media (max-width: 768px) { .stories-grid { grid-template-columns: 1fr; } }
 
-/* Mainnet layout: 4-column grid with span-1 (25%) and span-2 (50%) cards.
-   Multicast and Jito BAM stories sit side-by-side at the top as related infrastructure
-   adoption stories; Coverage Matrix takes the remaining 50% of row 1; Software and SFDP
-   each span 50% in row 2. On mobile the grid collapses to 1 column. */
-.stories-grid.mainnet-layout { grid-template-columns: repeat(4, 1fr); }
-.stories-grid.mainnet-layout .story.span-2 { grid-column: span 2; }
+/* Mainnet and Alpenglow layout: 4-column grid with span-1 (25%) and span-2 (50%) cards.
+   Mainnet: Multicast + BAM (1+1) / Coverage Matrix (2) / Software + SFDP (2+2).
+   Alpenglow: What is Alpenglow (2) / Features + BLS (1+1) / Software + Stake (2+2).
+   On mobile the grid collapses to 1 column. */
+.stories-grid.mainnet-layout,
+.stories-grid.alpenglow-layout { grid-template-columns: repeat(4, 1fr); }
+.stories-grid.mainnet-layout .story.span-2,
+.stories-grid.alpenglow-layout .story.span-2 { grid-column: span 2; }
 @media (max-width: 768px) {
-  .stories-grid.mainnet-layout { grid-template-columns: 1fr; }
-  .stories-grid.mainnet-layout .story.span-2 { grid-column: span 1; }
+  .stories-grid.mainnet-layout,
+  .stories-grid.alpenglow-layout { grid-template-columns: 1fr; }
+  .stories-grid.mainnet-layout .story.span-2,
+  .stories-grid.alpenglow-layout .story.span-2 { grid-column: span 1; }
+}
+
+/* Consensus badge — shown on Software card on every cluster (currently only alpenglow,
+   can be added to mainnet/testnet/devnet Software cards later). Special highlight when
+   the cluster has already activated Alpenglow consensus (SIMD-0326). */
+.consensus-badge {
+  font-size: 0.66rem;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.18rem 0.45rem;
+  background: var(--bg-card-hover);
+  white-space: nowrap;
+  margin-left: auto;
+}
+.consensus-badge.is-alpenglow {
+  color: var(--cluster-accent);
+  border-color: color-mix(in srgb, var(--cluster-accent) 35%, transparent);
+  background: color-mix(in srgb, var(--cluster-accent) 8%, var(--bg-card));
+}
+
+/* story-big-denom: smaller "/ N" tail next to big numerator on cards like Feature readiness */
+.story-big-denom {
+  font-size: 0.55em;
+  color: var(--text-muted);
+  font-weight: 500;
+  vertical-align: baseline;
+}
+
+/* Inactive-feature hint under the Feature readiness bar rows */
+.feat-inactive-hint {
+  margin-top: 0.55rem;
+  padding-top: 0.55rem;
+  border-top: 1px dashed var(--border);
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  line-height: 1.4;
 }
 
 .story {
@@ -652,6 +729,8 @@ import ClusterBanner from '../components/ClusterBanner.astro';
 .bar-row-fill.cyan-dim { background: var(--accent-cyan); opacity: 0.45; }
 .bar-row-fill.cluster { background: var(--cluster-accent); }
 .bar-row-fill.good { background: var(--status-good); }
+.bar-row-fill.warn { background: var(--status-warning); }
+.bar-row-fill.neutral { background: var(--text-muted); opacity: 0.55; }
 .bar-row-fill.info { background: var(--accent-blue); }
 .bar-row-fill.muted { background: var(--text-muted); }
 .bar-row-fill.crit { background: var(--status-critical); }
@@ -839,7 +918,15 @@ import ClusterBanner from '../components/ClusterBanner.astro';
 .infra-summary-line.absent { opacity: 0.55; }
 .infra-summary-head { display: flex; align-items: center; gap: 0.8rem; flex-wrap: wrap; }
 .infra-summary-label { font-size: 0.85rem; font-weight: 600; }
-.infra-summary-stats { font-size: 0.82rem; color: var(--text-secondary); }
+.infra-summary-stats {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  /* Allow the stats line to wrap on narrow widths instead of overflowing
+     when long compositions (e.g. "X public RPCs (Y on validators) ·
+     Z/W official reachable · K on DoubleZero") exceed available space. */
+  display: inline;
+  word-spacing: 0.02em;
+}
 
 /* DZ link issues — compact aggregated row (v2.6) + chips with rounded loss values */
 .dz-issues-summary {
@@ -1170,6 +1257,10 @@ import ClusterBanner from '../components/ClusterBanner.astro';
   color: var(--accent-amber, #fbbf24);
   background: color-mix(in srgb, var(--accent-amber, #fbbf24) 15%, transparent);
 }
+.about-cluster-row[data-cluster-color="alpenglow-community"] .about-cluster-tag {
+  color: var(--accent-rose, #fb7185);
+  background: color-mix(in srgb, var(--accent-rose, #fb7185) 15%, transparent);
+}
 
 .about-cluster-stat {
   display: inline-flex; align-items: baseline; gap: 0.4rem;
@@ -1187,6 +1278,7 @@ import ClusterBanner from '../components/ClusterBanner.astro';
 .about-cluster-row[data-cluster-color="mainnet-beta"] .about-cluster-stat .num { color: var(--accent-blue); }
 .about-cluster-row[data-cluster-color="testnet"]      .about-cluster-stat .num { color: var(--accent-magenta, #e879f9); }
 .about-cluster-row[data-cluster-color="devnet"]       .about-cluster-stat .num { color: var(--accent-amber, #fbbf24); }
+.about-cluster-row[data-cluster-color="alpenglow-community"] .about-cluster-stat .num { color: var(--accent-rose, #fb7185); }
 
 /* Separators (·) hidden — grid columns provide the visual rhythm. */
 .about-sep { display: none; }
@@ -1433,19 +1525,47 @@ function infoIcon(): string {
 
 // ───────── Pulse ─────────
 
+// Detects which consensus algorithm a cluster currently runs by checking whether
+// SIMD-0326 (the Alpenglow consensus proposal) is in the inactive-features list.
+// Works on every cluster (since the features list itself is universal): if SIMD-0326
+// is still listed as inactive, Tower BFT is live; if it's gone from inactive, Alpenglow
+// has been activated. Searches the description field (not the id, which is just a
+// random-looking key like "mustRekeyVm2QHYB...").
+function detectConsensus(d: any): 'Tower BFT' | 'Alpenglow' | null {
+  const features = d?.features;
+  if (!features) return null;
+  const inactive = features.inactive || [];
+  const hasSimd0326Inactive = inactive.some((f: any) =>
+    typeof f?.description === 'string' && f.description.includes('SIMD-0326')
+  );
+  return hasSimd0326Inactive ? 'Tower BFT' : 'Alpenglow';
+}
+
 function renderPulse(d: any, records: any[], cluster: string) {
   const m = d?.metrics || {};
   const v = m.validators || {};
   const ch = m.cluster_health || {};
   const dz = m.doublezero;
 
-  let items: { num: string; label: string }[] = [];
+  let items: { num: string; label: string; emoji?: string }[] = [];
   if (cluster === 'mainnet-beta') {
     items = [
       { num: fmt(v.total), label: 'active validators' },
       { num: pct(ch.average_stake_weighted_skip_rate, 2), label: 'stake-weighted skip' },
       { num: dz?.multicast_publishers?.stake_percent != null ? pct(dz.multicast_publishers.stake_percent, 1) : '—', label: 'stake on DZ multicast' },
       { num: fmt(v.decentralization?.current?.superminority_validator_33?.value), label: 'superminority validators' },
+    ];
+  } else if (cluster === 'alpenglow-community') {
+    // Alpenglow pulse: validators / skip / delinquent stake / current consensus.
+    // Consensus in the 4th slot is the showpiece — captures the historic moment
+    // when SIMD-0326 flips from inactive to active.
+    const consensus = detectConsensus(d);
+    const delinqStakePct = ch.delinquent_stake_percent;
+    items = [
+      { num: fmt(v.total), label: 'active validators' },
+      { num: pct(ch.average_stake_weighted_skip_rate, 2), label: 'stake-weighted skip' },
+      { num: delinqStakePct != null ? pct(delinqStakePct, 1) : '—', label: 'delinquent stake' },
+      { num: consensus || '—', label: 'consensus', emoji: consensus === 'Alpenglow' ? '🏔' : undefined },
     ];
   } else {
     const active = records.filter(r => !r.delinquent);
@@ -1468,7 +1588,12 @@ function renderPulse(d: any, records: any[], cluster: string) {
   const html: string[] = [];
   items.forEach((item, i) => {
     if (i > 0) html.push('<div class="pulse-divider"></div>');
-    html.push(`<div class="pulse-item"><div class="pulse-num mono">${escapeHtml(item.num)}</div><div class="pulse-label">${escapeHtml(item.label)}</div></div>`);
+    // Consensus slot renders text + optional emoji at smaller size so it visually
+    // matches the layout of numeric slots.
+    const isText = /[A-Za-z]/.test(item.num);
+    const numCls = isText ? 'pulse-num mono pulse-num-text' : 'pulse-num mono';
+    const emojiHtml = item.emoji ? `<span class="pulse-num-emoji">${item.emoji}</span>` : '';
+    html.push(`<div class="pulse-item"><div class="${numCls}">${emojiHtml}${escapeHtml(item.num)}</div><div class="pulse-label">${escapeHtml(item.label)}</div></div>`);
   });
   row.innerHTML = html.join('');
 }
@@ -1586,18 +1711,24 @@ async function renderStories(d: any, records: any[], cluster: string) {
   const grid = document.getElementById('stories-grid');
   if (!grid) return;
 
-  // Toggle 4-column mainnet layout (1+1+2 / 2+2 cells) vs 2x2 default for testnet/devnet
+  // Layout variants:
+  //  - mainnet: 4-col grid, 1+1+2 / 2+2 (Multicast / BAM / Coverage Matrix / Software / SFDP)
+  //  - alpenglow: 4-col grid, 2+1+1 / 2+2 (What is Alpenglow / Feature readiness / BLS adoption / Software / Validators by stake)
+  //  - testnet/devnet: 2x2 default
+  grid.classList.remove('mainnet-layout', 'alpenglow-layout');
   if (cluster === 'mainnet-beta') {
     grid.classList.add('mainnet-layout');
     grid.innerHTML = renderMainnetStories(records, d);
     setupStackedBarTooltip('.stacked-bar', '#stacked-tooltip-clients');
+  } else if (cluster === 'alpenglow-community') {
+    grid.classList.add('alpenglow-layout');
+    grid.innerHTML = renderAlpenglowStories(records, d);
+    setupStackedBarTooltip('.stacked-bar', '#stacked-tooltip-versions');
   } else if (cluster === 'testnet') {
-    grid.classList.remove('mainnet-layout');
     grid.innerHTML = renderTestnetDevnetStories(records, d, 'testnet', /* sfdpPlaceholder */ true);
     setupStackedBarTooltip('.stacked-bar', '#stacked-tooltip-versions');
     renderTestnetSfdpLinkedCard(records).catch(e => console.warn('[SONDA] SFDP cross-cluster:', e));
   } else {
-    grid.classList.remove('mainnet-layout');
     grid.innerHTML = renderTestnetDevnetStories(records, d, 'devnet', false);
     setupStackedBarTooltip('.stacked-bar', '#stacked-tooltip-versions');
   }
@@ -2006,6 +2137,211 @@ function renderTestnetDevnetStories(records: any[], d: any, cluster: 'testnet' |
   `;
 }
 
+// ───────── Alpenglow stories (5 cards: 2+1+1 / 2+2) ─────────
+
+function renderAlpenglowStories(records: any[], d: any): string {
+  const m = d?.metrics || {};
+  const v = m.validators || {};
+  const activeValidators = v.total ?? records.filter(r => !r.delinquent).length;
+  const activeRpcs = m.rpc?.total ?? 0;
+  const epochPct = d?.epoch_completed_percent ?? 0;
+  const consensus = detectConsensus(d);
+
+  // ── Card: What is Alpenglow (span-2) ──
+  // Plain-language description plus the three live stat tiles at the bottom.
+
+  // ── Card: Feature readiness (span-1) ──
+  // Total / active / pending counts from features block.
+  // Note: features.inactive_count is an alias for features.pending_count (kept for
+  // backward compat). Treating them as one — `pending` is the canonical name.
+  const features = d?.features || {};
+  const featTotal   = features.total_count   ?? 0;
+  const featActive  = features.active_count  ?? 0;
+  const featPending = features.pending_count ?? features.inactive_count ?? 0;
+  const featDenom = Math.max(1, featTotal);
+  const featActiveW  = (featActive  / featDenom) * 100;
+  const featPendingW = (featPending / featDenom) * 100;
+  const featPctText = featTotal > 0 ? `${(featActive / featTotal * 100).toFixed(1)}% activated` : 'no data';
+  // Top-3 pending feature descriptions (fall back to inactive list for backward compat).
+  const pendingList = Array.isArray(features.pending) && features.pending.length > 0
+    ? features.pending.slice(0, 3)
+    : (Array.isArray(features.inactive) ? features.inactive.slice(0, 3) : []);
+
+  // ── Card: BLS pubkey adoption (span-1) ──
+  // Calculated from validators.json records — count those with non-null bls_pubkey.
+  const blsTotal = records.length;
+  const blsAdopted = records.filter(r => r?.bls_pubkey != null && r.bls_pubkey !== '').length;
+  const blsPending = blsTotal - blsAdopted;
+  const blsDenom = Math.max(1, blsTotal);
+  const blsAdoptedW = (blsAdopted / blsDenom) * 100;
+  const blsPendingW = (blsPending / blsDenom) * 100;
+  const blsPctText = blsTotal > 0 ? `${(blsAdopted / blsTotal * 100).toFixed(1)}% adopted` : 'no data';
+
+  // ── Card: Software versions (span-2) ── (same pattern as testnet/devnet)
+  const sbv = m.cluster_health?.stake_by_version || {};
+  const totalActiveStake = m.cluster_health?.total_active_stake || 0;
+  const versionRows = Object.entries(sbv).map(([ver, info]: [string, any]) => ({
+    version: ver,
+    current: info.currentValidators || 0,
+    stake: info.currentActiveStake || 0,
+  })).filter(r => r.current > 0).sort((a, b) => b.current - a.current);
+  const versionsForRender = versionRows.length > 0 ? versionRows : (() => {
+    const counts: Record<string, number> = {};
+    records.forEach(r => { const vr = r.version || 'unknown'; counts[vr] = (counts[vr] || 0) + 1; });
+    return Object.entries(counts).sort((a, b) => b[1] - a[1])
+      .map(([version, current]) => ({ version, current, stake: 0 }));
+  })();
+  const totalVer = versionsForRender.reduce((s, r) => s + r.current, 0) || 1;
+  const versionSegments = versionsForRender.map(r => {
+    const w = (r.current / totalVer) * 100;
+    const color = versionColor(r.version);
+    const showLabel = w >= 10;
+    const stakePct = totalActiveStake ? (r.stake / totalActiveStake) * 100 : 0;
+    return `<div class="stacked-segment" data-seg-name="${escapeHtml(r.version)}" data-seg-count="${r.current}" data-seg-pct="${w.toFixed(1)}" data-seg-stake="${stakePct.toFixed(2)}" style="width:${w}%; background:${color};">${showLabel ? `${w.toFixed(0)}%` : ''}</div>`;
+  }).join('');
+  const versionLegend = versionsForRender.slice(0, 8).map(r => {
+    const w = (r.current / totalVer) * 100;
+    const color = versionColor(r.version);
+    const stakePct = totalActiveStake ? (r.stake / totalActiveStake) * 100 : 0;
+    const secondary = totalActiveStake ? `${stakePct.toFixed(1)}% stake` : `${w.toFixed(1)}%`;
+    return `<span class="stacked-legend-item">
+      <span class="stacked-legend-dot" style="background:${color};"></span>
+      <span class="stacked-legend-name">${escapeHtml(r.version)}</span>
+      <span class="stacked-legend-stat">${r.current} · ${secondary}</span>
+    </span>`;
+  }).join('');
+
+  // ── Card: Validators by stake (span-2) ── donut top-7 + Other (same as devnet)
+  const TOP_N = 7;
+  const stakeSorted = records
+    .filter(r => !r.delinquent && (r.activated_stake_lamports ?? 0) > 0)
+    .sort((a, b) => (b.activated_stake_lamports ?? 0) - (a.activated_stake_lamports ?? 0));
+  const topStake = stakeSorted.slice(0, TOP_N);
+  const restStake = stakeSorted.slice(TOP_N);
+  const stakeItems = topStake.map((r, i) => ({
+    label: r.name || (r.identity_pubkey ? r.identity_pubkey.slice(0, 4) + '…' + r.identity_pubkey.slice(-4) : 'unknown'),
+    value: r.activated_stake_lamports ?? 0,
+    color: pickPalette('stake')[i % pickPalette('stake').length],
+  }));
+  if (restStake.length > 0) {
+    const otherSum = restStake.reduce((s, r) => s + (r.activated_stake_lamports ?? 0), 0);
+    stakeItems.push({ label: `Other (${restStake.length})`, value: otherSum, color: 'var(--text-muted)' });
+  }
+  const stakeDonut = renderDonut(stakeItems, { size: 130, ringR: 56, innerR: 36 });
+
+  // Consensus badge shown on Software card across all clusters (mainnet/testnet/devnet/alpenglow)
+  // is appended here for alpenglow consistency.
+  const consensusBadge = consensus
+    ? `<span class="consensus-badge ${consensus === 'Alpenglow' ? 'is-alpenglow' : ''}">${consensus === 'Alpenglow' ? '🏔 ' : ''}Consensus: ${escapeHtml(consensus)}</span>`
+    : '';
+
+  return `
+    <!-- What is Alpenglow (span-2) -->
+    <div class="story span-2 tint-cluster">
+      <div class="story-header">
+        <span class="story-tag cluster-tag">Alpenglow</span>
+      </div>
+      <div class="story-title">Experimental community cluster</div>
+      <p class="whatis-text">
+        Public testbed for Anza's new consensus algorithm (SIMD-0326), designed to replace Tower BFT on Solana. The new design targets sub-150ms block finalization through a two-stage voting model (Votor + Rotor) and BLS aggregate signatures. Validators here help stress-test the implementation before rollout to devnet, testnet, and eventually mainnet.
+      </p>
+      <div class="whatis-stat-row">
+        <div class="whatis-stat"><div class="whatis-stat-num mono">${fmt(activeValidators)}</div><div class="whatis-stat-label">active validators</div></div>
+        <div class="whatis-stat"><div class="whatis-stat-num mono">${fmt(activeRpcs)}</div><div class="whatis-stat-label">public RPCs</div></div>
+        <div class="whatis-stat"><div class="whatis-stat-num mono">${consensus || '—'}</div><div class="whatis-stat-label">current consensus</div></div>
+      </div>
+    </div>
+
+    <!-- Feature readiness (span-1) -->
+    <div class="story span-1">
+      <div class="story-header">
+        <span class="story-tag neutral-tag">Features</span>
+        <span class="tooltip-wrap">
+          <span class="tooltip-icon" aria-label="info">${infoIcon()}</span>
+          <span class="tooltip-box">Activated features control protocol behavior. Pending features have an on-chain account but are not yet activated. SIMD-0326 in this list means Alpenglow consensus is not yet live.</span>
+        </span>
+      </div>
+      <div class="story-title">Protocol features</div>
+      <div class="story-big mono">${fmt(featActive)} <span class="story-big-denom">/ ${fmt(featTotal)}</span></div>
+      <div class="story-sub">${escapeHtml(featPctText)}</div>
+      <div class="bar-rows-wrap with-divider">
+        <div class="bar-row">
+          <span class="bar-row-label">active</span>
+          <div class="bar-row-track"><div class="bar-row-fill good" style="width:${featActiveW}%"></div></div>
+          <span class="bar-row-num">${fmt(featActive)}</span>
+        </div>
+        <div class="bar-row">
+          <span class="bar-row-label">pending</span>
+          <div class="bar-row-track"><div class="bar-row-fill warn" style="width:${featPendingW}%"></div></div>
+          <span class="bar-row-num">${fmt(featPending)}</span>
+        </div>
+      </div>
+      ${pendingList.length > 0 ? `<div class="feat-inactive-hint">Next: ${pendingList.map((f: any) => {
+        const desc = (f?.description || '').toString();
+        const simd = desc.match(/SIMD-\d+/);
+        return simd ? simd[0] : (desc ? (desc.slice(0, 18) + (desc.length > 18 ? '…' : '')) : 'feature ' + (f?.id || '').slice(0, 6));
+      }).join(', ')}</div>` : ''}
+    </div>
+
+    <!-- BLS pubkey adoption (span-1) -->
+    <div class="story span-1 tint-bam">
+      <div class="story-header">
+        <span class="story-tag bam-tag">Cryptography</span>
+        <span class="tooltip-wrap">
+          <span class="tooltip-icon" aria-label="info">${infoIcon()}</span>
+          <span class="tooltip-box">BLS aggregate signatures are required for Alpenglow consensus. Validators must register a BLS pubkey in their vote account (SIMD-0387). 100% adoption signals the network is upgrade-ready.</span>
+        </span>
+      </div>
+      <div class="story-title">BLS pubkey adoption</div>
+      <div class="story-big mono cyan">${fmt(blsAdopted)} <span class="story-big-denom">/ ${fmt(blsTotal)}</span></div>
+      <div class="story-sub">${escapeHtml(blsPctText)}</div>
+      <div class="bar-rows-wrap with-divider">
+        <div class="bar-row">
+          <span class="bar-row-label">registered</span>
+          <div class="bar-row-track"><div class="bar-row-fill cyan" style="width:${blsAdoptedW}%"></div></div>
+          <span class="bar-row-num">${fmt(blsAdopted)}</span>
+        </div>
+        <div class="bar-row">
+          <span class="bar-row-label">missing</span>
+          <div class="bar-row-track"><div class="bar-row-fill cyan-dim" style="width:${blsPendingW}%"></div></div>
+          <span class="bar-row-num">${fmt(blsPending)}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Software (span-2) -->
+    <div class="story span-2">
+      <div class="story-header">
+        <span class="story-tag neutral-tag">Software</span>
+        <span class="tooltip-wrap">
+          <span class="tooltip-icon" aria-label="info">${infoIcon()}</span>
+          <span class="tooltip-box">Validator clients on Alpenglow run a custom 0.3.x build line that implements the Alpenglow consensus algorithm. Versions diverge as new releases land.</span>
+        </span>
+        ${consensusBadge}
+      </div>
+      <div class="story-title">Validator versions</div>
+      <div class="stacked-bar"><div class="stacked-bar-inner">${versionSegments}</div><div class="stacked-tooltip" id="stacked-tooltip-versions"></div></div>
+      <div class="stacked-legend">${versionLegend}</div>
+    </div>
+
+    <!-- Validators by stake (span-2) -->
+    <div class="story span-2 tint-cluster">
+      <div class="story-header">
+        <span class="story-tag cluster-tag">Stake distribution</span>
+        <span class="tooltip-wrap">
+          <span class="tooltip-icon" aria-label="info">${infoIcon()}</span>
+          <span class="tooltip-box">Stake share by validator. Top ${TOP_N} are shown individually, the rest aggregated as Other.</span>
+        </span>
+      </div>
+      <div class="story-title">Validators by stake</div>
+      <div class="donut-wrap">
+        <div class="donut-svg">${stakeDonut.svg}</div>
+        <div class="donut-legend-2col">${stakeDonut.legend}</div>
+      </div>
+    </div>
+  `;
+}
+
 // ───────── SFDP linked card (testnet, async cross-cluster) ─────────
 
 async function renderTestnetSfdpLinkedCard(testnetRecords: any[]) {
@@ -2137,45 +2473,156 @@ function renderInfra(d: any) {
   const ep = d?.metrics?.endpoints || {};
   const dz = d?.metrics?.doublezero;
   const bam = d?.metrics?.bam;
+  const cluster = d?.cluster ?? 'mainnet-beta';
   const grid = document.getElementById('infra-grid');
   if (!grid) return;
 
   const cards: any[] = [];
 
-  if (bam && bam.node_count != null) {
-    cards.push({ name: 'Jito BAM', main: `${fmt(bam.node_count)} nodes`,
-      sub: `${fmt(bam.total_connected_validators ?? 0)} validators · ${pct(bam.stake_percentage, 1)} stake`,
-      status: 'ok', cls: 'healthy' });
+  if (cluster === 'alpenglow-community') {
+    // Alpenglow top-row replaces BAM/Jito/Harmonic (never deployed here) with
+    // alpenglow-specific operational + upgrade-pipeline indicators.
+    // All values come from network_summary alone — no validators.json dependency,
+    // so renderInfra can run before records load without "—" placeholders.
+
+    // Card 1 — Solana RPC (named endpoints, with footnote describing composition)
+    if (ep.solana && ep.solana.total != null) {
+      const e = ep.solana;
+      const entrypoints = d?.record_counts?.['solana-entrypoint'] ?? 0;
+      const namedRpcs   = d?.record_counts?.['solana-rpc'] ?? 0;
+      // Compact footnote: "2 entrypoints + 2 named RPCs · 1 down" — explains what
+      // these 4 endpoints are without overloading "official endpoints" terminology.
+      const composition = (entrypoints > 0 || namedRpcs > 0)
+        ? `${fmt(entrypoints)} entrypoints + ${fmt(namedRpcs)} named RPCs`
+        : '';
+      const downPart = e.unreachable > 0 ? `${fmt(e.unreachable)} down` : 'all operational';
+      const subParts = [composition, downPart].filter(Boolean);
+      cards.push({
+        name: 'Solana RPC',
+        main: `${fmt(e.reachable)} / ${fmt(e.total)}`,
+        sub: subParts.join(' · '),
+        status: e.unreachable > 0 ? (e.unreachable >= e.total / 2 ? 'bad' : 'warn') : 'ok',
+        cls: e.unreachable > 0 ? 'degraded' : 'healthy',
+      });
+    } else {
+      cards.push({ name: 'Solana RPC', main: '—', sub: 'no data', status: 'neutral', cls: 'absent' });
+    }
+
+    // Card 2 — Active validators (voting health)
+    const v = d?.metrics?.validators;
+    const ch = d?.metrics?.cluster_health;
+    if (v && v.total != null) {
+      const totalAll = v.total_all ?? v.total;
+      const delinqCount = v.offline ?? Math.max(0, totalAll - (v.total ?? 0));
+      const delinqStake = ch?.delinquent_stake_percent;
+      // Status thresholds tuned for experimental clusters: alpenglow regularly sees
+      // higher delinquency than mainnet because of regenesis events and node restarts.
+      let st = 'ok' as 'ok' | 'warn' | 'bad';
+      if (delinqStake != null) {
+        if (delinqStake >= 15) st = 'bad';
+        else if (delinqStake >= 5) st = 'warn';
+      }
+      const cls = st === 'bad' ? 'down' : (st === 'warn' ? 'degraded' : 'healthy');
+      cards.push({
+        name: 'Active validators',
+        main: fmt(v.total),
+        sub: `${fmt(delinqCount)} delinquent · ${fmt(totalAll)} total`,
+        status: st, cls,
+      });
+    } else {
+      cards.push({ name: 'Active validators', main: '—', sub: 'no data', status: 'neutral', cls: 'absent' });
+    }
+
+    // Card 3 — Pending features (protocol upgrade pipeline)
+    const features = d?.features;
+    if (features && features.total_count != null) {
+      const pending = features.pending_count ?? features.inactive_count ?? 0;
+      const pendingList: any[] = (features.pending && features.pending.length > 0)
+        ? features.pending
+        : (Array.isArray(features.inactive) ? features.inactive : []);
+      // Extract top SIMD identifier for sub-line context. If the first pending has no
+      // description we just say "in queue", letting the headline number do the work.
+      let topSimdLabel = '';
+      if (pendingList.length > 0) {
+        const d0 = (pendingList[0]?.description || '').toString();
+        const simd = d0.match(/SIMD-\d+/);
+        topSimdLabel = simd ? `${simd[0]} next` : 'in queue';
+      }
+      const subText = pending === 0 ? 'protocol fully activated' : (topSimdLabel || `${fmt(pending)} in queue`);
+      cards.push({
+        name: 'Pending features',
+        main: fmt(pending),
+        sub: subText,
+        // 0 pending = good (cluster fully caught up); >0 = informational, not bad
+        status: pending === 0 ? 'ok' : 'neutral',
+        cls: 'healthy',
+      });
+    } else {
+      cards.push({ name: 'Pending features', main: '—', sub: 'no data', status: 'neutral', cls: 'absent' });
+    }
+
+    // Card 4 — Dominant software version + share. "3 versions" was non-obvious;
+    // showing the actual leading version with adoption share is immediately readable.
+    const sbv = d?.metrics?.cluster_health?.stake_by_version || {};
+    const versionRows = Object.entries(sbv).map(([ver, info]: [string, any]) => ({
+      version: ver,
+      current: info?.currentValidators || 0,
+    })).filter(r => r.current > 0 && r.version !== 'unknown').sort((a, b) => b.current - a.current);
+    const totalKnownVer = versionRows.reduce((s, r) => s + r.current, 0);
+    if (versionRows.length > 0 && totalKnownVer > 0) {
+      const dominantRow = versionRows[0];
+      const dominantShare = (dominantRow.current / totalKnownVer) * 100;
+      // Status: good if dominant version covers ≥90% (fleet aligned),
+      // warn 50-90% (rollout in progress), bad <50% (fragmented).
+      const st = dominantShare >= 90 ? 'ok' : (dominantShare >= 50 ? 'warn' : 'bad');
+      const cls = st === 'ok' ? 'healthy' : (st === 'warn' ? 'degraded' : 'down');
+      cards.push({
+        name: 'Dominant version',
+        main: dominantRow.version,
+        sub: `${fmt(dominantRow.current)} / ${fmt(totalKnownVer)} validators`,
+        status: st, cls,
+      });
+    } else {
+      cards.push({ name: 'Dominant version', main: '—', sub: 'no data', status: 'neutral', cls: 'absent' });
+    }
   } else {
-    cards.push({ name: 'Jito BAM', main: '—', sub: 'not deployed on this cluster', status: 'neutral', cls: 'absent' });
+    // Default top-row: BAM / Jito Endpoints / Solana RPC / Harmonic (mainnet/testnet/devnet)
+    if (bam && bam.node_count != null) {
+      cards.push({ name: 'Jito BAM', main: `${fmt(bam.node_count)} nodes`,
+        sub: `${fmt(bam.total_connected_validators ?? 0)} validators · ${pct(bam.stake_percentage, 1)} stake`,
+        status: 'ok', cls: 'healthy' });
+    } else {
+      cards.push({ name: 'Jito BAM', main: '—', sub: 'not deployed on this cluster', status: 'neutral', cls: 'absent' });
+    }
+
+    if (ep.jito && ep.jito.total != null) {
+      const e = ep.jito;
+      const status = e.unreachable > 0 ? (e.unreachable >= 3 ? 'bad' : 'warn') : 'ok';
+      const cls = e.unreachable > 0 ? (e.unreachable >= 3 ? 'down' : 'degraded') : 'healthy';
+      cards.push({ name: 'Jito Endpoints', main: `${fmt(e.reachable)} / ${fmt(e.total)}`,
+        sub: `${fmt(e.unreachable ?? 0)} down · ${fmt(e.unverifiable ?? 0)} unverified`, status, cls });
+    } else {
+      cards.push({ name: 'Jito Endpoints', main: '—', sub: 'no data', status: 'neutral', cls: 'absent' });
+    }
+
+    if (ep.solana && ep.solana.total != null) {
+      const e = ep.solana;
+      cards.push({ name: 'Solana RPC', main: `${fmt(e.reachable)} / ${fmt(e.total)}`,
+        sub: e.unreachable === 0 ? 'all operational' : `${fmt(e.unreachable)} down`,
+        status: e.unreachable > 0 ? 'bad' : 'ok', cls: e.unreachable > 0 ? 'down' : 'healthy' });
+    } else {
+      cards.push({ name: 'Solana RPC', main: '—', sub: 'no data', status: 'neutral', cls: 'absent' });
+    }
+
+    if (ep.harmonic && ep.harmonic.total != null) {
+      const e = ep.harmonic;
+      cards.push({ name: 'Harmonic', main: `${fmt(e.reachable)} / ${fmt(e.total)}`,
+        sub: `${fmt(e.unverifiable ?? 0)} unverified`, status: e.unreachable > 0 ? 'warn' : 'ok', cls: 'healthy' });
+    } else {
+      cards.push({ name: 'Harmonic', main: '—', sub: 'not deployed on this cluster', status: 'neutral', cls: 'absent' });
+    }
   }
 
-  if (ep.jito && ep.jito.total != null) {
-    const e = ep.jito;
-    const status = e.unreachable > 0 ? (e.unreachable >= 3 ? 'bad' : 'warn') : 'ok';
-    const cls = e.unreachable > 0 ? (e.unreachable >= 3 ? 'down' : 'degraded') : 'healthy';
-    cards.push({ name: 'Jito Endpoints', main: `${fmt(e.reachable)} / ${fmt(e.total)}`,
-      sub: `${fmt(e.unreachable ?? 0)} down · ${fmt(e.unverifiable ?? 0)} unverified`, status, cls });
-  } else {
-    cards.push({ name: 'Jito Endpoints', main: '—', sub: 'no data', status: 'neutral', cls: 'absent' });
-  }
-
-  if (ep.solana && ep.solana.total != null) {
-    const e = ep.solana;
-    cards.push({ name: 'Solana RPC', main: `${fmt(e.reachable)} / ${fmt(e.total)}`,
-      sub: e.unreachable === 0 ? 'all operational' : `${fmt(e.unreachable)} down`,
-      status: e.unreachable > 0 ? 'bad' : 'ok', cls: e.unreachable > 0 ? 'down' : 'healthy' });
-  } else {
-    cards.push({ name: 'Solana RPC', main: '—', sub: 'no data', status: 'neutral', cls: 'absent' });
-  }
-
-  if (ep.harmonic && ep.harmonic.total != null) {
-    const e = ep.harmonic;
-    cards.push({ name: 'Harmonic', main: `${fmt(e.reachable)} / ${fmt(e.total)}`,
-      sub: `${fmt(e.unverifiable ?? 0)} unverified`, status: e.unreachable > 0 ? 'warn' : 'ok', cls: 'healthy' });
-  } else {
-    cards.push({ name: 'Harmonic', main: '—', sub: 'not deployed on this cluster', status: 'neutral', cls: 'absent' });
-  }
 
   grid.innerHTML = cards.map(c => `
     <div class="infra-card ${c.cls}">
@@ -2187,11 +2634,18 @@ function renderInfra(d: any) {
   // DZ summary line (mainnet) / Endpoints distribution (testnet/devnet) — both share the same
   // card slot but differ in inner layout. Both get a 2-line header (label+summary, then stats row)
   // matching the RPC card's structure for visual symmetry.
-  const cluster = d?.cluster ?? 'mainnet-beta';
+  // (cluster is already declared at the top of renderInfra)
   const dzCard = document.getElementById('dz-summary-card');
   const dzLabel = document.getElementById('dz-summary-label');
   const dzStatsRow = document.getElementById('dz-stats-row');
   const dzInner = document.getElementById('dz-inner');
+
+  // Always reset the right card content before re-rendering. This prevents stale
+  // content from a previous cluster bleeding through on cluster switches and is
+  // a safety net if a branch later in this function exits early or throws.
+  if (dzInner) dzInner.innerHTML = '';
+  if (dzStatsRow) dzStatsRow.innerHTML = '';
+  setText('dz-summary-stats', '');
 
   if (cluster === 'mainnet-beta' && dz && dz.network_health) {
     // ── Mainnet: DZ network health ──
@@ -2272,6 +2726,68 @@ function renderInfra(d: any) {
             <div class="dz-issues">${chipsHtml}</div>
           </div>
         </div>`;
+    }
+  } else if (cluster === 'alpenglow-community') {
+    // ── alpenglow: card repurposed as "Validators distribution".
+    // Only 2 entrypoints on alpenglow, so endpoint geography is uninformative.
+    // Instead surface validator geography directly — same data we already have in
+    // metrics.validators.{country,asn,city}_distribution.
+    if (dzCard) dzCard.classList.remove('absent');
+    if (dzLabel) {
+      dzLabel.textContent = 'Validators distribution';
+      dzLabel.style.color = 'var(--cluster-accent)';
+    }
+    setText('dz-summary-stats', '');
+    const stEl = document.getElementById('dz-summary-stats');
+    if (stEl) stEl.style.fontStyle = '';
+
+    const vMetrics = d?.metrics?.validators || {};
+    const vCountry = vMetrics.country_distribution || {};
+    const vAsn     = vMetrics.asn_distribution || {};
+    const vCity    = vMetrics.city_distribution || {};
+    const vCountries = Object.keys(vCountry).length;
+    const vCities    = Object.keys(vCity).length;
+    const vAsns      = Object.keys(vAsn).length;
+
+    if (dzStatsRow) {
+      const statsParts: string[] = [];
+      if (vCountries > 0) statsParts.push(`<span class="rpc-stat-item"><span class="rpc-stat-val mono">${fmt(vCountries)}</span> countries</span>`);
+      if (vCities > 0)    statsParts.push(`<span class="rpc-stat-item"><span class="rpc-stat-val mono">${fmt(vCities)}</span> cities</span>`);
+      if (vAsns > 0)      statsParts.push(`<span class="rpc-stat-item"><span class="rpc-stat-val mono">${fmt(vAsns)}</span> providers</span>`);
+      dzStatsRow.innerHTML = statsParts.join('');
+    }
+
+    const blocks: string[] = [];
+    if (Object.keys(vCountry).length > 0) {
+      const items1 = makeDonutItems(vCountry, 5, pickPalette('rpc'));
+      const d1 = renderDonut(items1, { size: 80, ringR: 34, innerR: 22 });
+      blocks.push(`
+        <div class="donut-block">
+          <div class="donut-block-title">Validators by country</div>
+          <div class="donut-block-body">
+            <div class="donut-mini">${d1.svg}</div>
+            <div class="donut-legend">${d1.legend}</div>
+          </div>
+        </div>`);
+    }
+    if (Object.keys(vAsn).length > 0) {
+      const items2 = makeDonutItems(vAsn, 5, pickPalette('rpc-secondary'));
+      const d2 = renderDonut(items2, { size: 80, ringR: 34, innerR: 22 });
+      blocks.push(`
+        <div class="donut-block">
+          <div class="donut-block-title">Validators by ASN</div>
+          <div class="donut-block-body">
+            <div class="donut-mini">${d2.svg}</div>
+            <div class="donut-legend">${d2.legend}</div>
+          </div>
+        </div>`);
+    }
+
+    let cols = '';
+    if (blocks.length === 2) cols = ' cols-2';
+    else if (blocks.length === 3) cols = ' cols-3';
+    if (dzInner) {
+      dzInner.innerHTML = `<div class="dz-donuts-row${cols}">${blocks.join('')}</div>`;
     }
   } else {
     // ── testnet/devnet: repurpose card as Endpoints distribution ──
@@ -2467,8 +2983,20 @@ function renderRpcSummary(d: any) {
   const cities = Object.keys(rpc.city_distribution || {}).length;
   const uniqueAsns = Object.keys(rpc.asn_distribution || {}).length;
 
-  // Header line: total + official + DZ-connected (mainnet only)
-  let summaryStr = `${fmt(total)} public RPCs · ${fmt(officialReachable)}/${fmt(officialTotal)} official endpoints reachable`;
+  // Validator-hosted RPC count: metrics.rpc.total counts every node that exposes an RPC
+  // port (dedicated rpc-role nodes AND validators that opened :8899). record_counts.rpc
+  // is the dedicated-only subset. The difference is validators-hosting-rpc.
+  const dedicatedRpc = d?.record_counts?.rpc ?? 0;
+  const validatorHosted = Math.max(0, total - dedicatedRpc);
+
+  // Header line: total + (validator-hosted inline) + official reachable + DZ-connected (when present).
+  let summaryStr = `${fmt(total)} public RPCs`;
+  if (validatorHosted > 0) {
+    summaryStr += ` (${fmt(validatorHosted)} on validators)`;
+  }
+  if (officialTotal > 0) {
+    summaryStr += ` · ${fmt(officialReachable)}/${fmt(officialTotal)} official reachable`;
+  }
   if (typeof dzRpcConnected === 'number' && dzRpcConnected > 0) {
     summaryStr += ` · ${fmt(dzRpcConnected)} on DoubleZero`;
   }
@@ -2798,8 +3326,10 @@ async function renderAboutEpoch() {
   } catch (e) { console.warn('[SONDA] mainnet epoch fetch:', e); }
 }
 
-// About stats — 3 cluster rows in their own colors. Independent of selected cluster.
-// Fetches all 3 summaries in parallel; each cell falls back to "—" if a fetch fails.
+// About stats — cluster rows in their own colors. Independent of selected cluster.
+// Fetches all summaries in parallel; each cell falls back to "—" if a fetch fails.
+// The alpenglow row auto-hides if its summary is missing or has zero validators
+// (regenesis events, downed RPC, etc. — preserving "no broken UI" principle).
 async function renderAboutStats() {
   const fillRow = (prefix: string, summary: any) => {
     const v = summary?.metrics?.validators;
@@ -2813,21 +3343,27 @@ async function renderAboutStats() {
       if (valEl) { valEl.textContent = fmt(validators); valEl.classList.remove('sk-val'); }
       if (ccEl)  { ccEl.textContent = fmt(countries);  ccEl.classList.remove('sk-val'); }
       if (asnEl) { asnEl.textContent = fmt(asns);      asnEl.classList.remove('sk-val'); }
+      return validators > 0;
     }
+    return false;
   };
 
-  // For mainnet we already have a cached fetch (fetchMainnetSummaryCached used by About epoch).
-  // For testnet/devnet, we fetch fresh once on mount; not cached by us, but the underlying
-  // fetchSummary is cheap (~one R2 GET ~50KB each).
   try {
-    const [m, t, d] = await Promise.all([
+    const [m, t, d, ag] = await Promise.all([
       fetchMainnetSummaryCached().catch(() => null),
       fetchSummary('testnet').catch(() => null),
       fetchSummary('devnet').catch(() => null),
+      fetchSummary('alpenglow-community').catch(() => null),
     ]);
     fillRow('mn', m);
     fillRow('tn', t);
     fillRow('dn', d);
+
+    // Alpenglow row: only show if we got real data (validators > 0). Cluster restarts
+    // during the experimental phase can wipe the snapshot temporarily.
+    const agOk = fillRow('ag', ag);
+    const agRow = document.getElementById('about-row-alpenglow');
+    if (agRow) agRow.style.display = agOk ? '' : 'none';
   } catch (e) {
     console.warn('[SONDA] about stats:', e);
   }
