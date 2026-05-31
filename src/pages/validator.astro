@@ -326,8 +326,8 @@ import Footer from '../components/Footer.astro';
 </style>
 
 <script type="module">
-import { bootstrapCluster, getCluster, fetchValidators, fetchSummary, fmtStakeShort } from '/src/lib/data.js';
-import { fmt, shortenIdentity, clientColor } from '/src/lib/formatters.js';
+import { bootstrapCluster, getCluster, fetchValidators, fetchSummary, fmtStakeShort } from '../lib/data.js';
+import { fmt, shortenIdentity, clientColor } from '../lib/formatters.js';
 
 const params = new URLSearchParams(window.location.search);
 const validatorId = params.get('id');

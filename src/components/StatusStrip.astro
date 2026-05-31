@@ -156,7 +156,7 @@ function updateFooterTsFromTimestamp(timestamp: string) {
 
 // Auto-refresh: every 60s re-fetch the current cluster's summary so epoch/pct/timestamp
 // stay live without a page reload. Footer timestamps update via the same centralized path.
-import('/src/lib/data.js').then(mod => {
+import('../lib/data.js').then(mod => {
   setInterval(async () => {
     try {
       const c = mod.getCluster ? mod.getCluster() : 'mainnet-beta';

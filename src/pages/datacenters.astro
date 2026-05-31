@@ -441,8 +441,8 @@ import Footer from '../components/Footer.astro';
 import {
   bootstrapCluster, getCluster, fetchValidators, fetchSummary,
   aggregateDatacenters, concentrationLevel, fmtStakeShort,
-} from '/src/lib/data.js';
-import { fmt } from '/src/lib/formatters.js';
+} from '../lib/data.js';
+import { fmt } from '../lib/formatters.js';
 
 const params = new URLSearchParams(window.location.search);
 let aggregated = null;
