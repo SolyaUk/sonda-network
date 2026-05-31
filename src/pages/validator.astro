@@ -1,0 +1,654 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Header from '../components/Header.astro';
+import StatusStrip from '../components/StatusStrip.astro';
+import ClusterBanner from '../components/ClusterBanner.astro';
+import Footer from '../components/Footer.astro';
+---
+
+<BaseLayout title="Validator · SONDA">
+  <Header activePage="validators" />
+  <StatusStrip />
+  <ClusterBanner />
+
+  <div class="dev-banner">
+    <div class="dev-banner-inner">
+      <span class="dev-badge">BETA</span>
+      Dashboard is under active development. Some sections are incomplete.
+      <a href="https://github.com/SolyaUk/sonda-network" target="_blank" rel="noopener" class="dev-link">View on GitHub</a>
+    </div>
+  </div>
+
+  <main class="page-main">
+    <a href="/validators" class="back-link" id="back-link">← Back to validators</a>
+
+    <div id="v-loading" class="page-loading">Loading validator…</div>
+    <div id="v-error" class="page-error" style="display:none"></div>
+
+    <div id="v-content" style="display:none">
+      <section class="v-header-card">
+        <div class="v-head-row">
+          <div class="v-icon-wrap" id="v-icon"></div>
+          <div class="v-head-main">
+            <h1 class="v-name" id="v-name">—</h1>
+            <div class="v-name-badges" id="v-name-badges"></div>
+            <div class="v-keys-block">
+              <div class="v-key-row">
+                <span class="v-key-label">identity</span>
+                <code id="v-identity" class="v-key-val"></code>
+                <button class="v-copy" data-target="v-identity-full" title="Copy">⎘</button>
+                <span id="v-identity-full" style="display:none"></span>
+              </div>
+              <div class="v-key-row">
+                <span class="v-key-label">vote</span>
+                <code id="v-vote" class="v-key-val"></code>
+                <button class="v-copy" data-target="v-vote-full" title="Copy">⎘</button>
+                <span id="v-vote-full" style="display:none"></span>
+              </div>
+              <div class="v-key-row" id="v-bls-row" style="display:none">
+                <span class="v-key-label">BLS</span>
+                <code id="v-bls" class="v-key-val"></code>
+                <button class="v-copy" data-target="v-bls-full" title="Copy">⎘</button>
+                <span id="v-bls-full" style="display:none"></span>
+              </div>
+            </div>
+          </div>
+          <div class="v-head-side" id="v-head-side"></div>
+        </div>
+      </section>
+
+      <section class="v-quick-stats">
+        <div class="qs-card">
+          <div class="qs-label">STAKE</div>
+          <div class="qs-val mono" id="qs-stake">—</div>
+          <div class="qs-sub" id="qs-stake-pct">— of network</div>
+        </div>
+        <div class="qs-card">
+          <div class="qs-label">COMMISSION</div>
+          <div class="qs-val mono" id="qs-commission">—</div>
+          <div class="qs-sub">vote commission</div>
+        </div>
+        <div class="qs-card">
+          <div class="qs-label">MEV COMMISSION</div>
+          <div class="qs-val mono" id="qs-mev">—</div>
+          <div class="qs-sub">Jito tips</div>
+        </div>
+        <div class="qs-card">
+          <div class="qs-label">SKIP RATE</div>
+          <div class="qs-val mono" id="qs-skip">—</div>
+          <div class="qs-sub">current epoch</div>
+        </div>
+        <div class="qs-card">
+          <div class="qs-label">CREDITS</div>
+          <div class="qs-val mono" id="qs-credits">—</div>
+          <div class="qs-sub" id="qs-credits-rank">current epoch</div>
+        </div>
+      </section>
+
+      <section class="v-cards-grid">
+        <div class="v-card span-2">
+          <div class="v-card-tag">LOCATION</div>
+          <h2 class="v-card-title">Where this validator runs</h2>
+          <div class="v-loc-row" id="v-loc-row"></div>
+          <div class="v-loc-meta" id="v-loc-meta"></div>
+          <div class="v-loc-alts" id="v-loc-alts" style="display:none"></div>
+        </div>
+        <div class="v-card span-2">
+          <div class="v-card-tag">INFRASTRUCTURE</div>
+          <h2 class="v-card-title">Network layers and software</h2>
+          <div class="v-infra-grid" id="v-infra-grid"></div>
+        </div>
+        <div class="v-card span-2">
+          <div class="v-card-tag">PERFORMANCE</div>
+          <h2 class="v-card-title">How this validator is running</h2>
+          <div class="v-perf-grid" id="v-perf-grid"></div>
+        </div>
+        <div class="v-card span-2" id="v-related-card" style="display:none">
+          <div class="v-card-tag">CROSS-CLUSTER</div>
+          <h2 class="v-card-title">Linked nodes on other clusters</h2>
+          <div id="v-related-body"></div>
+        </div>
+      </section>
+
+      <section class="v-placeholder-section">
+        <div class="ph-card">
+          <div class="ph-card-tag">COMING SOON</div>
+          <h3 class="ph-card-title">Location history timeline</h3>
+          <p class="ph-card-text">All IP changes since 2021 with country, ASN, and city. Includes Jito Kobe and SFDP archives.</p>
+        </div>
+        <div class="ph-card">
+          <div class="ph-card-tag">COMING SOON</div>
+          <h3 class="ph-card-title">Performance over epochs</h3>
+          <p class="ph-card-text">Charts of stake, skip rate, credits, and version across recent epochs.</p>
+        </div>
+        <div class="ph-card">
+          <div class="ph-card-tag">COMING SOON</div>
+          <h3 class="ph-card-title">Recent changes</h3>
+          <p class="ph-card-text">7-day and 30-day event count and delinquency duration. Version, commission, IP changes.</p>
+        </div>
+      </section>
+    </div>
+  </main>
+  <Footer />
+</BaseLayout>
+
+<style is:global>
+  .page-main { max-width: 1180px; margin: 0 auto; padding: 1rem 1.5rem 4rem; }
+  .back-link { color: var(--text-muted); font-size: 0.85rem; text-decoration: none; display: inline-block; margin-bottom: 1.2rem; }
+  .back-link:hover { color: var(--cluster-accent); }
+  .dev-banner { background: rgba(59,130,246,0.08); border-bottom: 1px solid rgba(59,130,246,0.2); font-size: 0.78rem; color: var(--text-secondary); }
+  .dev-banner-inner { max-width: 1280px; margin: 0 auto; padding: 0.5rem 1.5rem; display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+  .dev-badge { font-family: var(--font-mono); font-size: 0.65rem; font-weight: 600; background: var(--accent-blue); color: #fff; padding: 0.15rem 0.45rem; border-radius: 4px; letter-spacing: 0.08em; flex-shrink: 0; }
+  .dev-link { color: var(--accent-blue); text-decoration: none; margin-left: auto; }
+  .page-loading, .page-error { text-align: center; color: var(--text-muted); padding: 4rem 1rem; }
+  .page-error { color: inherit; }
+
+  .nf-block { max-width: 580px; margin: 2rem auto; text-align: center; background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 2.2rem 1.8rem; }
+  .nf-title { font-family: var(--font-display); font-size: clamp(1.1rem, 2.5vw, 1.4rem); font-weight: 600; color: var(--text-primary); margin-bottom: 0.85rem; }
+  .nf-id { margin-bottom: 1rem; }
+  .nf-id code { font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-secondary); background: var(--bg-secondary); border: 1px solid var(--border); padding: 0.25rem 0.55rem; border-radius: 5px; word-break: break-all; }
+  .nf-message { color: var(--text-secondary); font-size: 0.92rem; line-height: 1.55; margin: 0 0 1.4rem; }
+  .nf-linked { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1.5rem; }
+  .nf-linked-card { display: grid; grid-template-columns: 100px 1fr auto; align-items: center; gap: 0.8rem; padding: 0.75rem 1rem; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; text-decoration: none; transition: border-color 0.15s, background 0.15s; }
+  .nf-linked-card:hover { background: var(--bg-card-hover); }
+  /* Each linked card gets its target cluster accent color */
+  .nf-linked-card.cluster-mainnet { --c-accent: #3b82f6; }
+  .nf-linked-card.cluster-testnet { --c-accent: #e879f9; }
+  .nf-linked-card.cluster-devnet { --c-accent: #fbbf24; }
+  .nf-linked-card.cluster-alpenglow { --c-accent: #fb7185; }
+  .nf-linked-card .nf-linked-cluster { color: var(--c-accent, var(--cluster-accent)); }
+  .nf-linked-card .nf-linked-arrow { color: var(--c-accent, var(--cluster-accent)); }
+  .nf-linked-card:hover { border-color: var(--c-accent, var(--cluster-accent)); background: color-mix(in srgb, var(--c-accent, var(--cluster-accent)) 8%, var(--bg-secondary)); }
+  .nf-linked-cluster { font-family: var(--font-mono); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; text-align: left; font-weight: 600; }
+  .nf-linked-name { color: var(--text-primary); font-weight: 600; text-align: left; }
+  .nf-linked-arrow { font-size: 1.1rem; }
+  .nf-actions { display: flex; gap: 0.6rem; justify-content: center; flex-wrap: wrap; }
+  .nf-btn { background: var(--cluster-accent); color: white; border: 1px solid var(--cluster-accent); padding: 0.55rem 1.1rem; border-radius: 8px; font-size: 0.88rem; text-decoration: none; }
+  .nf-btn:hover { opacity: 0.9; }
+  .nf-btn-ghost { background: transparent; color: var(--text-primary); border-color: var(--border); }
+  .nf-btn-ghost:hover { border-color: var(--cluster-accent); }
+
+  .v-header-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 1.3rem 1.5rem; margin-bottom: 1.2rem; }
+  .v-head-row { display: flex; gap: 1.1rem; align-items: flex-start; flex-wrap: wrap; }
+  .v-icon-wrap { flex-shrink: 0; }
+  .v-icon-wrap span.v-icon-large { width: 72px; height: 72px; display: flex; align-items: center; justify-content: center; border-radius: 50%; overflow: hidden; color: white; font-size: 2rem; font-weight: 600; font-family: var(--font-display); position: relative; }
+  .v-head-main { flex: 1; min-width: 0; }
+  .v-name { font-family: var(--font-display); font-size: clamp(1.4rem, 3vw, 1.8rem); font-weight: 700; color: var(--text-primary); margin: 0 0 0.5rem; word-break: break-word; }
+
+  /* Badges shown right below the name — quick visual summary */
+  .v-name-badges { display: flex; flex-wrap: wrap; gap: 0.35rem; margin: 0 0 0.7rem; }
+  .vpill { display: inline-block; font-size: 0.68rem; padding: 0.18rem 0.5rem; border-radius: 5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
+  .vpill-delinq { background: rgba(239, 68, 68, 0.15); color: var(--status-critical); border: 1px solid rgba(239, 68, 68, 0.4); }
+  .vpill-sm { background: rgba(239, 68, 68, 0.12); color: var(--status-critical); border: 1px solid rgba(239, 68, 68, 0.3); }
+  .vpill-dz { background: rgba(167, 139, 250, 0.15); color: var(--accent-violet); border: 1px solid rgba(167, 139, 250, 0.4); }
+  .vpill-mc { background: rgba(232, 121, 249, 0.15); color: var(--accent-magenta); border: 1px solid rgba(232, 121, 249, 0.4); }
+  .vpill-bam { background: rgba(6, 182, 212, 0.15); color: var(--accent-cyan); border: 1px solid rgba(6, 182, 212, 0.4); }
+  .vpill-rakurai { background: rgba(234, 179, 8, 0.15); color: var(--accent-amber); border: 1px solid rgba(234, 179, 8, 0.4); }
+  .vpill-sfdp { background: rgba(34, 197, 94, 0.15); color: var(--status-good); border: 1px solid rgba(34, 197, 94, 0.4); }
+
+  /* SFDP state pills inside infrastructure cell. Approved is green; others are distinct
+     colors but not red-flag colors — they describe state, not problems. */
+  .vsfdp { display: inline-block; font-size: 0.85rem; padding: 0.18rem 0.55rem; border-radius: 5px; font-weight: 600; }
+  .vsfdp-approved { background: rgba(34, 197, 94, 0.15); color: var(--status-good); border: 1px solid rgba(34, 197, 94, 0.35); }
+  .vsfdp-review { background: rgba(59, 130, 246, 0.12); color: var(--accent-blue); border: 1px solid rgba(59, 130, 246, 0.3); }
+  .vsfdp-reject { background: rgba(249, 115, 22, 0.12); color: var(--accent-orange, #f97316); border: 1px solid rgba(249, 115, 22, 0.3); }
+  .vsfdp-retired { background: rgba(107, 114, 128, 0.15); color: var(--text-muted); border: 1px solid rgba(107, 114, 128, 0.3); }
+  .vsfdp-other { background: rgba(107, 114, 128, 0.15); color: var(--text-secondary); border: 1px solid rgba(107, 114, 128, 0.3); }
+  .vsfdp-never { background: transparent; color: var(--text-muted); border: 1px dashed rgba(107, 114, 128, 0.35); font-weight: 400; }
+
+  /* Custom fast tooltip — shows on hover with 80ms delay. Native title="" is ~1.5s. */
+  [data-tip] { position: relative; cursor: help; }
+  [data-tip]::after {
+    content: attr(data-tip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%) translateY(-4px);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    padding: 0.35rem 0.55rem;
+    border-radius: 6px;
+    font-family: var(--font-display);
+    font-size: 0.72rem;
+    font-weight: 400;
+    line-height: 1.35;
+    letter-spacing: normal;
+    text-transform: none;
+    white-space: normal;
+    width: 240px;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.08s ease, visibility 0.08s ease;
+    z-index: 200;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+  }
+  [data-tip]:hover::after { opacity: 1; visibility: visible; }
+  @media (hover: none) { [data-tip]:hover::after { display: none; } }
+  .v-keys-block { display: flex; flex-direction: column; gap: 0.35rem; }
+  .v-key-row { display: flex; align-items: center; gap: 0.5rem; font-family: var(--font-mono); font-size: 0.78rem; flex-wrap: wrap; }
+  .v-key-label { color: var(--text-muted); font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em; min-width: 50px; }
+  .v-key-val { color: var(--text-secondary); background: var(--bg-card-hover); padding: 0.15rem 0.45rem; border-radius: 4px; font-size: 0.75rem; }
+  .v-copy { background: none; border: 1px solid var(--border); color: var(--text-muted); border-radius: 4px; padding: 0 0.4rem; cursor: pointer; font-size: 0.85rem; line-height: 1.5; }
+  .v-copy:hover { color: var(--cluster-accent); border-color: var(--cluster-accent); }
+
+  .v-head-side { display: flex; flex-direction: column; gap: 0.5rem; align-items: flex-end; }
+  .v-status-pill { display: inline-block; padding: 0.3rem 0.8rem; border-radius: 14px; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+  .v-status-active { background: rgba(34, 197, 94, 0.15); color: var(--status-good); border: 1px solid rgba(34, 197, 94, 0.3); }
+  .v-status-delinquent { background: rgba(239, 68, 68, 0.15); color: var(--status-critical); border: 1px solid rgba(239, 68, 68, 0.3); }
+  .v-website { color: var(--cluster-accent); text-decoration: none; font-size: 0.82rem; }
+  .v-website:hover { text-decoration: underline; }
+
+  .v-quick-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.85rem; margin-bottom: 1.3rem; }
+  .qs-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 0.9rem 1.1rem 1rem; }
+  .qs-label { font-size: 0.6rem; letter-spacing: 0.1em; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.45rem; }
+  .qs-val { font-family: var(--font-display); font-size: 1.5rem; font-weight: 700; color: var(--text-primary); line-height: 1; }
+  .qs-sub { font-size: 0.72rem; color: var(--text-muted); margin-top: 0.3rem; }
+
+  .v-cards-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.9rem; margin-bottom: 1.3rem; }
+  .v-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 1.2rem 1.35rem 1.3rem; }
+  .v-card.span-2 { grid-column: span 2; }
+  .v-card-tag { display: inline-block; background: var(--bg-card-hover); color: var(--cluster-accent); border-radius: 5px; padding: 0.15rem 0.55rem; font-size: 0.62rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.65rem; }
+  .v-card-title { font-family: var(--font-display); font-size: 1.05rem; font-weight: 600; color: var(--text-primary); margin: 0 0 0.9rem; }
+
+  .v-loc-row { display: flex; align-items: center; gap: 0.85rem; margin-bottom: 0.85rem; flex-wrap: wrap; }
+  .v-loc-flag { width: 36px; height: 36px; border-radius: 50%; overflow: hidden; background: var(--bg-card-hover); border: 1px solid var(--border); flex-shrink: 0; }
+  .v-loc-text { flex: 1; min-width: 0; }
+  .v-loc-city { font-size: 1.2rem; font-weight: 600; color: var(--text-primary); }
+  .v-loc-country { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.15rem; }
+  .v-loc-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.6rem 1rem; padding-top: 0.85rem; border-top: 1px solid var(--border); font-size: 0.85rem; }
+  .v-loc-meta-item { display: flex; flex-direction: column; gap: 0.15rem; }
+  .v-loc-meta-label { font-size: 0.65rem; letter-spacing: 0.05em; color: var(--text-muted); text-transform: uppercase; }
+  .v-loc-meta-val { color: var(--text-primary); }
+
+  /* Geo confidence pill styles */
+  .gc-pill { display: inline-block; font-size: 0.78rem; padding: 0.08rem 0.45rem; border-radius: 4px; font-weight: 600; text-transform: capitalize; }
+  .gc-high { background: rgba(34, 197, 94, 0.15); color: var(--status-good); border: 1px solid rgba(34, 197, 94, 0.35); }
+  .gc-medium { background: rgba(251, 191, 36, 0.15); color: var(--accent-amber, #f59e0b); border: 1px solid rgba(251, 191, 36, 0.35); }
+  .gc-low { background: rgba(249, 115, 22, 0.15); color: var(--accent-orange, #f97316); border: 1px solid rgba(249, 115, 22, 0.35); }
+  .gc-other { background: rgba(107, 114, 128, 0.15); color: var(--text-secondary); border: 1px solid rgba(107, 114, 128, 0.3); }
+  .gc-disc { font-size: 0.72rem; color: var(--accent-orange, #f97316); margin-left: 0.35rem; cursor: help; }
+
+  /* Geo alternatives — shown when sources disagree */
+  .v-loc-alts { margin-top: 1rem; padding-top: 0.85rem; border-top: 1px dashed var(--border); }
+  .v-loc-alts-title { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.55rem; }
+  .v-loc-alts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.55rem; }
+  .v-loc-alt {
+    display: grid;
+    grid-template-columns: 24px 1fr;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 0.5rem 0.65rem;
+    font-size: 0.78rem;
+  }
+  .v-loc-alt-flag { width: 24px; height: 18px; border-radius: 3px; overflow: hidden; background: var(--bg-card-hover); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; }
+  .v-loc-alt-flag img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .v-loc-alt-main { color: var(--text-primary); }
+  .v-loc-alt-source { font-family: var(--font-mono); font-size: 0.68rem; color: var(--text-muted); }
+
+  .v-infra-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.7rem; }
+  .v-infra-cell { background: var(--bg-card-hover); border: 1px solid var(--border); border-radius: 8px; padding: 0.65rem 0.85rem 0.75rem; }
+  .v-infra-cell-label { font-size: 0.6rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.3rem; }
+  .v-infra-cell-val { font-size: 0.88rem; color: var(--text-primary); font-weight: 500; }
+  .v-infra-cell-val .yes { color: var(--status-good); }
+  .v-infra-cell-val .no { color: var(--text-muted); }
+  .v-infra-cell-sub { font-size: 0.72rem; color: var(--text-muted); margin-top: 0.2rem; }
+
+  .v-perf-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.8rem; }
+  .v-perf-cell { background: var(--bg-card-hover); border: 1px solid var(--border); border-radius: 8px; padding: 0.7rem 0.85rem 0.8rem; }
+  .v-perf-cell-label { font-size: 0.6rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.35rem; }
+  .v-perf-cell-val { font-family: var(--font-mono); font-size: 1.1rem; color: var(--text-primary); font-weight: 600; }
+  .v-perf-cell-sub { font-size: 0.7rem; color: var(--text-muted); margin-top: 0.2rem; }
+
+  .v-related-link { display: inline-flex; align-items: center; gap: 0.4rem; color: var(--cluster-accent); text-decoration: none; padding: 0.55rem 0.85rem; background: var(--bg-card-hover); border: 1px solid var(--border); border-radius: 8px; font-size: 0.88rem; margin-right: 0.5rem; margin-bottom: 0.5rem; }
+  .v-related-link:hover { border-color: var(--cluster-accent); }
+
+  .v-placeholder-section { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 0.85rem; margin-top: 0.5rem; }
+  .ph-card { background: var(--bg-card); border: 1px dashed var(--border); border-radius: 12px; padding: 1rem 1.15rem 1.15rem; opacity: 0.85; }
+  .ph-card-tag { display: inline-block; font-size: 0.6rem; color: var(--text-muted); background: var(--bg-card-hover); border-radius: 4px; padding: 0.15rem 0.5rem; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem; }
+  .ph-card-title { font-family: var(--font-display); font-size: 0.95rem; font-weight: 600; color: var(--text-secondary); margin: 0 0 0.4rem; }
+  .ph-card-text { font-size: 0.82rem; color: var(--text-muted); line-height: 1.5; margin: 0; }
+
+  @media (max-width: 900px) {
+    .v-quick-stats { grid-template-columns: repeat(2, 1fr); }
+    .v-cards-grid { grid-template-columns: 1fr; }
+    .v-card.span-2 { grid-column: span 1; }
+  }
+  @media (max-width: 600px) {
+    .page-main { padding: 0.85rem 1rem 3rem; }
+    .v-header-card { padding: 1rem; }
+    .v-head-side { align-items: flex-start; }
+  }
+</style>
+
+<script type="module">
+import { bootstrapCluster, getCluster, fetchValidators, fetchSummary, fmtStakeShort } from '/src/lib/data.js';
+import { fmt, shortenIdentity, clientColor } from '/src/lib/formatters.js';
+
+const params = new URLSearchParams(window.location.search);
+const validatorId = params.get('id');
+
+let allRecordsForRank = [];
+
+async function loadValidator() {
+  const cluster = getCluster();
+  document.getElementById('back-link').href = `/validators?cluster=${cluster}`;
+
+  if (window.sondaSetClusterBanner) window.sondaSetClusterBanner(cluster);
+
+  fetchSummary(cluster).then(s => {
+    if (!s) return;
+    if (window.sondaUpdateStrip) window.sondaUpdateStrip(s);
+  }).catch(() => {});
+
+  if (!validatorId) {
+    showNotFoundPage(null, cluster, 'No validator specified', 'Open a validator from the validators list to see its details');
+    return;
+  }
+
+  try {
+    const data = await fetchValidators(cluster);
+    const records = (data?.records || []).filter(r => r && r.role === 'validator');
+    allRecordsForRank = records;
+    const r = records.find(x => x.vote_account === validatorId || x.identity_pubkey === validatorId);
+    if (!r) {
+      // Search across other clusters to suggest where this validator IS present
+      const otherClusters = ['mainnet-beta', 'testnet', 'devnet', 'alpenglow-community'].filter(c => c !== cluster);
+      const linked = [];
+      await Promise.all(otherClusters.map(async oc => {
+        try {
+          const od = await fetchValidators(oc);
+          const orecs = (od?.records || []).filter(x => x && x.role === 'validator');
+          const found = orecs.find(x => x.vote_account === validatorId || x.identity_pubkey === validatorId);
+          if (found) linked.push({ cluster: oc, record: found });
+        } catch {}
+      }));
+      showNotFoundPage(validatorId, cluster,
+        'This node is not running in the selected cluster',
+        linked.length > 0
+          ? 'It is active on the cluster(s) listed below — click to view it there'
+          : 'It does not appear in any current snapshot. The validator may have changed identity or be offline across all clusters',
+        linked);
+      return;
+    }
+    renderValidator(r, cluster);
+  } catch (e) {
+    showNotFoundPage(validatorId, cluster, 'Failed to load', e.message);
+    console.error(e);
+  }
+}
+
+function showNotFoundPage(id, cluster, title, message, linkedClusters) {
+  document.getElementById('v-loading').style.display = 'none';
+  const errEl = document.getElementById('v-error');
+  errEl.style.display = 'block';
+  const clusterName = cluster.replace('-beta', '').replace('-community', '');
+  let linksHtml = '';
+  if (linkedClusters && linkedClusters.length > 0) {
+    linksHtml = '<div class="nf-linked">' + linkedClusters.map(({ cluster: oc, record }) => {
+      const ocName = oc.replace('-beta', '').replace('-community', '');
+      const ocClass = `nf-linked-card cluster-${oc.replace(/-beta|-community/g, '')}`;
+      const href = `/validator?id=${record.vote_account || record.identity_pubkey}&cluster=${oc}`;
+      const name = record.name || 'Unnamed validator';
+      return `<a class="${ocClass}" href="${href}">
+          <div class="nf-linked-cluster">${ocName}</div>
+          <div class="nf-linked-name">${name}</div>
+          <div class="nf-linked-arrow">→</div>
+        </a>`;
+    }).join('') + '</div>';
+  }
+  errEl.innerHTML = `
+    <div class="nf-block">
+      <div class="nf-title">${title}</div>
+      ${id ? `<div class="nf-id"><code>${id}</code></div>` : ''}
+      <p class="nf-message">${message}</p>
+      ${linksHtml}
+      <div class="nf-actions">
+        <a href="/validators?cluster=${cluster}" class="nf-btn">Back to validators in ${clusterName}</a>
+        <a href="/" class="nf-btn nf-btn-ghost">Overview</a>
+      </div>
+    </div>
+  `;
+}
+
+/** SFDP state styling — Approved is green, others are distinct colors but not red-flag colors. */
+function sfdpStatePill(state) {
+  if (!state) return '<span class="vsfdp vsfdp-never">Never in SFDP</span>';
+  const lower = state.toLowerCase();
+  if (lower === 'approved') return `<span class="vsfdp vsfdp-approved">${state}</span>`;
+  if (lower.includes('review') || lower.includes('pending')) return `<span class="vsfdp vsfdp-review">${state}</span>`;
+  if (lower.includes('reject')) return `<span class="vsfdp vsfdp-reject">${state}</span>`;
+  if (lower.includes('retire') || lower.includes('expired')) return `<span class="vsfdp vsfdp-retired">${state}</span>`;
+  return `<span class="vsfdp vsfdp-other">${state}</span>`;
+}
+
+/** Whether a given infrastructure field is meaningful in the current cluster — based on whether
+ *  ANY validator in the snapshot has data for it. Hides empty noise on devnet/alpenglow. */
+function clusterHas(field) {
+  if (!allRecordsForRank.length) return false;
+  if (field === 'dz') return allRecordsForRank.some(x => x.dz_connected);
+  if (field === 'mc') return allRecordsForRank.some(x => x.dz_multicast_publisher);
+  if (field === 'bam') return allRecordsForRank.some(x => x.bam_node);
+  if (field === 'rakurai') return allRecordsForRank.some(x => x.is_rakurai);
+  if (field === 'sfdp') return allRecordsForRank.some(x => x.sfdp_state);
+  if (field === 'ibrl') return allRecordsForRank.some(x => x.ibrl?.ibrl_score != null);
+  return false;
+}
+
+function renderValidator(r, cluster) {
+  document.getElementById('v-loading').style.display = 'none';
+  document.getElementById('v-content').style.display = 'block';
+  document.title = `${r.name || shortenIdentity(r.identity_pubkey)} · SONDA`;
+
+  const initial = (r.name && r.name.trim()[0]) || (r.identity_pubkey && r.identity_pubkey[0]) || '?';
+  const seedHash = (s) => { let h=0; for (let i=0;i<s.length;i++) h=((h<<5)-h+s.charCodeAt(i))|0; return Math.abs(h); };
+  const h = seedHash(r.identity_pubkey || r.name || 'unknown');
+  const hue = h % 360, sat = 35 + ((h >> 8) % 20);
+  document.getElementById('v-icon').innerHTML = `
+    <span class="v-icon-large" style="background:hsl(${hue},${sat}%,45%)">
+      ${r.icon_url ? `<img src="${r.icon_url}" width="72" height="72" loading="eager" referrerpolicy="no-referrer" style="width:100%;height:100%;object-fit:cover;display:block" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/>` : ''}
+      <span style="${r.icon_url ? 'display:none;' : 'display:flex;'}width:100%;height:100%;align-items:center;justify-content:center;color:white;font-weight:600;font-size:2rem;font-family:var(--font-display);position:absolute;top:0;left:0">${initial.toUpperCase()}</span>
+    </span>`;
+
+  document.getElementById('v-name').textContent = r.name || 'Unnamed validator';
+  document.getElementById('v-identity').textContent = shortenIdentity(r.identity_pubkey, 6, 6);
+  document.getElementById('v-identity-full').textContent = r.identity_pubkey;
+  document.getElementById('v-vote').textContent = shortenIdentity(r.vote_account, 6, 6);
+  document.getElementById('v-vote-full').textContent = r.vote_account;
+  if (r.bls_pubkey) {
+    document.getElementById('v-bls-row').style.display = 'flex';
+    document.getElementById('v-bls').textContent = shortenIdentity(r.bls_pubkey, 6, 6);
+    document.getElementById('v-bls-full').textContent = r.bls_pubkey;
+  }
+
+  // Badges near name — quick visual summary of what's active
+  const badges = [];
+  if (r.delinquent) badges.push('<span class="vpill vpill-delinq">Delinquent</span>');
+  if (r.is_superminority) badges.push('<span class="vpill vpill-sm">SM</span>');
+  if (r.dz_connected) badges.push('<span class="vpill vpill-dz">DZ</span>');
+  if (r.dz_multicast_publisher) badges.push('<span class="vpill vpill-mc">DZ Multicast</span>');
+  if (r.bam_node) badges.push('<span class="vpill vpill-bam">BAM</span>');
+  if (r.is_rakurai) badges.push('<span class="vpill vpill-rakurai">Rakurai</span>');
+  if (r.sfdp_state === 'Approved') badges.push('<span class="vpill vpill-sfdp">SFDP</span>');
+  document.getElementById('v-name-badges').innerHTML = badges.join('');
+
+  const statusPill = r.delinquent
+    ? '<span class="v-status-pill v-status-delinquent">Delinquent</span>'
+    : '<span class="v-status-pill v-status-active">Active</span>';
+  const website = r.website ? `<a class="v-website" href="${r.website}" target="_blank" rel="noopener">Website ↗</a>` : '';
+  document.getElementById('v-head-side').innerHTML = statusPill + website;
+
+  document.getElementById('qs-stake').textContent = `${fmtStakeShort(r.activated_stake_lamports)} SOL`;
+  document.getElementById('qs-stake-pct').textContent = r.stake_percentage != null ? `${r.stake_percentage.toFixed(3)}% of network` : '— of network';
+  document.getElementById('qs-commission').textContent = r.commission != null ? `${r.commission}%` : '—';
+  document.getElementById('qs-mev').textContent = r.mev_commission != null ? `${(r.mev_commission / 100).toFixed(2)}%` : '—';
+  document.getElementById('qs-skip').textContent = r.skip_rate != null ? `${r.skip_rate.toFixed(2)}%` : '—';
+  document.getElementById('qs-credits').textContent = r.epoch_credits != null ? fmt(r.epoch_credits) : '—';
+
+  // Rank by epoch_credits (current snapshot)
+  if (r.epoch_credits != null && allRecordsForRank.length > 0) {
+    const sorted = [...allRecordsForRank].filter(x => x.epoch_credits != null).sort((a, b) => b.epoch_credits - a.epoch_credits);
+    const rank = sorted.findIndex(x => x.identity_pubkey === r.identity_pubkey) + 1;
+    if (rank > 0) {
+      document.getElementById('qs-credits-rank').textContent = `current epoch · #${rank} of ${sorted.length}`;
+    }
+  }
+
+  const geo = r.geolocation || {};
+  const cc = (geo.country_code || '??').toLowerCase();
+  const flagSrc = cc !== '??' ? `https://flagcdn.com/w80/${cc}.png` : '';
+  document.getElementById('v-loc-row').innerHTML = `
+    <span class="v-loc-flag">
+      ${flagSrc ? `<img src="${flagSrc}" width="36" height="36" style="width:100%;height:100%;object-fit:cover;display:block"/>` : '<span style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:var(--text-muted)">?</span>'}
+    </span>
+    <div class="v-loc-text">
+      <div class="v-loc-city">${geo.city || 'Unknown city'}</div>
+      <div class="v-loc-country">${geo.region ? geo.region + ', ' : ''}${geo.country || geo.country_code || 'Unknown'}</div>
+    </div>`;
+
+  // Geo Confidence is a string ("high"/"medium"/"low"), not a number. Render as-is with color.
+  let confidenceHtml = '';
+  if (geo.confidence) {
+    const lvl = String(geo.confidence).toLowerCase();
+    const cls = lvl === 'high' ? 'gc-high' : lvl === 'medium' ? 'gc-medium' : lvl === 'low' ? 'gc-low' : 'gc-other';
+    confidenceHtml = `<div class="v-loc-meta-item"><span class="v-loc-meta-label">Geo Confidence</span><span class="v-loc-meta-val"><span class="gc-pill ${cls}">${geo.confidence}</span>${geo.discrepancy ? ' <span class="gc-disc" data-tip="Geo sources disagree, see alternatives below">discrepancy flagged</span>' : ''}</span></div>`;
+  }
+
+  document.getElementById('v-loc-meta').innerHTML = `
+    <div class="v-loc-meta-item"><span class="v-loc-meta-label">IP Address</span><span class="v-loc-meta-val" style="font-family:var(--font-mono)">${r.ip_address || '—'}</span></div>
+    <div class="v-loc-meta-item"><span class="v-loc-meta-label">Network Provider</span><span class="v-loc-meta-val">${geo.asn_name || '—'}</span></div>
+    <div class="v-loc-meta-item"><span class="v-loc-meta-label">ASN</span><span class="v-loc-meta-val" style="font-family:var(--font-mono)">${geo.asn ? `<a href="/datacenter?asn=${geo.asn}&cluster=${getCluster()}" style="color:var(--cluster-accent);text-decoration:none">${geo.asn}</a>` : '—'}</span></div>
+    <div class="v-loc-meta-item"><span class="v-loc-meta-label">Coordinates</span><span class="v-loc-meta-val" style="font-family:var(--font-mono);font-size:0.78rem">${(geo.latitude != null && geo.longitude != null) ? geo.latitude.toFixed(2) + ', ' + geo.longitude.toFixed(2) : '—'}</span></div>
+    ${confidenceHtml}
+    ${geo.primary_source ? `<div class="v-loc-meta-item"><span class="v-loc-meta-label">Primary Source</span><span class="v-loc-meta-val">${geo.primary_source}</span></div>` : ''}`;
+
+  // Discrepancy alternatives — render after main location card when sources disagree
+  renderGeoAlternatives(geo);
+
+  // Build infrastructure cells based on what is meaningful in this cluster
+  const cells = [];
+  if (clusterHas('dz')) {
+    const dzVal = r.dz_connected ? '<span class="yes">Yes</span>' : '<span class="no">No</span>';
+    const dzSub = r.dz_connected ? [r.dz_device_name, r.dz_connection_type].filter(Boolean).join(' · ') : '';
+    cells.push(`<div class="v-infra-cell"><div class="v-infra-cell-label" data-tip="DoubleZero — private low-latency network underlay for validators">DoubleZero</div><div class="v-infra-cell-val">${dzVal}</div>${dzSub ? `<div class="v-infra-cell-sub">${dzSub}</div>` : ''}</div>`);
+  }
+  if (clusterHas('mc')) {
+    const mcVal = r.dz_multicast_publisher ? '<span class="yes">Yes</span>' : '<span class="no">No</span>';
+    cells.push(`<div class="v-infra-cell"><div class="v-infra-cell-label" data-tip="Publishes shreds via DZ multicast group">DZ Multicast</div><div class="v-infra-cell-val">${mcVal}</div></div>`);
+  }
+  if (clusterHas('bam')) {
+    const bamVal = r.bam_node ? `<span class="yes">${r.bam_region || r.bam_node}</span>` : '<span class="no">No</span>';
+    cells.push(`<div class="v-infra-cell"><div class="v-infra-cell-label" data-tip="Jito BAM (Block Assembly Marketplace) — decentralized block production">Jito BAM</div><div class="v-infra-cell-val">${bamVal}</div></div>`);
+  }
+  // Note: 'Rakurai' is intentionally NOT shown as a separate Yes/No cell — the Version
+  // cell below already displays r.client_type colored, which carries the same information.
+  if (clusterHas('sfdp')) {
+    cells.push(`<div class="v-infra-cell"><div class="v-infra-cell-label" data-tip="Solana Foundation Delegation Program status">SFDP</div><div class="v-infra-cell-val">${sfdpStatePill(r.sfdp_state)}</div></div>`);
+  }
+  const cColor = clientColor(r.client_type);
+  cells.push(`<div class="v-infra-cell"><div class="v-infra-cell-label">Version</div><div class="v-infra-cell-val">${r.version || '—'}</div>${r.client_type ? `<div class="v-infra-cell-sub" style="color:${cColor};font-weight:600">${r.client_type}</div>` : ''}</div>`);
+  if (r.bls_pubkey) {
+    cells.push('<div class="v-infra-cell"><div class="v-infra-cell-label" data-tip="BLS pubkey — required for Alpenglow consensus participation">BLS Pubkey</div><div class="v-infra-cell-val"><span class="yes">Registered</span></div></div>');
+  }
+  document.getElementById('v-infra-grid').innerHTML = cells.join('');
+
+  // Performance cells — only those that have data in the cluster
+  const hasSlot = allRecordsForRank.some(x => x.slot_duration_median != null);
+  const hasVlat = allRecordsForRank.some(x => x.median_vote_latency != null);
+  const perfCells = [];
+  perfCells.push(`<div class="v-perf-cell"><div class="v-perf-cell-label" data-tip="Percentage of leader slots skipped in the current epoch. Lower is better">Skip Rate</div><div class="v-perf-cell-val">${r.skip_rate != null ? r.skip_rate.toFixed(2) + '%' : '—'}</div></div>`);
+  perfCells.push(`<div class="v-perf-cell"><div class="v-perf-cell-label" data-tip="Vote credits earned in the current epoch. Higher is better">Epoch Credits</div><div class="v-perf-cell-val">${r.epoch_credits != null ? fmt(r.epoch_credits) : '—'}</div></div>`);
+  if (hasSlot) perfCells.push(`<div class="v-perf-cell"><div class="v-perf-cell-label" data-tip="Median slot duration in milliseconds">Slot Duration</div><div class="v-perf-cell-val">${r.slot_duration_median != null ? r.slot_duration_median.toFixed(0) + 'ms' : '—'}</div><div class="v-perf-cell-sub">median</div></div>`);
+  if (hasVlat) perfCells.push(`<div class="v-perf-cell"><div class="v-perf-cell-label" data-tip="Median vote latency in slots. Lower is better">Vote Latency</div><div class="v-perf-cell-val">${r.median_vote_latency != null ? r.median_vote_latency.toFixed(2) : '—'}</div><div class="v-perf-cell-sub">median (slots)</div></div>`);
+  if (clusterHas('ibrl') && r.ibrl?.ibrl_score != null) {
+    perfCells.push(`<div class="v-perf-cell"><div class="v-perf-cell-label" data-tip="IBRL — overall block production quality score (0-100). Higher is better">IBRL Overall</div><div class="v-perf-cell-val">${r.ibrl.ibrl_score.toFixed(0)}</div></div>`);
+    perfCells.push(`<div class="v-perf-cell"><div class="v-perf-cell-label" data-tip="IBRL sub-score for block build time efficiency">IBRL Build Time</div><div class="v-perf-cell-val">${r.ibrl.build_time_score != null ? r.ibrl.build_time_score.toFixed(0) : '—'}</div></div>`);
+    perfCells.push(`<div class="v-perf-cell"><div class="v-perf-cell-label" data-tip="IBRL sub-score for how many votes per block">IBRL Vote Packing</div><div class="v-perf-cell-val">${r.ibrl.vote_packing_score != null ? r.ibrl.vote_packing_score.toFixed(0) : '—'}</div></div>`);
+    perfCells.push(`<div class="v-perf-cell"><div class="v-perf-cell-label" data-tip="Median block build time in milliseconds">Block Build (ms)</div><div class="v-perf-cell-val">${r.ibrl.median_block_build_ms != null ? r.ibrl.median_block_build_ms.toFixed(0) : '—'}</div></div>`);
+  }
+  document.getElementById('v-perf-grid').innerHTML = perfCells.join('');
+
+  // Cross-cluster: search for this validator's identity/vote/testnet_pubkey across all
+  // other clusters and surface every match. This works in both directions (mainnet→testnet
+  // via r.testnet_pubkey, AND testnet→mainnet via matching identity_pubkey across snapshots).
+  populateCrossCluster(r, cluster).catch(() => {});
+
+  document.querySelectorAll('.v-copy').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const target = document.getElementById(btn.dataset.target);
+      if (target) {
+        navigator.clipboard.writeText(target.textContent || '');
+        const orig = btn.textContent;
+        btn.textContent = '✓';
+        setTimeout(() => { btn.textContent = orig; }, 1000);
+      }
+    });
+  });
+}
+
+function renderGeoAlternatives(geo) {
+  const el = document.getElementById('v-loc-alts');
+  if (!el) return;
+  const alts = geo?.discrepancy_alternatives;
+  if (!geo?.discrepancy || !alts || typeof alts !== 'object' || Object.keys(alts).length === 0) {
+    el.style.display = 'none';
+    return;
+  }
+  const cards = Object.entries(alts).map(([source, info]) => {
+    const cc = (info?.country || '??').toLowerCase();
+    const flagSrc = cc !== '??' && cc.length === 2 ? `https://flagcdn.com/w40/${cc}.png` : '';
+    const flag = flagSrc
+      ? `<span class="v-loc-alt-flag"><img src="${flagSrc}" width="24" height="18" loading="lazy"/></span>`
+      : `<span class="v-loc-alt-flag"><span style="color:var(--text-muted);font-size:0.7em">?</span></span>`;
+    const city = info?.city || '—';
+    const country = info?.country || '';
+    const region = info?.region ? `, ${info.region}` : '';
+    const asn = info?.asn || '';
+    return `<div class="v-loc-alt">
+      ${flag}
+      <div>
+        <div class="v-loc-alt-main">${city}${region ? region : ''}${country ? `, ${country}` : ''}</div>
+        <div class="v-loc-alt-source">${source}${asn ? ' · ' + asn : ''}</div>
+      </div>
+    </div>`;
+  }).join('');
+  el.style.display = 'block';
+  el.innerHTML = `
+    <div class="v-loc-alts-title" data-tip="Where other geo sources place this IP. The primary source above is what SONDA displays elsewhere.">Alternative locations from other sources</div>
+    <div class="v-loc-alts-grid">${cards}</div>
+  `;
+}
+
+async function populateCrossCluster(r, currentCluster) {
+  const otherClusters = ['mainnet-beta', 'testnet', 'devnet', 'alpenglow-community'].filter(c => c !== currentCluster);
+  const matches = [];
+  // Candidate keys to try when matching across snapshots
+  const candidates = [r.identity_pubkey, r.vote_account, r.testnet_pubkey, r.mainnet_pubkey].filter(Boolean);
+  await Promise.all(otherClusters.map(async oc => {
+    try {
+      const od = await fetchValidators(oc);
+      const orecs = (od?.records || []).filter(x => x && x.role === 'validator');
+      const found = orecs.find(x => candidates.includes(x.identity_pubkey) || candidates.includes(x.vote_account) || candidates.includes(x.testnet_pubkey) || candidates.includes(x.mainnet_pubkey));
+      if (found) matches.push({ cluster: oc, record: found });
+    } catch {}
+  }));
+  if (matches.length === 0) return;
+  document.getElementById('v-related-card').style.display = 'block';
+  document.getElementById('v-related-body').innerHTML = matches.map(({ cluster: oc, record }) => {
+    const ocName = oc.replace('-beta', '').replace('-community', '');
+    const id = record.vote_account || record.identity_pubkey;
+    return `<a class="v-related-link" href="/validator?id=${id}&cluster=${oc}">
+      <span class="v-related-cluster">${ocName}</span> node: ${shortenIdentity(id, 6, 6)} →
+    </a>`;
+  }).join('');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  bootstrapCluster();
+  loadValidator();
+});
+</script>

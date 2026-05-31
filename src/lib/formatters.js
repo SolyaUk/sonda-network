@@ -100,3 +100,39 @@ export function versionColor(version) {
   }
   return VERSION_PALETTE[Math.abs(hash) % VERSION_PALETTE.length];
 }
+// ============================================================================
+// Client/software palette (canonical, must match Software card on homepage).
+// Family-based: clients in the same family share a hue. Visually distinct
+// families (Jito vs Harmonic vs Frankendancer vs Firedancer) get different hues.
+// Keep in sync with CLIENT_COLORS in index.astro.
+// ============================================================================
+const CLIENT_COLORS = {
+  // Jito family — violet
+  'Jito_BAM':                 '#a78bfa',
+  'JitoBAM':                  '#a78bfa',
+  'Jito_Labs':                '#8b5cf6',
+  'Jito':                     '#8b5cf6',
+  // Harmonic family — cyan
+  'Harmonic':                 '#22d3ee',
+  'HarmonicAgave':            '#22d3ee',
+  'HarmonicFrankendancer':    '#06b6d4',
+  'HarmonicFiredancer':       '#0891b2',
+  'Harmonic_Major':           '#0e7490',
+  'FD_Harmonic':              '#0891b2',
+  // Frankendancer family — magenta
+  'Frankendancer':            '#e879f9',
+  // Firedancer family — orange
+  'Firedancer':               '#f97316',
+  'FireBAM':                  '#fb923c',
+  // Standalone clients — each its own color
+  'Rakurai':                  '#eab308',
+  'Raiku':                    '#fbbf24',
+  'Agave':                    '#14b8a6',
+  'Unknown':                  '#6b7280',
+};
+
+/** Color for a client/software name. Returns muted grey if unknown. */
+export function clientColor(client) {
+  if (!client) return '#6b7280';
+  return CLIENT_COLORS[client] || '#6b7280';
+}

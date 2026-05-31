@@ -18,6 +18,7 @@
     "tailwindcss": "^4.2.2"
   },
   "overrides": {
-    "vite": "^7"
+    "vite": "^7",
+    "devalue": "^5.8.1"
   }
 }

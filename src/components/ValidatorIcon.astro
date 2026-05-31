@@ -1,0 +1,73 @@
+---
+// Validator icon with lazy loading + onerror fallback to colored identicon.
+// Identicon = HSL background derived from identity hash + first letter of name.
+// All inline (no SSR fetches). Browser handles caching via standard headers.
+
+interface Props {
+  iconUrl?: string | null;
+  name?: string | null;
+  identity?: string | null;
+  size?: number;
+}
+
+const { iconUrl, name, identity, size = 32 } = Astro.props;
+
+// Inline hash → HSL. Stable across renders.
+function hash(s: string) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+  return h;
+}
+const seed = identity || name || 'unknown';
+const h = Math.abs(hash(seed));
+const hue = h % 360;
+const sat = 35 + ((h >> 8) % 20);
+const initial = (name && name.trim()[0]) || (identity && identity[0]) || '?';
+const bgColor = `hsl(${hue}, ${sat}%, 45%)`;
+---
+
+<span class="vi-wrap" style={`width:${size}px;height:${size}px`}>
+  {iconUrl ? (
+    <img
+      class="vi-img"
+      src={iconUrl}
+      alt={name || ''}
+      width={size}
+      height={size}
+      loading="lazy"
+      referrerpolicy="no-referrer"
+      onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"
+    />
+  ) : null}
+  <span class="vi-fb" style={`background:${bgColor};${iconUrl ? 'display:none' : ''}`}>
+    {initial.toUpperCase()}
+  </span>
+</span>
+
+<style>
+.vi-wrap {
+  display: inline-block;
+  position: relative;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: var(--bg-card-hover);
+}
+.vi-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.vi-fb {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 600;
+  font-family: var(--font-display);
+  font-size: 0.85em;
+}
+</style>

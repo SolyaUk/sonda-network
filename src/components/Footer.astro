@@ -1,0 +1,35 @@
+---
+// Reusable footer extracted from index.astro so all pages can include it.
+---
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-top">
+      <div class="footer-brand">
+        <span class="footer-sonda-name">SONDA</span>
+        <span class="footer-by-text">by</span>
+        <a href="https://solya.studio" target="_blank" rel="noopener" class="footer-solya-link">
+          <img src="/solya-logo-circle.png" alt="Solya" class="footer-solya-logo" />
+          <span>Solya validator</span>
+        </a>
+      </div>
+      <div class="footer-links">
+        <a href="https://x.com/SondaNetwork" target="_blank" rel="noopener" class="footer-link">@SondaNetwork</a>
+        <a href="https://t.me/sonda_network_events" target="_blank" rel="noopener" class="footer-link">Telegram</a>
+        <a href="https://github.com/SolyaUk/sonda-network" target="_blank" rel="noopener" class="footer-link">GitHub</a>
+      </div>
+    </div>
+    <div class="footer-sources">
+      <span class="footer-sources-label">Data sources:</span>
+      <span>Solana RPC</span><span class="sep">·</span><span>Jito Kobe</span><span class="sep">·</span>
+      <span>SFDP</span><span class="sep">·</span><span>StakeWiz</span><span class="sep">·</span>
+      <span>DB-IP</span><span class="sep">·</span><span>IPInfo</span><span class="sep">·</span>
+      <span>GeoJS</span><span class="sep">·</span><span>DoubleZero</span><span class="sep">·</span>
+      <span>Jito BAM</span><span class="sep">·</span><span>RIPE Stat</span>
+    </div>
+    <div class="footer-bottom">
+      <span>Data updates every ~60 seconds. Last snapshot: <span class="mono" id="footer-ts">--</span></span>
+      <span class="footer-attribution">When using SONDA data, attribution is required.</span>
+    </div>
+  </div>
+</footer>

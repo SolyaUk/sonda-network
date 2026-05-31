@@ -11,9 +11,9 @@ const { activePage = 'overview' } = Astro.props;
 
     <nav class="site-nav" aria-label="Main navigation">
       <a href="/" class:list={['nav-link', activePage === 'overview' && 'active']}>Overview</a>
-      <a href="/validators" data-stub class:list={['nav-link', activePage === 'validators' && 'active']}>Validators</a>
+      <a href="/validators" class:list={['nav-link', activePage === 'validators' && 'active']}>Validators</a>
+      <a href="/datacenters" class:list={['nav-link', activePage === 'datacenters' && 'active']}>Datacenters</a>
       <a href="/endpoints" data-stub class:list={['nav-link', activePage === 'endpoints' && 'active']}>Endpoints</a>
-      <a href="/datacenters" data-stub class:list={['nav-link', activePage === 'datacenters' && 'active']}>Datacenters</a>
       <a href="/#about" class="nav-link">About</a>
     </nav>
 
@@ -70,9 +70,9 @@ const { activePage = 'overview' } = Astro.props;
 
   <div class="mobile-menu" id="mobile-menu">
     <a href="/" class:list={['mobile-link', activePage === 'overview' && 'active']}>Overview</a>
-    <a href="/validators" data-stub class:list={['mobile-link', activePage === 'validators' && 'active']}>Validators</a>
+    <a href="/validators" class:list={['mobile-link', activePage === 'validators' && 'active']}>Validators</a>
+    <a href="/datacenters" class:list={['mobile-link', activePage === 'datacenters' && 'active']}>Datacenters</a>
     <a href="/endpoints" data-stub class:list={['mobile-link', activePage === 'endpoints' && 'active']}>Endpoints</a>
-    <a href="/datacenters" data-stub class:list={['mobile-link', activePage === 'datacenters' && 'active']}>Datacenters</a>
     <a href="/#about" class="mobile-link">About</a>
   </div>
 </header>
@@ -211,6 +211,19 @@ document.querySelectorAll('.cluster-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     const cluster = (btn as HTMLElement).dataset.cluster;
     if (!cluster || cluster === getCluster()) return;
+    // On detail pages, redirect directly to the list page in the new cluster.
+    // This avoids replaceState mutating the current detail URL, which would break
+    // browser-back (back would land on a detail URL that points to a cluster the
+    // validator isn't in, showing a "not found" page).
+    const path = window.location.pathname.replace(/\/$/, '');
+    if (path === '/validator') {
+      window.location.href = `/validators?cluster=${cluster}`;
+      return;
+    }
+    if (path === '/datacenter') {
+      window.location.href = `/datacenters?cluster=${cluster}`;
+      return;
+    }
     setClusterShared(cluster);
     updateClusterButtons(cluster);
   });
@@ -245,4 +258,13 @@ setInterval(updateAgoText, 5000);
   lastUpdateTime = new Date(ts).getTime();
   updateAgoText();
 };
+
+// Block clicks on [data-stub] links so users don't navigate to 404 pages.
+// The 'in development' hover tooltip remains via CSS.
+document.querySelectorAll<HTMLAnchorElement>('a[data-stub]').forEach(a => {
+  a.addEventListener('click', e => {
+    e.preventDefault();
+    e.stopPropagation();
+  });
+});
 </script>

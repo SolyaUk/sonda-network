@@ -1,0 +1,689 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Header from '../components/Header.astro';
+import StatusStrip from '../components/StatusStrip.astro';
+import ClusterBanner from '../components/ClusterBanner.astro';
+import Footer from '../components/Footer.astro';
+---
+
+<BaseLayout title="Datacenters · SONDA">
+  <Header activePage="datacenters" />
+  <StatusStrip />
+  <ClusterBanner />
+
+  <div class="dev-banner">
+    <div class="dev-banner-inner">
+      <span class="dev-badge">BETA</span>
+      Dashboard is under active development. Some sections are incomplete.
+      <a href="https://github.com/SolyaUk/sonda-network" target="_blank" rel="noopener" class="dev-link">View on GitHub</a>
+    </div>
+  </div>
+
+  <main class="page-main">
+    <a href="/" class="back-link" id="back-link">← Back to overview</a>
+
+    <section class="page-hero">
+      <h1 class="page-title">Datacenters</h1>
+      <p class="page-sub">
+        Datacenters that host validators, aggregated by network provider (ASN) or by ASN + city. Sort and filter to find concentration risks and infrastructure clusters
+      </p>
+      <p class="page-note">
+        Display names, websites, logos, and provider details are derived directly from ASN data for now. A curated mapping with brand identity is coming next
+      </p>
+    </section>
+
+    <!-- Summary cards -->
+    <section class="vsummary">
+      <div class="vsum-card">
+        <div class="vsum-label">DATACENTERS</div>
+        <div class="vsum-val mono" id="dc-sum-total">—</div>
+        <div class="vsum-sub" id="dc-sum-asn">— ASNs</div>
+      </div>
+      <div class="vsum-card">
+        <div class="vsum-label">TOP CONCENTRATION</div>
+        <div class="vsum-val mono" id="dc-sum-top-pct">—</div>
+        <div class="vsum-sub" id="dc-sum-top-name">—</div>
+      </div>
+      <div class="vsum-card">
+        <div class="vsum-label">DOUBLEZERO</div>
+        <div class="vsum-val mono" id="dc-sum-dz">—</div>
+        <div class="vsum-sub">DC with DZ-connected</div>
+      </div>
+      <div class="vsum-card">
+        <div class="vsum-label">RISK FLAGS</div>
+        <div class="vsum-val mono" id="dc-sum-risk">—</div>
+        <div class="vsum-sub">DC with ≥ 15% stake</div>
+      </div>
+    </section>
+
+    <!-- View toggle -->
+    <section class="view-toggle-bar">
+      <div class="view-toggle" role="group" aria-label="Group view">
+        <button class="vt-btn active" data-view="by_asn">By network provider (ASN)</button>
+        <button class="vt-btn" data-view="by_dc">By datacenter (ASN + city)</button>
+      </div>
+      <div class="dc-search-wrap">
+        <input type="search" class="dc-search" id="dc-search" placeholder="Search ASN, ASN name, or city…" />
+      </div>
+    </section>
+
+    <div class="result-line">
+      <span id="dc-result-count">Loading…</span>
+      <div class="sort-controls">
+        <label class="sort-label" for="dc-sort-select">Sort by:</label>
+        <select id="dc-sort-select" class="sort-select">
+          <option value="stake-desc">Stake (high to low)</option>
+          <option value="stake-asc">Stake (low to high)</option>
+          <option value="validators-desc">Validators (most)</option>
+          <option value="skip-asc">Skip rate (best)</option>
+          <option value="name-asc">ASN name (A–Z)</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Datacenters table -->
+    <div class="dctable-wrap">
+      <table class="dctable">
+        <thead>
+          <tr>
+            <th class="dc-col-name">Datacenter</th>
+            <th class="dc-col-loc" id="dc-col-loc-header">Location</th>
+            <th class="dc-col-vals">Validators</th>
+            <th class="dc-col-stake">Stake</th>
+            <th class="dc-col-perf">Performance</th>
+            <th class="dc-col-infra">Hosted</th>
+            <th class="dc-col-risk">Risk</th>
+          </tr>
+        </thead>
+        <tbody id="dctable-body"></tbody>
+      </table>
+    </div>
+
+    <!-- Mobile cards (collapsed by default) -->
+    <div class="dccards-wrap" id="dccards-wrap"></div>
+
+    <p class="page-footnote">
+      Non-validator nodes (RPCs, Jito relayers, DZ devices), DC display names with logos and websites,
+      and a per-DC validator-count timeline are coming next, derived from the backend timeseries.
+    </p>
+  </main>
+  <Footer />
+</BaseLayout>
+
+<style is:global>
+  .page-main {
+    max-width: 1380px;
+    margin: 0 auto;
+    padding: 1rem 1.5rem 4rem;
+  }
+  .back-link {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    text-decoration: none;
+    display: inline-block;
+    margin-bottom: 0.8rem;
+  }
+  .back-link:hover { color: var(--cluster-accent); }
+  .dev-banner { background: rgba(59,130,246,0.08); border-bottom: 1px solid rgba(59,130,246,0.2); font-size: 0.78rem; color: var(--text-secondary); }
+  .dev-banner-inner { max-width: 1280px; margin: 0 auto; padding: 0.5rem 1.5rem; display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+  .dev-badge { font-family: var(--font-mono); font-size: 0.65rem; font-weight: 600; background: var(--accent-blue); color: #fff; padding: 0.15rem 0.45rem; border-radius: 4px; letter-spacing: 0.08em; flex-shrink: 0; }
+  .dev-link { color: var(--accent-blue); text-decoration: none; margin-left: auto; }
+  .page-hero { margin-bottom: 1.5rem; }
+  .page-title {
+    font-family: var(--font-display);
+    font-size: clamp(1.6rem, 3vw, 2rem);
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0.5rem 0 0.4rem;
+  }
+  .page-sub {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    max-width: 760px;
+    line-height: 1.5;
+    margin: 0;
+  }
+  .page-note {
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    font-style: italic;
+    margin: 0.75rem 0 0;
+    max-width: 760px;
+  }
+  .vsummary {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.85rem;
+    margin: 1.5rem 0 1.2rem;
+  }
+  .vsum-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 0.85rem 1.05rem 0.95rem;
+  }
+  .vsum-label {
+    font-size: 0.6rem; letter-spacing: 0.1em;
+    color: var(--text-muted); text-transform: uppercase;
+    margin-bottom: 0.4rem;
+  }
+  .vsum-val {
+    font-family: var(--font-display);
+    font-size: 1.5rem; font-weight: 700;
+    color: var(--text-primary); line-height: 1;
+  }
+  .vsum-sub { font-size: 0.72rem; color: var(--text-muted); margin-top: 0.25rem; }
+  @media (max-width: 768px) { .vsummary { grid-template-columns: repeat(2, 1fr); gap: 0.6rem; } }
+
+  .view-toggle-bar {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 0.85rem;
+    flex-wrap: wrap;
+  }
+  .view-toggle {
+    display: inline-flex;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 3px;
+  }
+  .vt-btn {
+    background: none;
+    border: none;
+    padding: 0.45rem 0.85rem;
+    color: var(--text-secondary);
+    font-size: 0.82rem;
+    cursor: pointer;
+    border-radius: 6px;
+    font-family: inherit;
+    transition: background 0.15s ease;
+  }
+  .vt-btn:hover { color: var(--text-primary); }
+  .vt-btn.active {
+    background: var(--cluster-accent);
+    color: white;
+  }
+  .dc-search-wrap { flex: 1; min-width: 200px; }
+  .dc-search {
+    width: 100%;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.55rem 0.85rem;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    font-family: inherit;
+  }
+  .dc-search:focus { outline: none; border-color: var(--cluster-accent); }
+
+  .result-line {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    margin-bottom: 0.8rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .sort-controls { display: flex; align-items: center; gap: 0.5rem; }
+  .sort-label { font-size: 0.78rem; }
+  .sort-select {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    border-radius: 6px;
+    padding: 0.3rem 0.5rem;
+    font-size: 0.78rem;
+    font-family: inherit;
+  }
+
+  .dctable-wrap {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow-x: auto;
+  }
+  .dctable {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+  }
+  .dctable thead th {
+    text-align: left;
+    background: var(--bg-card-hover);
+    color: var(--text-muted);
+    font-size: 0.68rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    font-weight: 600;
+    padding: 0.7rem 0.9rem;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  .dctable tbody tr {
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: background 0.12s ease;
+  }
+  .dctable tbody tr:hover { background: var(--bg-card-hover); }
+  .dctable td {
+    padding: 0.7rem 0.9rem;
+    vertical-align: top;
+    color: var(--text-primary);
+  }
+  .dc-col-name { min-width: 200px; max-width: 280px; }
+  .dc-col-loc { min-width: 150px; max-width: 220px; }
+  .dc-col-vals { width: 110px; }
+  .dc-col-stake { min-width: 130px; max-width: 170px; }
+  .dc-col-perf { min-width: 180px; max-width: 220px; }
+  .dc-col-infra { min-width: 130px; max-width: 200px; }
+  /* Cluster-aware Hosted column hide when no DC has DZ/BAM/SFDP (devnet, alpenglow) */
+  .dctable-wrap.hide-hosted .dc-col-infra,
+  .dctable-wrap.hide-hosted td.dc-col-infra-cell { display: none; }
+  .dc-col-risk { width: 80px; text-align: center; }
+
+  .dc-name-cell {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+  }
+  .dc-name-asn {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-top: 0.15rem;
+  }
+  .dc-loc-row { display: flex; align-items: center; gap: 0.45rem; }
+  .dc-loc-city {
+    font-size: 0.88rem;
+    color: var(--text-primary);
+  }
+  .dc-loc-cities-multi {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+
+  .dc-stake-main {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+  .dc-stake-pct {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-top: 0.15rem;
+    font-family: var(--font-mono);
+  }
+
+  .dc-perf-row {
+    display: grid;
+    grid-template-columns: auto auto;
+    gap: 0.05rem 0.65rem;
+    font-size: 0.75rem;
+    font-family: var(--font-mono);
+  }
+  .dc-perf-label {
+    color: var(--text-muted);
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .dc-infra-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+  }
+  .dc-infra-tag {
+    display: inline-block;
+    font-size: 0.7rem;
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    background: var(--bg-card-hover);
+    color: var(--text-secondary);
+  }
+  .dc-infra-tag-dz { color: var(--accent-violet); border-color: rgba(167, 139, 250, 0.4); }
+  .dc-infra-tag-bam { color: var(--accent-cyan); border-color: rgba(6, 182, 212, 0.4); }
+  .dc-infra-tag-sfdp { color: var(--accent-blue); border-color: rgba(59, 130, 246, 0.4); }
+
+  .dc-risk-pill {
+    display: inline-block;
+    font-size: 0.65rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .dc-risk-bad { background: rgba(239, 68, 68, 0.15); color: var(--status-critical); border: 1px solid rgba(239, 68, 68, 0.4); }
+  .dc-risk-warn { background: rgba(249, 115, 22, 0.15); color: var(--status-warning); border: 1px solid rgba(249, 115, 22, 0.4); }
+  .dc-risk-caution { background: rgba(251, 191, 36, 0.12); color: #d97706; border: 1px solid rgba(251, 191, 36, 0.35); }
+  .dc-risk-good { color: var(--status-good); }
+
+  .page-footnote {
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    text-align: center;
+    margin-top: 2rem;
+    font-style: italic;
+    max-width: 760px;
+    margin-left: auto;
+    margin-right: auto;
+    line-height: 1.5;
+  }
+
+  /* Mobile cards */
+  .dccards-wrap { display: none; }
+  .dccard {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 0.65rem;
+    overflow: hidden;
+  }
+  .dccard-head {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 0.9rem;
+    gap: 0.65rem;
+    cursor: pointer;
+  }
+  .dccard-main { flex: 1; min-width: 0; }
+  .dccard-name { font-weight: 600; color: var(--text-primary); font-size: 0.92rem; }
+  .dccard-loc { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.15rem; }
+  .dccard-side { display: flex; flex-direction: column; align-items: flex-end; gap: 0.15rem; }
+  .dccard-stake { font-family: var(--font-mono); font-weight: 600; font-size: 0.88rem; color: var(--text-primary); }
+  .dccard-pct { font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-muted); }
+  .dccard-go {
+    flex-shrink: 0;
+    background: var(--cluster-accent);
+    color: white;
+    border-radius: 6px;
+    padding: 0.4rem 0.55rem;
+    font-size: 0.78rem;
+    text-decoration: none;
+    line-height: 1;
+  }
+  .dccard-body {
+    display: none;
+    padding: 0.65rem 0.9rem 0.85rem;
+    border-top: 1px solid var(--border);
+    background: var(--bg-secondary);
+    font-size: 0.82rem;
+  }
+  .dccard.open .dccard-body { display: block; }
+  .dccard-body-row {
+    display: grid;
+    grid-template-columns: 110px 1fr;
+    gap: 0.4rem;
+    margin-bottom: 0.4rem;
+  }
+  .dccard-body-label {
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  @media (max-width: 900px) {
+    .dctable-wrap { display: none; }
+    .dccards-wrap { display: block; }
+    .page-main { padding: 0.85rem 1rem 3rem; }
+    .view-toggle-bar { gap: 0.5rem; }
+  }
+</style>
+
+<script type="module">
+import {
+  bootstrapCluster, getCluster, fetchValidators, fetchSummary,
+  aggregateDatacenters, concentrationLevel, fmtStakeShort,
+} from '/src/lib/data.js';
+import { fmt } from '/src/lib/formatters.js';
+
+const params = new URLSearchParams(window.location.search);
+let aggregated = null;
+let allRecords = [];
+
+let currentView = params.get('view') === 'by_dc' ? 'by_dc' : 'by_asn';
+
+function setUrlParam(key, value) {
+  const url = new URL(window.location.href);
+  if (value == null || value === '') url.searchParams.delete(key);
+  else url.searchParams.set(key, value);
+  window.history.replaceState(null, '', url.toString());
+}
+
+function applyAndRender() {
+  if (!aggregated) return;
+  const data = currentView === 'by_asn' ? aggregated.by_asn : aggregated.by_dc;
+  let filtered = [...data];
+
+  // Search
+  const q = (document.getElementById('dc-search').value || '').trim().toLowerCase();
+  if (q) {
+    filtered = filtered.filter(d =>
+      (d.asn || '').toLowerCase().includes(q) ||
+      (d.asn_name || '').toLowerCase().includes(q) ||
+      (d.city || '').toLowerCase().includes(q) ||
+      (d.cities || []).some(c => c.toLowerCase().includes(q))
+    );
+  }
+
+  // Sort
+  const sortVal = document.getElementById('dc-sort-select').value;
+  const [sortKey, sortDir] = sortVal.split('-');
+  const m = sortDir === 'asc' ? 1 : -1;
+  const accessor = {
+    stake: d => d.stake_lamports || 0,
+    validators: d => d.validators_total || 0,
+    skip: d => d.weighted_skip_rate ?? 999,
+    name: d => (d.asn_name || '').toLowerCase(),
+  }[sortKey] || (d => d.stake_lamports || 0);
+  filtered.sort((a, b) => {
+    const va = accessor(a), vb = accessor(b);
+    if (va < vb) return -1 * m;
+    if (va > vb) return 1 * m;
+    return 0;
+  });
+
+  document.getElementById('dc-result-count').textContent =
+    `${filtered.length} ${currentView === 'by_asn' ? 'network provider' + (filtered.length === 1 ? '' : 's') : 'datacenter' + (filtered.length === 1 ? '' : 's')}`;
+
+  renderTable(filtered);
+  renderMobileCards(filtered);
+}
+
+function renderTable(rows) {
+  const cluster = getCluster();
+  const tbody = document.getElementById('dctable-body');
+  const html = rows.map(d => {
+    const isByAsn = currentView === 'by_asn';
+    const href = isByAsn
+      ? `/datacenter?asn=${d.asn}&cluster=${cluster}`
+      : `/datacenter?asn=${d.asn}&cluster=${cluster}&city=${encodeURIComponent(d.city)}`;
+    const stake = fmtStakeShort(d.stake_lamports);
+    const pct = d.stake_pct != null ? d.stake_pct.toFixed(2) + '%' : '—';
+    const skip = d.weighted_skip_rate != null ? d.weighted_skip_rate.toFixed(2) + '%' : '—';
+    const ibrl = d.weighted_ibrl != null ? d.weighted_ibrl.toFixed(0) : '—';
+    const credits = d.weighted_credits != null ? fmt(Math.round(d.weighted_credits)) : '—';
+    const risk = concentrationLevel(d.stake_pct);
+    const riskLabel = risk === 'bad' ? 'CRITICAL' : risk === 'warn' ? 'HIGH' : risk === 'caution' ? 'WATCH' : '—';
+    const riskClass = `dc-risk-${risk}`;
+    const infraTags = [];
+    if (d.dz_connected > 0) infraTags.push(`<span class="dc-infra-tag dc-infra-tag-dz">DZ ${d.dz_connected}</span>`);
+    if (d.bam_count > 0) infraTags.push(`<span class="dc-infra-tag dc-infra-tag-bam">BAM ${d.bam_count}</span>`);
+    if (d.sfdp_approved > 0) infraTags.push(`<span class="dc-infra-tag dc-infra-tag-sfdp">SFDP ${d.sfdp_approved}</span>`);
+
+    let nameCell, locCell;
+    if (isByAsn) {
+      const citiesCount = d.cities?.length || 0;
+      nameCell = `
+        <div class="dc-name-cell">${d.asn_name || d.asn}</div>
+        <div class="dc-name-asn">${d.asn}</div>`;
+      locCell = `<div class="dc-loc-city">${citiesCount} ${citiesCount === 1 ? 'city' : 'cities'}</div>
+                 <div class="dc-loc-cities-multi">${(d.cities || []).slice(0, 3).join(', ')}${citiesCount > 3 ? ', …' : ''}</div>`;
+    } else {
+      nameCell = `
+        <div class="dc-name-cell">${d.asn_name || d.asn} · ${d.city}</div>
+        <div class="dc-name-asn">${d.asn} · ${d.country}</div>`;
+      locCell = `<div class="dc-loc-city" style="font-size:0.78rem;color:var(--text-muted)">${d.country}</div>`;
+    }
+
+    return `
+      <tr data-href="${href}">
+        <td>${nameCell}</td>
+        <td>${locCell}</td>
+        <td>
+          <div class="dc-stake-main">${fmt(d.validators_total)}</div>
+          <div class="dc-stake-pct">${d.validators_active} active · ${d.validators_delinquent} delinq</div>
+        </td>
+        <td>
+          <div class="dc-stake-main">${stake} SOL</div>
+          <div class="dc-stake-pct">${pct} of network</div>
+        </td>
+        <td>
+          <div class="dc-perf-row">
+            <span class="dc-perf-label" data-tip="Stake-weighted skip rate across hosted validators">skip</span><span>${skip}</span>
+            <span class="dc-perf-label" data-tip="Stake-weighted average vote credits">credits</span><span>${credits}</span>
+            ${d.weighted_ibrl != null ? `<span class="dc-perf-label" data-tip="Stake-weighted IBRL score (block production quality)">ibrl</span><span>${ibrl}</span>` : ''}
+          </div>
+        </td>
+        <td class="dc-col-infra-cell">
+          <div class="dc-infra-row" data-tip="Validators hosted in this datacenter with the given capability (DZ device, Jito BAM, SFDP-approved)">${infraTags.join('') || '<span style="color:var(--text-muted);font-size:0.72rem">—</span>'}</div>
+        </td>
+        <td data-tip="Concentration risk by share of total cluster stake">${risk === 'good' ? '<span class="dc-risk-good">OK</span>' : `<span class="dc-risk-pill ${riskClass}">${riskLabel}</span>`}</td>
+      </tr>
+    `;
+  }).join('');
+  tbody.innerHTML = html;
+
+  // Wire clicks
+  tbody.querySelectorAll('tr').forEach(tr => {
+    tr.addEventListener('click', () => { window.location.href = tr.dataset.href; });
+  });
+}
+
+function renderMobileCards(rows) {
+  const cluster = getCluster();
+  const wrap = document.getElementById('dccards-wrap');
+  const html = rows.map(d => {
+    const isByAsn = currentView === 'by_asn';
+    const href = isByAsn
+      ? `/datacenter?asn=${d.asn}&cluster=${cluster}`
+      : `/datacenter?asn=${d.asn}&cluster=${cluster}&city=${encodeURIComponent(d.city)}`;
+    const stake = fmtStakeShort(d.stake_lamports);
+    const pct = d.stake_pct != null ? d.stake_pct.toFixed(2) + '%' : '—';
+    const skip = d.weighted_skip_rate != null ? d.weighted_skip_rate.toFixed(2) + '%' : '—';
+    const credits = d.weighted_credits != null ? fmt(Math.round(d.weighted_credits)) : '—';
+    const risk = concentrationLevel(d.stake_pct);
+    const riskLabel = risk === 'bad' ? 'CRITICAL' : risk === 'warn' ? 'HIGH' : risk === 'caution' ? 'WATCH' : '';
+    const locDisplay = isByAsn
+      ? `${d.cities?.length || 0} cities · ${(d.cities || []).slice(0, 2).join(', ')}${d.cities?.length > 2 ? '…' : ''}`
+      : `${d.city}, ${d.country}`;
+
+    return `
+      <div class="dccard">
+        <div class="dccard-head">
+          <div class="dccard-main">
+            <div class="dccard-name">${d.asn_name || d.asn}</div>
+            <div class="dccard-loc">${locDisplay}</div>
+          </div>
+          <div class="dccard-side">
+            <div class="dccard-stake">${stake} SOL</div>
+            <div class="dccard-pct">${pct}${riskLabel ? ' · ' + riskLabel : ''}</div>
+          </div>
+          <a class="dccard-go" href="${href}" onclick="event.stopPropagation()" title="Open DC page">›</a>
+        </div>
+        <div class="dccard-body">
+          <div class="dccard-body-row"><span class="dccard-body-label">ASN</span><span style="font-family:var(--font-mono);font-size:0.78rem">${d.asn}</span></div>
+          <div class="dccard-body-row"><span class="dccard-body-label">Validators</span><span>${d.validators_total} (${d.validators_active} active · ${d.validators_delinquent} delinq)</span></div>
+          <div class="dccard-body-row"><span class="dccard-body-label">Performance</span><span>skip ${skip} · credits ${credits}</span></div>
+          <div class="dccard-body-row"><span class="dccard-body-label">DZ / BAM / SFDP</span><span>${d.dz_connected} / ${d.bam_count} / ${d.sfdp_approved}</span></div>
+        </div>
+      </div>
+    `;
+  }).join('');
+  wrap.innerHTML = html;
+  wrap.querySelectorAll('.dccard').forEach(card => {
+    card.querySelector('.dccard-head').addEventListener('click', e => {
+      if (e.target.closest('.dccard-go')) return;
+      card.classList.toggle('open');
+    });
+  });
+}
+
+function renderSummary() {
+  if (!aggregated) return;
+  const byDc = aggregated.by_dc;
+  const byAsn = aggregated.by_asn;
+  document.getElementById('dc-sum-total').textContent = fmt(byDc.length);
+  document.getElementById('dc-sum-asn').textContent = `${byAsn.length} ASNs`;
+  const top = byDc[0];
+  if (top) {
+    document.getElementById('dc-sum-top-pct').textContent = top.stake_pct.toFixed(2) + '%';
+    document.getElementById('dc-sum-top-name').textContent = `${top.asn_name || top.asn} · ${top.city}`;
+  }
+  const dzDcs = byDc.filter(d => d.dz_connected > 0).length;
+  document.getElementById('dc-sum-dz').textContent = fmt(dzDcs);
+  const riskDcs = byDc.filter(d => d.stake_pct >= 15).length;
+  document.getElementById('dc-sum-risk').textContent = fmt(riskDcs);
+}
+
+async function loadAndRender() {
+  document.getElementById('dc-result-count').textContent = 'Loading…';
+  const cluster = getCluster();
+
+  if (window.sondaSetClusterBanner) window.sondaSetClusterBanner(cluster);
+
+  fetchSummary(cluster).then(s => {
+    if (!s) return;
+    if (window.sondaUpdateStrip) window.sondaUpdateStrip(s);
+  }).catch(() => {});
+
+  try {
+    const data = await fetchValidators(cluster);
+    allRecords = data?.records || [];
+    aggregated = aggregateDatacenters(allRecords);
+
+    // Cluster-aware: hide Hosted column entirely if no validator has DZ/BAM/SFDP
+    const hasHosted = allRecords.some(r => r.dz_connected || r.bam_node || r.sfdp_state === 'Approved');
+    const wrap = document.querySelector('.dctable-wrap');
+    if (wrap) wrap.classList.toggle('hide-hosted', !hasHosted);
+
+    renderSummary();
+    applyAndRender();
+  } catch (e) {
+    document.getElementById('dc-result-count').textContent = 'Failed to load.';
+    console.error('fetchValidators failed:', e);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  bootstrapCluster();
+
+  // View toggle
+  document.querySelectorAll('.vt-btn').forEach(btn => {
+    if (btn.dataset.view === currentView) btn.classList.add('active');
+    else btn.classList.remove('active');
+    btn.addEventListener('click', () => {
+      currentView = btn.dataset.view;
+      document.querySelectorAll('.vt-btn').forEach(b => b.classList.toggle('active', b.dataset.view === currentView));
+      setUrlParam('view', currentView === 'by_dc' ? null : currentView);
+      applyAndRender();
+    });
+  });
+
+  // Search
+  document.getElementById('dc-search').addEventListener('input', applyAndRender);
+
+  // Sort
+  document.getElementById('dc-sort-select').addEventListener('change', applyAndRender);
+
+  loadAndRender();
+  window.addEventListener('sonda:cluster-change', loadAndRender);
+});
+</script>

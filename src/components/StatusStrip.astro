@@ -124,6 +124,17 @@ function updateStripAgo() {
 }
 setInterval(updateStripAgo, 5000);
 
+function updateFooterTsFromTimestamp(timestamp: string) {
+  const footerTs = document.getElementById('footer-ts');
+  if (!footerTs || !timestamp) return;
+  const ts = new Date(timestamp).getTime();
+  const sec = Math.floor((Date.now() - ts) / 1000);
+  if (sec < 5) footerTs.textContent = 'just now';
+  else if (sec < 60) footerTs.textContent = `${sec}s ago`;
+  else if (sec < 3600) footerTs.textContent = `${Math.floor(sec/60)}m ago`;
+  else footerTs.textContent = `${Math.floor(sec/3600)}h ago`;
+}
+
 (window as any).sondaUpdateStrip = (data: any) => {
   const epochEl = document.getElementById('strip-epoch');
   const pctEl = document.getElementById('strip-pct');
@@ -135,5 +146,25 @@ setInterval(updateStripAgo, 5000);
   if (clusterEl) clusterEl.textContent = data.cluster;
   stripLastUpdate = new Date(data.timestamp).getTime();
   updateStripAgo();
+  // Also feed the header updated-pill so both stay in sync from the same source
+  if ((window as any).sondaSetUpdateTime && data.timestamp) {
+    (window as any).sondaSetUpdateTime(data.timestamp);
+  }
+  // Centralized footer timestamp update — every page with a #footer-ts span gets it
+  updateFooterTsFromTimestamp(data.timestamp);
 };
+
+// Auto-refresh: every 60s re-fetch the current cluster's summary so epoch/pct/timestamp
+// stay live without a page reload. Footer timestamps update via the same centralized path.
+import('/src/lib/data.js').then(mod => {
+  setInterval(async () => {
+    try {
+      const c = mod.getCluster ? mod.getCluster() : 'mainnet-beta';
+      const s = await mod.fetchSummary(c);
+      if (s && (window as any).sondaUpdateStrip) {
+        (window as any).sondaUpdateStrip(s);
+      }
+    } catch (e) { /* ignore transient failures */ }
+  }, 60000);
+});
 </script>

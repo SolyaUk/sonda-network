@@ -325,7 +325,7 @@ import ClusterBanner from '../components/ClusterBanner.astro';
             <h2 class="section-title">Geographic distribution</h2>
             <p class="section-desc" id="geo-desc">Validator count and stake share.</p>
           </div>
-          <a href="/validators" data-stub class="section-link">All validators →</a>
+          <a href="/datacenters" class="section-link">All datacenters →</a>
         </div>
         <div class="geo-grid">
           <div class="geo-block">
@@ -410,7 +410,7 @@ import ClusterBanner from '../components/ClusterBanner.astro';
                 <span class="about-tag">Attribution appreciated</span>
               </div>
               <p class="about-built-by">
-                Built by the <a href="https://solya.studio" target="_blank" rel="noopener" class="link">Solya validator</a> team.
+                Built by the <a href="https://solya.studio" target="_blank" rel="noopener" class="link">Solya validator</a> team
               </p>
             </div>
 
@@ -720,7 +720,10 @@ import ClusterBanner from '../components/ClusterBanner.astro';
 
 /* Generic stacked progress row — used by DZ breakdown, software versions, SFDP states */
 .bar-row { display: grid; grid-template-columns: 1fr 70px 38px; gap: 0.6rem; align-items: center; font-size: 0.78rem; padding: 0.15rem 0; }
-.bar-row-label { color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; cursor: help; }
+.bar-row-label { color: var(--text-secondary); white-space: nowrap; min-width: 0; cursor: default; position: relative; }
+.bar-row-label[data-tip] { cursor: help; }
+/* Labels with tooltip can't have overflow:hidden because it clips the tooltip popup.
+   Long labels will wrap naturally; current set of labels is short enough not to need ellipsis. */
 .bar-row-track { height: 5px; background: var(--bg-primary); border: 1px solid var(--border); border-radius: 3px; overflow: hidden; }
 .bar-row-fill { height: 100%; border-radius: 2px; transition: width 0.4s ease; min-width: 1px; }
 .bar-row-fill.violet { background: var(--accent-violet); }
@@ -1457,9 +1460,20 @@ import { savePreviousFetch } from '../lib/compare.js';
 // ───────── Constants ─────────
 
 const CLIENT_COLORS: Record<string, string> = {
-  'Jito_BAM': '#22d3ee', 'Jito_Labs': '#3b82f6', 'Frankendancer': '#a78bfa',
-  'Harmonic': '#06b6d4', 'FD_Harmonic': '#0891b2', 'Harmonic_Major': '#0e7490',
-  'Firedancer': '#f97316', 'Rakurai': '#eab308', 'Agave': '#6b7280',
+  // Jito family — violet
+  'Jito_BAM': '#a78bfa', 'JitoBAM': '#a78bfa',
+  'Jito_Labs': '#8b5cf6', 'Jito': '#8b5cf6',
+  // Harmonic family — cyan
+  'Harmonic': '#22d3ee', 'HarmonicAgave': '#22d3ee',
+  'HarmonicFrankendancer': '#06b6d4', 'HarmonicFiredancer': '#0891b2',
+  'FD_Harmonic': '#0891b2', 'Harmonic_Major': '#0e7490',
+  // Frankendancer family — magenta
+  'Frankendancer': '#e879f9',
+  // Firedancer family — orange
+  'Firedancer': '#f97316', 'FireBAM': '#fb923c',
+  // Standalone clients
+  'Rakurai': '#eab308', 'Raiku': '#fbbf24',
+  'Agave': '#14b8a6', 'Unknown': '#6b7280',
 };
 
 const PIE_PALETTE = ['#3b82f6', '#a78bfa', '#22d3ee', '#f97316', '#22c55e', '#eab308', '#ef4444', '#e879f9', '#06b6d4', '#fbbf24', '#8b5cf6', '#10b981'];
@@ -1840,17 +1854,17 @@ function renderMainnetStories(records: any[], d: any): string {
       <div class="story-sub">${pct(mcStake, 1)} of network stake</div>
       <div class="bar-rows-wrap with-divider">
         <div class="bar-row">
-          <span class="bar-row-label" title="ibrl + multicast">ibrl + multicast</span>
+          <span class="bar-row-label" data-tip="ibrl + multicast">ibrl + multicast</span>
           <div class="bar-row-track"><div class="bar-row-fill violet" style="width:${(ibrlMc/dzTotal*100)}%"></div></div>
           <span class="bar-row-num">${fmt(ibrlMc)}</span>
         </div>
         <div class="bar-row">
-          <span class="bar-row-label" title="multicast only">multicast only</span>
+          <span class="bar-row-label" data-tip="multicast only">multicast only</span>
           <div class="bar-row-track"><div class="bar-row-fill violet" style="width:${(mcOnly/dzTotal*100)}%"></div></div>
           <span class="bar-row-num">${fmt(mcOnly)}</span>
         </div>
         <div class="bar-row">
-          <span class="bar-row-label" title="ibrl only (not publishing)">ibrl only (not publishing)</span>
+          <span class="bar-row-label" data-tip="ibrl only (not publishing)">ibrl only (not publishing)</span>
           <div class="bar-row-track"><div class="bar-row-fill violet-dim" style="width:${(ibrlOnly/dzTotal*100)}%"></div></div>
           <span class="bar-row-num">${fmt(ibrlOnly)}</span>
         </div>
@@ -1877,7 +1891,7 @@ function renderMainnetStories(records: any[], d: any): string {
           const fillCls = i === 0 ? 'cyan' : (i === 1 ? 'cyan' : 'cyan-dim');
           return `
         <div class="bar-row">
-          <span class="bar-row-label" title="BAM-validator region">${escapeHtml(region)}</span>
+          <span class="bar-row-label" data-tip="BAM-validator region">${escapeHtml(region)}</span>
           <div class="bar-row-track"><div class="bar-row-fill ${fillCls}" style="width:${widthPct}%"></div></div>
           <span class="bar-row-num">${fmt(c)}</span>
         </div>`;
@@ -1902,7 +1916,7 @@ function renderMainnetStories(records: any[], d: any): string {
         <div class="matrix-cell" data-cell="dz"><div class="matrix-num mono">${fmt(dz_only)}</div><div class="matrix-cell-label">DZ only</div></div>
         <div class="matrix-cell" data-cell="neither"><div class="matrix-num mono">${fmt(neither)}</div><div class="matrix-cell-label">Neither</div></div>
       </div>
-      <a href="/validators" data-stub class="story-link">View all validators →</a>
+      <a href="/validators" class="story-link">View all validators →</a>
     </div>
 
     <!-- Software (clients) (span-2, 50%) -->
@@ -2411,7 +2425,7 @@ async function renderTestnetSfdpLinkedCard(testnetRecords: any[]) {
     const c = stateCounts[s];
     const w = (c / linkedCount) * 100;
     return `<div class="bar-row">
-      <span class="bar-row-label" title="${escapeHtml(stateLabels[s])}">${escapeHtml(stateLabels[s])}</span>
+      <span class="bar-row-label" data-tip="${escapeHtml(stateLabels[s])}">${escapeHtml(stateLabels[s])}</span>
       <div class="bar-row-track"><div class="bar-row-fill ${stateClass[s]}" style="width:${w}%"></div></div>
       <span class="bar-row-num">${c}</span>
     </div>`;
@@ -3160,7 +3174,7 @@ function renderGeo(d: any) {
         const cls = stakeNum > 25 ? 'crit' : stakeNum > 15 ? 'warn' : 'normal';
         const w = Math.round((count as number / maxA) * 100);
         return `<div class="geo-row">
-          <div class="geo-country"><span class="geo-cc" title="${escapeHtml(asn as string)}">${escapeHtml(asn as string)}</span></div>
+          <div class="geo-country"><span class="geo-cc" data-tip="${escapeHtml(asn as string)}">${escapeHtml(asn as string)}</span></div>
           <div class="geo-bar-wrap"><div class="geo-bar ${cls}" style="width:${w}%"></div></div>
           <div class="geo-count">${fmt(count)}</div>
           <div class="geo-stake">${stake != null ? pct(stakeNum, 1) : ''}</div>

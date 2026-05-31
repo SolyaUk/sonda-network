@@ -1,0 +1,69 @@
+---
+// Brand icon component for known infrastructure brands.
+// v0 strategy: Google Favicons API (fast, no backend changes).
+// v2 will swap to /public/brands/ static SVG.
+
+interface Props {
+  brand: 'doublezero' | 'bam' | 'jito' | 'rakurai' | 'sfdp' | 'harmonic' | 'firedancer' | 'frankendancer' | 'agave';
+  size?: number;
+  title?: string;
+}
+
+const { brand, size = 16, title } = Astro.props;
+
+// Brand → domain map. Google Favicons API resolves favicons reliably.
+const DOMAINS: Record<string, string> = {
+  doublezero: 'doublezero.xyz',
+  bam: 'jito.network',
+  jito: 'jito.network',
+  rakurai: 'rakurai.io',
+  sfdp: 'solana.org',
+  harmonic: 'harmonic.xyz',
+  firedancer: 'jumpcrypto.com',
+  frankendancer: 'jumpcrypto.com',
+  agave: 'solana.com',
+};
+
+const domain = DOMAINS[brand];
+const iconUrl = domain
+  ? `https://www.google.com/s2/favicons?domain=${domain}&sz=64`
+  : null;
+---
+
+{iconUrl ? (
+  <img
+    class="brand-icon"
+    src={iconUrl}
+    alt={brand}
+    width={size}
+    height={size}
+    loading="lazy"
+    referrerpolicy="no-referrer"
+    title={title || brand}
+    style={`width:${size}px;height:${size}px`}
+  />
+) : (
+  <span class="brand-fb" style={`width:${size}px;height:${size}px`} title={title || brand}>
+    {brand[0].toUpperCase()}
+  </span>
+)}
+
+<style>
+.brand-icon {
+  display: inline-block;
+  vertical-align: middle;
+  border-radius: 3px;
+  flex-shrink: 0;
+  object-fit: contain;
+}
+.brand-fb {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-card-hover);
+  border-radius: 3px;
+  font-size: 0.6em;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+</style>

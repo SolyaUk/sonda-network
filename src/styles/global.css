@@ -161,3 +161,91 @@ html:not([data-theme]) {
   --status-neutral:  #9ca3af;
   --cluster-accent:  #3b82f6;
 }
+/* Footer (shared across all pages) */
+.site-footer { border-top: 1px solid var(--border); padding: 2rem 0; margin-top: 2rem; }
+.footer-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem; }
+.footer-brand { display: flex; align-items: center; gap: 0.5rem; }
+.footer-sonda-name { font-family: var(--font-display); font-weight: 700; font-size: 0.9rem; color: var(--text-primary); }
+.footer-by-text { font-size: 0.8rem; color: var(--text-muted); }
+.footer-solya-link { display: flex; align-items: center; gap: 0.35rem; text-decoration: none; color: var(--text-secondary); font-size: 0.82rem; }
+.footer-solya-link:hover { color: var(--cluster-accent); }
+.footer-solya-logo { width: 20px; height: 20px; border-radius: 50%; object-fit: cover; }
+.footer-links { display: flex; gap: 1.25rem; }
+.footer-link { font-size: 0.82rem; color: var(--text-secondary); text-decoration: none; }
+.footer-link:hover { color: var(--cluster-accent); }
+.footer-sources { display: flex; flex-wrap: wrap; gap: 0.3rem; align-items: center; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.75rem; }
+.footer-sources-label { color: var(--text-secondary); font-weight: 500; margin-right: 0.2rem; }
+.footer-bottom { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; font-size: 0.75rem; color: var(--text-muted); }
+.footer-attribution { font-style: italic; }
+.site-footer .container { max-width: 1280px; margin: 0 auto; padding: 0 1.5rem; }
+.site-footer .sep { opacity: 0.4; }
+
+/* Stub links — non-clickable, hover shows "in development" tooltip.
+   Applied globally so all pages get consistent behavior for /endpoints etc. */
+[data-stub] {
+  cursor: not-allowed;
+  opacity: 0.45;
+  position: relative;
+  pointer-events: auto;  /* keep hover for tooltip */
+}
+[data-stub]:hover {
+  background: transparent !important;
+  color: inherit !important;
+  text-decoration: none !important;
+}
+[data-stub]:hover::after {
+  content: 'in development';
+  position: absolute;
+  top: 100%; left: 50%;
+  transform: translateX(-50%);
+  margin-top: 4px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  padding: 0.18rem 0.45rem;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 100;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+}
+@media (hover: none) {
+  [data-stub]:hover::after { display: none; }
+}
+
+/* Custom fast tooltip — shows on hover with 80ms transition.
+   Native title="" has ~1.5s delay. Applied via data-tip="..." attribute.
+   Defined globally so any page can use it without re-declaring. */
+[data-tip] { position: relative; cursor: help; }
+[data-tip]::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%) translateY(-4px);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  padding: 0.35rem 0.55rem;
+  border-radius: 6px;
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  font-weight: 400;
+  line-height: 1.35;
+  letter-spacing: normal;
+  text-transform: none;
+  white-space: normal;
+  width: 240px;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.08s ease, visibility 0.08s ease;
+  z-index: 200;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+}
+[data-tip][data-tip-narrow]::after { white-space: nowrap; width: auto; max-width: 280px; }
+[data-tip]:hover::after { opacity: 1; visibility: visible; }
+@media (hover: none) { [data-tip]:hover::after { display: none; } }

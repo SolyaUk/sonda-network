@@ -1,0 +1,330 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Header from '../components/Header.astro';
+import StatusStrip from '../components/StatusStrip.astro';
+import ClusterBanner from '../components/ClusterBanner.astro';
+import Footer from '../components/Footer.astro';
+---
+
+<BaseLayout title="Datacenter · SONDA">
+  <Header activePage="datacenters" />
+  <StatusStrip />
+  <ClusterBanner />
+
+  <div class="dev-banner">
+    <div class="dev-banner-inner">
+      <span class="dev-badge">BETA</span>
+      Dashboard is under active development. Some sections are incomplete.
+      <a href="https://github.com/SolyaUk/sonda-network" target="_blank" rel="noopener" class="dev-link">View on GitHub</a>
+    </div>
+  </div>
+
+  <main class="page-main">
+    <a href="/datacenters" class="back-link" id="back-link">← Back to datacenters</a>
+
+    <div id="dc-loading" class="page-loading">Loading datacenter…</div>
+    <div id="dc-error" class="page-error" style="display:none"></div>
+
+    <div id="dc-content" style="display:none">
+      <section class="dc-header-card">
+        <div class="dc-head-row">
+          <div class="dc-head-main">
+            <div class="dc-head-tag" id="dc-head-tag">NETWORK PROVIDER</div>
+            <h1 class="dc-name" id="dc-name">—</h1>
+            <div class="dc-meta-line" id="dc-meta-line">—</div>
+          </div>
+          <div class="dc-head-side" id="dc-head-side"></div>
+        </div>
+      </section>
+
+      <section class="dc-quick-stats">
+        <div class="qs-card">
+          <div class="qs-label">VALIDATORS</div>
+          <div class="qs-val mono" id="qs-validators">—</div>
+          <div class="qs-sub" id="qs-validators-sub">— active · — delinquent</div>
+        </div>
+        <div class="qs-card">
+          <div class="qs-label">TOTAL STAKE</div>
+          <div class="qs-val mono" id="qs-stake">—</div>
+          <div class="qs-sub" id="qs-stake-pct">— of network</div>
+        </div>
+        <div class="qs-card">
+          <div class="qs-label">SKIP RATE</div>
+          <div class="qs-val mono" id="qs-skip">—</div>
+          <div class="qs-sub">stake-weighted</div>
+        </div>
+        <div class="qs-card">
+          <div class="qs-label">DZ / BAM</div>
+          <div class="qs-val mono" id="qs-dzbam">—</div>
+          <div class="qs-sub" id="qs-dzbam-sub">— SFDP approved</div>
+        </div>
+      </section>
+
+      <section class="dc-card" id="dc-cities-card" style="display:none">
+        <div class="dc-card-tag">LOCATIONS</div>
+        <h2 class="dc-card-title">Cities where this network provider hosts validators</h2>
+        <div class="dc-cities-grid" id="dc-cities-grid"></div>
+      </section>
+
+      <div class="dc-filter-line" id="dc-filter-line" style="display:none"></div>
+
+      <section class="dc-card">
+        <div class="dc-card-tag">VALIDATORS</div>
+        <h2 class="dc-card-title" id="dc-vals-title">Validators in this datacenter</h2>
+        <div class="dc-vals-wrap">
+          <table class="dctable">
+            <thead>
+              <tr>
+                <th></th>
+                <th>Name</th>
+                <th>City</th>
+                <th>Stake</th>
+                <th>Version</th>
+                <th>Skip rate</th>
+                <th>Infrastructure</th>
+              </tr>
+            </thead>
+            <tbody id="dc-vals-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="v-placeholder-section">
+        <div class="ph-card">
+          <div class="ph-card-tag">COMING SOON</div>
+          <h3 class="ph-card-title">DC profile</h3>
+          <p class="ph-card-text">Display name, website, logo, tags, and any affiliate information.</p>
+        </div>
+        <div class="ph-card">
+          <div class="ph-card-tag">COMING SOON</div>
+          <h3 class="ph-card-title">Non-validator nodes</h3>
+          <p class="ph-card-text">RPC nodes, Jito relayers, DoubleZero devices, and other infrastructure hosted at this provider.</p>
+        </div>
+        <div class="ph-card">
+          <div class="ph-card-tag">COMING SOON</div>
+          <h3 class="ph-card-title">Validator count over time</h3>
+          <p class="ph-card-text">Daily counts of active and delinquent validators with recent joins/leaves and prior locations.</p>
+        </div>
+      </section>
+    </div>
+  </main>
+  <Footer />
+</BaseLayout>
+
+<style is:global>
+  .page-main { max-width: 1180px; margin: 0 auto; padding: 1rem 1.5rem 4rem; }
+  .back-link { color: var(--text-muted); font-size: 0.85rem; text-decoration: none; display: inline-block; margin-bottom: 1.2rem; }
+  .back-link:hover { color: var(--cluster-accent); }
+  .dev-banner { background: rgba(59,130,246,0.08); border-bottom: 1px solid rgba(59,130,246,0.2); font-size: 0.78rem; color: var(--text-secondary); }
+  .dev-banner-inner { max-width: 1280px; margin: 0 auto; padding: 0.5rem 1.5rem; display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+  .dev-badge { font-family: var(--font-mono); font-size: 0.65rem; font-weight: 600; background: var(--accent-blue); color: #fff; padding: 0.15rem 0.45rem; border-radius: 4px; letter-spacing: 0.08em; flex-shrink: 0; }
+  .dev-link { color: var(--accent-blue); text-decoration: none; margin-left: auto; }
+  .back-link:hover { color: var(--cluster-accent); }
+  .page-loading, .page-error { text-align: center; color: var(--text-muted); padding: 4rem 1rem; }
+  .page-error { color: var(--status-critical); }
+
+  .dc-header-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 1.3rem 1.5rem; margin-bottom: 1.2rem; }
+  .dc-head-row { display: flex; gap: 1.1rem; align-items: flex-start; flex-wrap: wrap; }
+  .dc-head-main { flex: 1; min-width: 0; }
+  .dc-head-tag { display: inline-block; background: var(--bg-card-hover); color: var(--cluster-accent); border-radius: 5px; padding: 0.15rem 0.55rem; font-size: 0.62rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.65rem; }
+  .dc-name { font-family: var(--font-display); font-size: clamp(1.4rem, 3vw, 1.9rem); font-weight: 700; color: var(--text-primary); margin: 0 0 0.4rem; }
+  .dc-meta-line { font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-muted); }
+  .dc-head-side { display: flex; flex-direction: column; gap: 0.5rem; align-items: flex-end; }
+  .dc-risk-large { display: inline-block; padding: 0.4rem 1rem; border-radius: 16px; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
+  .dc-risk-large.bad { background: rgba(239, 68, 68, 0.15); color: var(--status-critical); border: 1px solid rgba(239, 68, 68, 0.4); }
+  .dc-risk-large.warn { background: rgba(249, 115, 22, 0.15); color: var(--status-warning); border: 1px solid rgba(249, 115, 22, 0.4); }
+  .dc-risk-large.caution { background: rgba(251, 191, 36, 0.12); color: #d97706; border: 1px solid rgba(251, 191, 36, 0.35); }
+  .dc-risk-large.good { background: rgba(34, 197, 94, 0.12); color: var(--status-good); border: 1px solid rgba(34, 197, 94, 0.3); }
+
+  .dc-quick-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.85rem; margin-bottom: 1.3rem; }
+  .qs-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 0.9rem 1.1rem 1rem; }
+  .qs-label { font-size: 0.6rem; letter-spacing: 0.1em; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.45rem; }
+  .qs-val { font-family: var(--font-display); font-size: 1.5rem; font-weight: 700; color: var(--text-primary); line-height: 1; }
+  .qs-sub { font-size: 0.72rem; color: var(--text-muted); margin-top: 0.3rem; }
+
+  .dc-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 1.2rem 1.35rem 1.3rem; margin-bottom: 1.2rem; }
+  .dc-card-tag { display: inline-block; background: var(--bg-card-hover); color: var(--cluster-accent); border-radius: 5px; padding: 0.15rem 0.55rem; font-size: 0.62rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.65rem; }
+  .dc-card-title { font-family: var(--font-display); font-size: 1.05rem; font-weight: 600; color: var(--text-primary); margin: 0 0 0.9rem; }
+
+  .dc-cities-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.65rem; }
+  .dc-city-cell { background: var(--bg-card-hover); border: 1px solid var(--border); border-radius: 8px; padding: 0.65rem 0.85rem 0.75rem; cursor: pointer; transition: border-color 0.15s ease; text-decoration: none; color: inherit; display: block; }
+  .dc-city-cell:hover { border-color: var(--cluster-accent); }
+  .dc-city-name { font-weight: 600; color: var(--text-primary); font-size: 0.9rem; }
+  .dc-city-stats { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.3rem; font-family: var(--font-mono); }
+
+  .dc-filter-line { background: var(--bg-card-hover); border: 1px solid var(--border); border-radius: 8px; padding: 0.5rem 0.85rem; color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; }
+  .dc-filter-clear-btn { background: none; border: 1px solid var(--border); color: var(--text-muted); border-radius: 6px; padding: 0.2rem 0.6rem; font-size: 0.75rem; cursor: pointer; font-family: inherit; }
+  .dc-filter-clear-btn:hover { color: var(--text-primary); border-color: var(--text-muted); }
+
+  .dc-vals-wrap { overflow-x: visible; }
+  @media (max-width: 720px) { .dc-vals-wrap { overflow-x: auto; } }
+  .dctable { width: 100%; border-collapse: collapse; font-size: 0.85rem; table-layout: auto; }
+  .dctable thead th { text-align: left; color: var(--text-muted); font-size: 0.65rem; letter-spacing: 0.05em; text-transform: uppercase; font-weight: 600; padding: 0.5rem 0.7rem; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  .dctable tbody tr { border-bottom: 1px solid var(--border); cursor: pointer; }
+  .dctable tbody tr:last-child { border-bottom: none; }
+  .dctable tbody tr:hover { background: var(--bg-card-hover); }
+  .dctable td { padding: 0.55rem 0.7rem; color: var(--text-primary); }
+  .dc-vals-name { font-weight: 500; }
+  .dc-vals-keys { font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-muted); margin-top: 0.1rem; }
+  .perf-skip-good { color: var(--status-good); }
+  .perf-skip-warn { color: var(--status-warning); }
+  .perf-skip-bad { color: var(--status-critical); }
+
+  .v-placeholder-section { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 0.85rem; margin-top: 1rem; }
+  .ph-card { background: var(--bg-card); border: 1px dashed var(--border); border-radius: 12px; padding: 1rem 1.15rem 1.15rem; opacity: 0.85; }
+  .ph-card-tag { display: inline-block; font-size: 0.6rem; color: var(--text-muted); background: var(--bg-card-hover); border-radius: 4px; padding: 0.15rem 0.5rem; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem; }
+  .ph-card-title { font-family: var(--font-display); font-size: 0.95rem; font-weight: 600; color: var(--text-secondary); margin: 0 0 0.4rem; }
+  .ph-card-text { font-size: 0.82rem; color: var(--text-muted); line-height: 1.5; margin: 0; }
+
+  @media (max-width: 900px) {
+    .dc-quick-stats { grid-template-columns: repeat(2, 1fr); }
+    .dc-head-side { align-items: flex-start; }
+  }
+  @media (max-width: 600px) {
+    .page-main { padding: 0.85rem 1rem 3rem; }
+    .dc-header-card { padding: 1rem; }
+  }
+</style>
+
+<script type="module">
+import { bootstrapCluster, getCluster, fetchValidators, fetchSummary, aggregateDatacenters, concentrationLevel, fmtStakeShort } from '/src/lib/data.js';
+import { fmt, shortenIdentity } from '/src/lib/formatters.js';
+
+const params = new URLSearchParams(window.location.search);
+const asn = params.get('asn');
+const cityFilter = params.get('city') || null;
+
+async function loadAndRender() {
+  const cluster = getCluster();
+  document.getElementById('back-link').href = `/datacenters?cluster=${cluster}`;
+
+  if (window.sondaSetClusterBanner) window.sondaSetClusterBanner(cluster);
+
+  fetchSummary(cluster).then(s => {
+    if (!s) return;
+    if (window.sondaUpdateStrip) window.sondaUpdateStrip(s);
+  }).catch(() => {});
+
+  if (!asn) {
+    document.getElementById('dc-loading').style.display = 'none';
+    document.getElementById('dc-error').style.display = 'block';
+    document.getElementById('dc-error').textContent = 'No ASN specified. Open from the datacenters list.';
+    return;
+  }
+
+  try {
+    const data = await fetchValidators(cluster);
+    const records = (data?.records || []).filter(r => r && r.role === 'validator');
+    const aggregated = aggregateDatacenters(records);
+    const asnEntry = aggregated.by_asn.find(d => d.asn === asn);
+
+    if (!asnEntry) {
+      document.getElementById('dc-loading').style.display = 'none';
+      document.getElementById('dc-error').style.display = 'block';
+      document.getElementById('dc-error').textContent = `ASN ${asn} not found on ${cluster}.`;
+      return;
+    }
+
+    let displayEntry = asnEntry;
+    if (cityFilter) {
+      const dcEntry = aggregated.by_dc.find(d => d.asn === asn && d.city === cityFilter);
+      if (dcEntry) displayEntry = dcEntry;
+    }
+
+    document.getElementById('dc-loading').style.display = 'none';
+    document.getElementById('dc-content').style.display = 'block';
+    document.title = `${displayEntry.asn_name || asn} ${cityFilter ? '· ' + cityFilter : ''} · SONDA`;
+
+    document.getElementById('dc-head-tag').textContent = cityFilter ? 'DATACENTER' : 'NETWORK PROVIDER';
+    document.getElementById('dc-name').textContent = displayEntry.asn_name || asn;
+    document.getElementById('dc-meta-line').textContent = cityFilter
+      ? `${asn} · ${cityFilter}${displayEntry.country ? ', ' + displayEntry.country : ''}`
+      : `${asn} · ${asnEntry.cities?.length || 0} cit${asnEntry.cities?.length === 1 ? 'y' : 'ies'}`;
+
+    const risk = concentrationLevel(displayEntry.stake_pct);
+    const riskLabel = risk === 'bad' ? 'CRITICAL CONCENTRATION'
+      : risk === 'warn' ? 'HIGH CONCENTRATION'
+      : risk === 'caution' ? 'WATCH' : 'LOW CONCENTRATION';
+    document.getElementById('dc-head-side').innerHTML = `<span class="dc-risk-large ${risk}">${riskLabel}</span>`;
+
+    document.getElementById('qs-validators').textContent = fmt(displayEntry.validators_total);
+    document.getElementById('qs-validators-sub').textContent = `${displayEntry.validators_active} active · ${displayEntry.validators_delinquent} delinquent`;
+    document.getElementById('qs-stake').textContent = `${fmtStakeShort(displayEntry.stake_lamports)} SOL`;
+    document.getElementById('qs-stake-pct').textContent = displayEntry.stake_pct != null ? `${displayEntry.stake_pct.toFixed(2)}% of network` : '— of network';
+    document.getElementById('qs-skip').textContent = displayEntry.weighted_skip_rate != null ? displayEntry.weighted_skip_rate.toFixed(2) + '%' : '—';
+    document.getElementById('qs-dzbam').textContent = `${displayEntry.dz_connected} / ${displayEntry.bam_count}`;
+    document.getElementById('qs-dzbam-sub').textContent = `${displayEntry.sfdp_approved} SFDP approved`;
+
+    if (!cityFilter && asnEntry.cities && asnEntry.cities.length > 1) {
+      document.getElementById('dc-cities-card').style.display = 'block';
+      const cityRows = aggregated.by_dc.filter(d => d.asn === asn).sort((a, b) => b.stake_lamports - a.stake_lamports);
+      document.getElementById('dc-cities-grid').innerHTML = cityRows.map(c => `
+        <a class="dc-city-cell" href="/datacenter?asn=${asn}&cluster=${cluster}&city=${encodeURIComponent(c.city)}">
+          <div class="dc-city-name">${c.city}${c.country ? `, ${c.country}` : ''}</div>
+          <div class="dc-city-stats">${c.validators_total} validators · ${fmtStakeShort(c.stake_lamports)} SOL · ${c.stake_pct.toFixed(2)}%</div>
+        </a>`).join('');
+    }
+
+    if (cityFilter) {
+      document.getElementById('dc-filter-line').style.display = 'flex';
+      document.getElementById('dc-filter-line').innerHTML = `
+        <span>Filtered to <strong>${cityFilter}</strong> only, showing ${displayEntry.validators_total} of ${asnEntry.validators_total} ASN validators</span>
+        <button class="dc-filter-clear-btn" id="dc-clear-city">Show all ${asn} cities</button>`;
+      document.getElementById('dc-clear-city').addEventListener('click', () => {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('city');
+        window.location.href = url.toString();
+      });
+      document.getElementById('dc-vals-title').textContent = `Validators in ${asn} · ${cityFilter}`;
+    } else {
+      document.getElementById('dc-vals-title').textContent = `All ${asnEntry.validators_total} validators across ${asnEntry.cities.length} cit${asnEntry.cities.length === 1 ? 'y' : 'ies'}`;
+    }
+
+    let validatorsList = records.filter(r => r.geolocation?.asn === asn);
+    if (cityFilter) validatorsList = validatorsList.filter(r => r.geolocation?.city === cityFilter);
+    validatorsList.sort((a, b) => (b.activated_stake_lamports || 0) - (a.activated_stake_lamports || 0));
+
+    document.getElementById('dc-vals-body').innerHTML = validatorsList.map(r => {
+      const initial = (r.name && r.name.trim()[0]) || (r.identity_pubkey && r.identity_pubkey[0]) || '?';
+      const seedHash = (s) => { let h=0; for (let i=0;i<s.length;i++) h=((h<<5)-h+s.charCodeAt(i))|0; return Math.abs(h); };
+      const h = seedHash(r.identity_pubkey || r.name || 'unknown');
+      const hue = h % 360, sat = 35 + ((h >> 8) % 20);
+      const skipRate = r.skip_rate;
+      const skipClass = skipRate == null ? '' : skipRate < 1 ? 'perf-skip-good' : skipRate < 3 ? 'perf-skip-warn' : 'perf-skip-bad';
+      const skipDisp = skipRate == null ? '—' : skipRate.toFixed(2) + '%';
+      const infraTags = [];
+      if (r.dz_connected) infraTags.push('<span style="color:var(--accent-violet);font-size:0.72rem">DZ</span>');
+      if (r.bam_node) infraTags.push('<span style="color:var(--accent-cyan);font-size:0.72rem">BAM</span>');
+      if (r.is_rakurai) infraTags.push('<span style="color:#f59e0b;font-size:0.72rem">RAK</span>');
+      return `
+        <tr onclick="window.location.href='/validator?id=${r.vote_account || r.identity_pubkey}&cluster=${cluster}'">
+          <td>
+            <span style="display:inline-block;width:28px;height:28px;border-radius:50%;overflow:hidden;background:hsl(${hue},${sat}%,45%);position:relative;flex-shrink:0">
+              ${r.icon_url ? `<img src="${r.icon_url}" width="28" height="28" loading="lazy" referrerpolicy="no-referrer" style="width:100%;height:100%;object-fit:cover;display:block" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/>` : ''}
+              <span style="${r.icon_url ? 'display:none;' : 'display:flex;'}width:100%;height:100%;align-items:center;justify-content:center;color:white;font-weight:600;font-size:0.8em;font-family:var(--font-display)">${initial.toUpperCase()}</span>
+            </span>
+          </td>
+          <td>
+            <div class="dc-vals-name">${r.name || '<span style="color:var(--text-muted);font-style:italic">unnamed</span>'}${r.delinquent ? ' <span style="color:var(--status-critical);font-size:0.7rem">●</span>' : ''}</div>
+            <div class="dc-vals-keys">${shortenIdentity(r.identity_pubkey, 4, 4)}</div>
+          </td>
+          <td>${r.geolocation?.city || '—'}</td>
+          <td>${fmtStakeShort(r.activated_stake_lamports)} SOL</td>
+          <td style="font-family:var(--font-mono);font-size:0.78rem">${r.version || '—'}</td>
+          <td class="${skipClass}" style="font-family:var(--font-mono)">${skipDisp}</td>
+          <td>${infraTags.join(' · ') || '<span style="color:var(--text-muted)">—</span>'}</td>
+        </tr>`;
+    }).join('');
+  } catch (e) {
+    document.getElementById('dc-loading').style.display = 'none';
+    document.getElementById('dc-error').style.display = 'block';
+    document.getElementById('dc-error').textContent = `Failed to load: ${e.message}`;
+    console.error(e);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  bootstrapCluster();
+  loadAndRender();
+});
+</script>
