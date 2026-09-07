@@ -607,6 +607,7 @@ import ClusterBanner from '../components/ClusterBanner.astro';
 }
 .pulse-num-emoji { font-size: 0.9em; }
 .pulse-label { font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.pulse-note { font-size: 0.66rem; color: var(--text-muted); font-family: var(--font-mono); margin-top: -0.1rem; }
 .pulse-divider { width: 1px; height: 36px; background: var(--border); flex-shrink: 0; }
 @media (max-width: 700px) {
   .pulse-row { flex-wrap: wrap; padding: 1rem 0; }
@@ -1453,28 +1454,14 @@ import ClusterBanner from '../components/ClusterBanner.astro';
 
 
 <script>
-import { fetchSummary, fetchValidators, fetchValidatorsCached, fetchMainnetSummaryCached, bootstrapCluster } from '../lib/data.js';
-import { fmt, pct, flag, fmtTimestamp, hhiRating, giniRating, nakRating, smRating, shannonRating, versionColor } from '../lib/formatters.js';
+import { fetchSummary, fetchValidators, fetchValidatorsCached, fetchMainnetSummaryCached, bootstrapCluster, aggregateByAsn, isValidatorRecord } from '../lib/data.js';
+import { fmt, pct, flag, fmtTimestamp, hhiRating, giniRating, nakRating, smRating, shannonRating, versionColor, clientColor } from '../lib/formatters.js';
 import { savePreviousFetch } from '../lib/compare.js';
 
 // ───────── Constants ─────────
 
-const CLIENT_COLORS: Record<string, string> = {
-  // Jito family — violet
-  'Jito_BAM': '#a78bfa', 'JitoBAM': '#a78bfa',
-  'Jito_Labs': '#8b5cf6', 'Jito': '#8b5cf6',
-  // Harmonic family — cyan
-  'Harmonic': '#22d3ee', 'HarmonicAgave': '#22d3ee',
-  'HarmonicFrankendancer': '#06b6d4', 'HarmonicFiredancer': '#0891b2',
-  'FD_Harmonic': '#0891b2', 'Harmonic_Major': '#0e7490',
-  // Frankendancer family — magenta
-  'Frankendancer': '#e879f9',
-  // Firedancer family — orange
-  'Firedancer': '#f97316', 'FireBAM': '#fb923c',
-  // Standalone clients
-  'Rakurai': '#eab308', 'Raiku': '#fbbf24',
-  'Agave': '#14b8a6', 'Unknown': '#6b7280',
-};
+// Client palette lives in src/lib/formatters.js (CLIENT_COLORS, clientColor). The copy
+// that used to sit here drifted (dead Harmonic_Major key) and painted HarmonicMajor grey.
 
 const PIE_PALETTE = ['#3b82f6', '#a78bfa', '#22d3ee', '#f97316', '#22c55e', '#eab308', '#ef4444', '#e879f9', '#06b6d4', '#fbbf24', '#8b5cf6', '#10b981'];
 
@@ -1505,7 +1492,7 @@ function pickPalette(kind: 'stake' | 'rpc' | 'rpc-secondary' | 'dz' | 'jito' | '
 
 function getClientColor(name: string): string {
   const base = name.replace(/\s*\(\d+\)\s*$/, '').trim();
-  return CLIENT_COLORS[base] || '#6b7280';
+  return clientColor(base);
 }
 function cleanClientName(name: string): string {
   return name.replace(/\s*\(\d+\)\s*$/, '').trim();
@@ -1539,20 +1526,65 @@ function infoIcon(): string {
 
 // ───────── Pulse ─────────
 
-// Detects which consensus algorithm a cluster currently runs by checking whether
-// SIMD-0326 (the Alpenglow consensus proposal) is in the inactive-features list.
-// Works on every cluster (since the features list itself is universal): if SIMD-0326
-// is still listed as inactive, Tower BFT is live; if it's gone from inactive, Alpenglow
-// has been activated. Searches the description field (not the id, which is just a
-// random-looking key like "mustRekeyVm2QHYB...").
+// Consensus mode comes from the backend's top-level `consensus` block (analyzer v3.10.1,
+// REFERENCE R10.1): mode is "alpenglow" only when the SIMD-0326 gate is ACTIVE (positive
+// evidence). Never infer consensus from the features list: after a regenesis the gate is
+// absent from pending, and reading "absent" as "activated" showed Alpenglow while the
+// cluster still ran Tower BFT. `consensus` is null when both RPC and CLI failed that
+// cycle; that renders as "no data", never as Alpenglow.
 function detectConsensus(d: any): 'Tower BFT' | 'Alpenglow' | null {
-  const features = d?.features;
-  if (!features) return null;
-  const inactive = features.inactive || [];
-  const hasSimd0326Inactive = inactive.some((f: any) =>
-    typeof f?.description === 'string' && f.description.includes('SIMD-0326')
-  );
-  return hasSimd0326Inactive ? 'Tower BFT' : 'Alpenglow';
+  const c = d?.consensus;
+  if (!c || typeof c !== 'object') return null;
+  if (c.mode === 'alpenglow') return 'Alpenglow';
+  if (c.mode === 'tower') return 'Tower BFT';
+  return null;
+}
+
+// Badge for Software card headers on every cluster (Viktor 2026-09-07: show consensus
+// everywhere, not only on alpenglow). Hidden when the backend has no consensus data.
+function consensusBadgeHtml(d: any): string {
+  const consensus = detectConsensus(d);
+  if (!consensus) return '';
+  const isAlp = consensus === 'Alpenglow';
+  return `<span class="consensus-badge ${isAlp ? 'is-alpenglow' : ''}" data-tip="${escapeHtml(consensusNote(d))}">${isAlp ? '🏔 ' : ''}Consensus: ${escapeHtml(consensus)}</span>`;
+}
+
+// Voting / delinquent / total counts over ALL vote accounts (validator + hidden + inactive),
+// summed from cluster_health.stake_by_version. Same universe as /validators, so the
+// homepage and the table agree. metrics.validators.offline is NOT a delinquent count
+// (it is hidden + inactive, the nodes outside gossip); it was misread as one before.
+function votingCounts(d: any): { current: number; delinquent: number; total: number } | null {
+  const sbv = d?.metrics?.cluster_health?.stake_by_version;
+  if (!sbv || typeof sbv !== 'object') return null;
+  let current = 0, delinquent = 0;
+  for (const info of Object.values(sbv) as any[]) {
+    current += info?.currentValidators || 0;
+    delinquent += info?.delinquentValidators || 0;
+  }
+  if (current + delinquent === 0) return null;
+  return { current, delinquent, total: current + delinquent };
+}
+
+// One-line note under the consensus pulse slot (kept short: it sits under a big label).
+function consensusShortNote(d: any): string {
+  const c = d?.consensus;
+  if (!c || typeof c !== 'object') return 'no data this cycle';
+  if (c.mode === 'alpenglow') return c.activation_epoch != null ? `since epoch ${c.activation_epoch}` : 'SIMD-0326 active';
+  const gate: Record<string, string> = { pending: 'SIMD-0326 pending', absent: 'SIMD-0326 not deployed', inactive: 'SIMD-0326 inactive' };
+  return gate[c.simd_0326] || 'SIMD-0326 not active';
+}
+
+// Short human note for the consensus block: activation epoch or gate state.
+function consensusNote(d: any): string {
+  const c = d?.consensus;
+  if (!c || typeof c !== 'object') return 'consensus data unavailable this cycle';
+  if (c.mode === 'alpenglow') return c.activation_epoch != null ? `SIMD-0326 active since epoch ${c.activation_epoch}` : 'SIMD-0326 active';
+  const gate: Record<string, string> = {
+    pending: 'SIMD-0326 gate created, not yet activated',
+    absent: 'SIMD-0326 gate not created on this cluster',
+    inactive: 'SIMD-0326 not active (CLI catalog check)',
+  };
+  return gate[c.simd_0326] || 'SIMD-0326 not active';
 }
 
 function renderPulse(d: any, records: any[], cluster: string) {
@@ -1561,39 +1593,52 @@ function renderPulse(d: any, records: any[], cluster: string) {
   const ch = m.cluster_health || {};
   const dz = m.doublezero;
 
-  let items: { num: string; label: string; emoji?: string }[] = [];
+  // Counts over the same universe as /validators (all vote accounts with stake):
+  // records first, stake_by_version sums as fallback, metrics.validators.total last.
+  const vals = records.filter(isValidatorRecord);
+  const vc = votingCounts(d);
+  const activeCount = vals.length > 0 ? vals.filter(r => !r.delinquent).length : (vc ? vc.current : v.total);
+  const delinqCount = vals.length > 0 ? vals.length - activeCount : (vc ? vc.delinquent : null);
+
+  // Consensus is shown on every cluster (Viktor 2026-09-07): mainnet/testnet/devnet run
+  // Tower BFT until SIMD-0326 activates there; alpenglow shows Alpenglow with its epoch.
+  const consensus = detectConsensus(d);
+  const consensusItem = {
+    num: consensus || 'no data',
+    label: 'consensus',
+    emoji: consensus === 'Alpenglow' ? '🏔' : undefined,
+    note: consensusShortNote(d),
+  };
+
+  let items: { num: string; label: string; emoji?: string; note?: string }[] = [];
   if (cluster === 'mainnet-beta') {
     items = [
-      { num: fmt(v.total), label: 'active validators' },
+      { num: fmt(activeCount), label: 'active validators' },
       { num: pct(ch.average_stake_weighted_skip_rate, 2), label: 'stake-weighted skip' },
       { num: dz?.multicast_publishers?.stake_percent != null ? pct(dz.multicast_publishers.stake_percent, 1) : '—', label: 'stake on DZ multicast' },
       { num: fmt(v.decentralization?.current?.superminority_validator_33?.value), label: 'superminority validators' },
+      consensusItem,
     ];
   } else if (cluster === 'alpenglow-community') {
-    // Alpenglow pulse: validators / skip / delinquent stake / current consensus.
-    // Consensus in the 4th slot is the showpiece — captures the historic moment
-    // when SIMD-0326 flips from inactive to active.
-    const consensus = detectConsensus(d);
     const delinqStakePct = ch.delinquent_stake_percent;
     items = [
-      { num: fmt(v.total), label: 'active validators' },
+      { num: fmt(activeCount), label: 'active validators' },
       { num: pct(ch.average_stake_weighted_skip_rate, 2), label: 'stake-weighted skip' },
       { num: delinqStakePct != null ? pct(delinqStakePct, 1) : '—', label: 'delinquent stake' },
-      { num: consensus || '—', label: 'consensus', emoji: consensus === 'Alpenglow' ? '🏔' : undefined },
+      consensusItem,
     ];
   } else {
-    const active = records.filter(r => !r.delinquent);
-    const delinq = records.length - active.length;
     const countries = new Set<string>();
-    records.forEach(r => {
+    vals.forEach(r => {
       const cc = r.geolocation?.country_code;
       if (cc && cc !== '??') countries.add(cc);
     });
     items = [
-      { num: fmt(active.length), label: 'active validators' },
+      { num: fmt(activeCount), label: 'active validators' },
       { num: pct(ch.average_stake_weighted_skip_rate, 2), label: 'stake-weighted skip' },
-      { num: fmt(delinq), label: 'delinquent validators' },
+      { num: delinqCount != null ? fmt(delinqCount) : '—', label: 'delinquent validators' },
       { num: fmt(countries.size), label: 'countries' },
+      consensusItem,
     ];
   }
 
@@ -1607,7 +1652,8 @@ function renderPulse(d: any, records: any[], cluster: string) {
     const isText = /[A-Za-z]/.test(item.num);
     const numCls = isText ? 'pulse-num mono pulse-num-text' : 'pulse-num mono';
     const emojiHtml = item.emoji ? `<span class="pulse-num-emoji">${item.emoji}</span>` : '';
-    html.push(`<div class="pulse-item"><div class="${numCls}">${emojiHtml}${escapeHtml(item.num)}</div><div class="pulse-label">${escapeHtml(item.label)}</div></div>`);
+    const noteHtml = item.note ? `<div class="pulse-note">${escapeHtml(item.note)}</div>` : '';
+    html.push(`<div class="pulse-item"><div class="${numCls}">${emojiHtml}${escapeHtml(item.num)}</div><div class="pulse-label">${escapeHtml(item.label)}</div>${noteHtml}</div>`);
   });
   row.innerHTML = html.join('');
 }
@@ -1927,6 +1973,7 @@ function renderMainnetStories(records: any[], d: any): string {
           <span class="tooltip-icon" aria-label="info">${infoIcon()}</span>
           <span class="tooltip-box">Most validator clients are based on Agave (originally Solana Labs, now maintained by Anza). Jito, BAM, Frankendancer, Rakurai, and Harmonic are forks adding specific features. Firedancer is the only fully independent implementation, by Jump Crypto.</span>
         </span>
+        ${consensusBadgeHtml(d)}
       </div>
       <div class="story-title">Validator client distribution</div>
       <div class="stacked-bar"><div class="stacked-bar-inner">${clientSegments}</div><div class="stacked-tooltip" id="stacked-tooltip-clients"></div></div>
@@ -2139,8 +2186,9 @@ function renderTestnetDevnetStories(records: any[], d: any, cluster: 'testnet' |
         <span class="story-tag neutral-tag">Software</span>
         <span class="tooltip-wrap">
           <span class="tooltip-icon" aria-label="info">${infoIcon()}</span>
-          <span class="tooltip-box">${cluster === 'testnet' ? 'Validator versions on testnet. Variety here is expected — testnet is where new releases get tested.' : 'Validator versions on devnet. Often runs the most recent betas, release candidates, or experimental builds.'}</span>
+          <span class="tooltip-box">${cluster === 'testnet' ? 'Validator versions on testnet. Variety here is expected: testnet is where new releases get tested.' : 'Validator versions on devnet. Often runs the most recent betas, release candidates, or experimental builds.'}</span>
         </span>
+        ${consensusBadgeHtml(d)}
       </div>
       <div class="story-title">Validator versions</div>
       <div class="stacked-bar"><div class="stacked-bar-inner">${versionSegments}</div><div class="stacked-tooltip" id="stacked-tooltip-versions"></div></div>
@@ -2168,6 +2216,9 @@ function renderAlpenglowStories(records: any[], d: any): string {
   // Total / active / pending counts from features block.
   // Note: features.inactive_count is an alias for features.pending_count (kept for
   // backward compat). Treating them as one — `pending` is the canonical name.
+  // features is null when the snapshot came from an RPC without getProgramAccounts
+  // (backend v6.9 fallback chain, REFERENCE R10.3). Render an explicit empty state then.
+  const featuresMissing = d?.features == null;
   const features = d?.features || {};
   const featTotal   = features.total_count   ?? 0;
   const featActive  = features.active_count  ?? 0;
@@ -2175,7 +2226,7 @@ function renderAlpenglowStories(records: any[], d: any): string {
   const featDenom = Math.max(1, featTotal);
   const featActiveW  = (featActive  / featDenom) * 100;
   const featPendingW = (featPending / featDenom) * 100;
-  const featPctText = featTotal > 0 ? `${(featActive / featTotal * 100).toFixed(1)}% activated` : 'no data';
+  const featPctText = featuresMissing ? 'no feature data this cycle' : (featTotal > 0 ? `${(featActive / featTotal * 100).toFixed(1)}% activated` : 'no data');
   // Top-3 pending feature descriptions (fall back to inactive list for backward compat).
   const pendingList = Array.isArray(features.pending) && features.pending.length > 0
     ? features.pending.slice(0, 3)
@@ -2245,9 +2296,7 @@ function renderAlpenglowStories(records: any[], d: any): string {
 
   // Consensus badge shown on Software card across all clusters (mainnet/testnet/devnet/alpenglow)
   // is appended here for alpenglow consistency.
-  const consensusBadge = consensus
-    ? `<span class="consensus-badge ${consensus === 'Alpenglow' ? 'is-alpenglow' : ''}">${consensus === 'Alpenglow' ? '🏔 ' : ''}Consensus: ${escapeHtml(consensus)}</span>`
-    : '';
+  const consensusBadge = consensusBadgeHtml(d);
 
   return `
     <!-- What is Alpenglow (span-2) -->
@@ -2262,7 +2311,7 @@ function renderAlpenglowStories(records: any[], d: any): string {
       <div class="whatis-stat-row">
         <div class="whatis-stat"><div class="whatis-stat-num mono">${fmt(activeValidators)}</div><div class="whatis-stat-label">active validators</div></div>
         <div class="whatis-stat"><div class="whatis-stat-num mono">${fmt(activeRpcs)}</div><div class="whatis-stat-label">public RPCs</div></div>
-        <div class="whatis-stat"><div class="whatis-stat-num mono">${consensus || '—'}</div><div class="whatis-stat-label">current consensus</div></div>
+        <div class="whatis-stat"><div class="whatis-stat-num mono">${consensus || 'no data'}</div><div class="whatis-stat-label">current consensus</div></div>
       </div>
     </div>
 
@@ -2276,9 +2325,9 @@ function renderAlpenglowStories(records: any[], d: any): string {
         </span>
       </div>
       <div class="story-title">Protocol features</div>
-      <div class="story-big mono">${fmt(featActive)} <span class="story-big-denom">/ ${fmt(featTotal)}</span></div>
+      <div class="story-big mono">${featuresMissing ? '<span style="color:var(--text-muted)">no data</span>' : `${fmt(featActive)} <span class="story-big-denom">/ ${fmt(featTotal)}</span>`}</div>
       <div class="story-sub">${escapeHtml(featPctText)}</div>
-      <div class="bar-rows-wrap with-divider">
+      ${featuresMissing ? `<div class="story-sub" style="margin-top:0.5rem;color:var(--text-muted)">The snapshot RPC could not list feature accounts. Consensus state is tracked separately and stays valid.</div>` : `<div class="bar-rows-wrap with-divider">
         <div class="bar-row">
           <span class="bar-row-label">active</span>
           <div class="bar-row-track"><div class="bar-row-fill good" style="width:${featActiveW}%"></div></div>
@@ -2289,8 +2338,8 @@ function renderAlpenglowStories(records: any[], d: any): string {
           <div class="bar-row-track"><div class="bar-row-fill warn" style="width:${featPendingW}%"></div></div>
           <span class="bar-row-num">${fmt(featPending)}</span>
         </div>
-      </div>
-      ${pendingList.length > 0 ? `<div class="feat-inactive-hint">Next: ${pendingList.map((f: any) => {
+      </div>`}
+      ${!featuresMissing && pendingList.length > 0 ? `<div class="feat-inactive-hint">Next: ${pendingList.map((f: any) => {
         const desc = (f?.description || '').toString();
         const simd = desc.match(/SIMD-\d+/);
         return simd ? simd[0] : (desc ? (desc.slice(0, 18) + (desc.length > 18 ? '…' : '')) : 'feature ' + (f?.id || '').slice(0, 6));
@@ -2329,7 +2378,7 @@ function renderAlpenglowStories(records: any[], d: any): string {
         <span class="story-tag neutral-tag">Software</span>
         <span class="tooltip-wrap">
           <span class="tooltip-icon" aria-label="info">${infoIcon()}</span>
-          <span class="tooltip-box">Validator clients on Alpenglow run a custom 0.3.x build line that implements the Alpenglow consensus algorithm. Versions diverge as new releases land.</span>
+          <span class="tooltip-box">Validator clients on Alpenglow run pre-release Agave builds that implement the Alpenglow consensus. Versions diverge as new betas land.</span>
         </span>
         ${consensusBadge}
       </div>
@@ -2525,9 +2574,11 @@ function renderInfra(d: any) {
     // Card 2 — Active validators (voting health)
     const v = d?.metrics?.validators;
     const ch = d?.metrics?.cluster_health;
+    const vc = votingCounts(d);
     if (v && v.total != null) {
-      const totalAll = v.total_all ?? v.total;
-      const delinqCount = v.offline ?? Math.max(0, totalAll - (v.total ?? 0));
+      const totalAll = vc ? vc.total : (v.total_all ?? v.total);
+      const votingCount = vc ? vc.current : v.total;
+      const delinqCount = vc ? vc.delinquent : Math.max(0, totalAll - (v.total ?? 0));
       const delinqStake = ch?.delinquent_stake_percent;
       // Status thresholds tuned for experimental clusters: alpenglow regularly sees
       // higher delinquency than mainnet because of regenesis events and node restarts.
@@ -2539,7 +2590,7 @@ function renderInfra(d: any) {
       const cls = st === 'bad' ? 'down' : (st === 'warn' ? 'degraded' : 'healthy');
       cards.push({
         name: 'Active validators',
-        main: fmt(v.total),
+        main: fmt(votingCount),
         sub: `${fmt(delinqCount)} delinquent · ${fmt(totalAll)} total`,
         status: st, cls,
       });
@@ -2572,7 +2623,7 @@ function renderInfra(d: any) {
         cls: 'healthy',
       });
     } else {
-      cards.push({ name: 'Pending features', main: '—', sub: 'no data', status: 'neutral', cls: 'absent' });
+      cards.push({ name: 'Pending features', main: '—', sub: d?.features == null ? 'no feature data this cycle' : 'no data', status: 'neutral', cls: 'absent' });
     }
 
     // Card 4 — Dominant software version + share. "3 versions" was non-obvious;
@@ -2929,6 +2980,40 @@ const LABEL_SHORT: Record<string, string> = {
   'DIGITALOCEAN-ASN': 'DigitalOcean',
   'AS-CHOOPA': 'Vultr',
   'AS-VULTR': 'Vultr',
+  // Interim canonical labels until dc_overrides display names arrive from derive_views
+  'LATITUDE-SH': 'Latitude.sh',
+  'Latitude.sh LTDA': 'Latitude.sh BR',
+  'ALLNODES': 'Allnodes',
+  'Allnodes Inc': 'Allnodes',
+  'MEVSPACE sp. z o.o.': 'Mevspace',
+  'SERVERS-COM': 'Servers.com',
+  'Servers.com, Inc.': 'Servers.com',
+  'WEBNX': 'WebNX',
+  'WebNX, Inc.': 'WebNX',
+  'HVC-AS': 'Hivelocity',
+  'HIVELOCITY, Inc.': 'Hivelocity',
+  'CHERRYSERVERS3-AS': 'CherryServers',
+  'CHERRYSERVERS4-AS': 'CherryServers',
+  'UAB Cherry Servers': 'CherryServers',
+  'UAB "Cherry Servers"': 'CherryServers',
+  'TeraSwitch Networks Inc.': 'TeraSwitch',
+  'TWELVE99': 'Arelion',
+  'Arelion Sweden AB': 'Arelion',
+  'AS-GLXY-DIGITAL': 'Galaxy Digital',
+  'Galaxy Digital LP': 'Galaxy Digital',
+  'RETN-AS': 'RETN',
+  'RETN Limited': 'RETN',
+  'VELIANET-AS': 'velia.net',
+  'velia.net Internetdienste GmbH': 'velia.net',
+  'AMARUTU-TECHNOLOGY': 'Amarutu',
+  'Amarutu Technology Ltd': 'Amarutu',
+  'The Constant Company, LLC': 'Vultr',
+  'Hetzner Online GmbH': 'Hetzner',
+  'HETZNER-AS': 'Hetzner',
+  'OVH SAS': 'OVH',
+  'Monogon SE': 'Monogon',
+  'Interserver, Inc': 'Interserver',
+  'Limestone Networks, Inc.': 'Limestone',
 };
 function shortenLabel(name: string): string {
   if (LABEL_SHORT[name]) return LABEL_SHORT[name];
@@ -3188,6 +3273,39 @@ function renderGeo(d: any) {
     const cc = Object.keys(v.country_distribution || {}).filter(c => c !== '??').length;
     const an = Object.keys(v.asn_distribution || {}).length;
     geoDesc.textContent = `${fmt(cc)} countries and ${fmt(an)} network providers represented.`;
+  }
+}
+
+// Provider list and count grouped by ASN NUMBER from validators.json records.
+// network_summary.json keys asn_distribution by raw asn_name, and the same ASN arrives
+// under different names depending on the geo provider (DB-IP "TERASWITCH" vs ipinfo
+// "TeraSwitch Networks Inc."), which splits one provider into several rows and inflates
+// the provider count (mainnet: 115 names for 89 ASNs). Runs after records arrive and
+// overwrites the summary-based render. Backend item: key asn_distribution by ASN number.
+function renderGeoAsnFromRecords(d: any, records: any[]) {
+  const agg = aggregateByAsn(records).filter(e => e.asn !== 'unknown');
+  if (agg.length === 0) return;
+  const top = agg.slice(0, 10);
+  const maxA = Math.max(1, ...top.map(e => e.count));
+  const geoAsns = document.getElementById('geo-asns');
+  if (geoAsns) {
+    geoAsns.innerHTML = top.map(e => {
+      const cls = e.stake_pct > 25 ? 'crit' : e.stake_pct > 15 ? 'warn' : 'normal';
+      const w = Math.round((e.count / maxA) * 100);
+      const label = shortenLabel(e.name);
+      return `<div class="geo-row">
+        <div class="geo-country"><span class="geo-cc" data-tip="${escapeHtml(e.name)} (${escapeHtml(e.asn)})">${escapeHtml(label)}</span></div>
+        <div class="geo-bar-wrap"><div class="geo-bar ${cls}" style="width:${w}%"></div></div>
+        <div class="geo-count">${fmt(e.count)}</div>
+        <div class="geo-stake">${pct(e.stake_pct, 1)}</div>
+      </div>`;
+    }).join('');
+  }
+  const geoDesc = document.getElementById('geo-desc');
+  if (geoDesc) {
+    const v = d?.metrics?.validators || {};
+    const cc = Object.keys(v.country_distribution || {}).filter(c => c !== '??').length;
+    geoDesc.textContent = `${fmt(cc)} countries and ${fmt(agg.length)} network providers represented.`;
   }
 }
 
@@ -3486,6 +3604,7 @@ async function loadAll(cluster: string, isClusterChange: boolean = false) {
     const validatorsData = await fetchValidators(cluster);
     const records = (validatorsData?.records || []).filter((r: any) => r != null);
     try { renderPulse(summary, records, cluster); } catch (e) { console.warn('renderPulse:', e); }
+    try { renderGeoAsnFromRecords(summary, records); } catch (e) { console.warn('renderGeoAsnFromRecords:', e); }
     try { await renderStories(summary, records, cluster); } catch (e) { console.warn('renderStories:', e); }
   } catch (e) {
     console.warn('[SONDA] validators fetch failed:', e);

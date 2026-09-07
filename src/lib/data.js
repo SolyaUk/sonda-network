@@ -3,6 +3,20 @@ export const R2_BASE = 'https://data.sonda.network';
 export const CLUSTERS = ['mainnet-beta', 'testnet', 'devnet', 'alpenglow-community'];
 export const DEFAULT_CLUSTER = 'mainnet-beta';
 
+// Validator universe shown on /validators and /validator: every vote account with
+// stake in the current epoch. 'validator' = visible in gossip; 'validator-hidden' =
+// voting but not visible in gossip (no IP, version or client data); 'validator-inactive' =
+// delinquent and not visible in gossip. co-hosted records have no vote account and are
+// not validators. This matches metrics.validators.total_all and stake_by_version in
+// network_summary.json, so totals stay stable when a node drops out of gossip.
+export const VALIDATOR_ROLES = ['validator', 'validator-hidden', 'validator-inactive'];
+export function isValidatorRecord(r) {
+  return !!r && VALIDATOR_ROLES.includes(r.role);
+}
+export function isInGossip(r) {
+  return !!r && r.role === 'validator';
+}
+
 // Apply cluster to <html data-cluster=...> for global tinting
 export function applyClusterToHtml(cluster) {
   if (typeof document === 'undefined') return;
@@ -274,7 +288,7 @@ export function concentrationLevel(stakePct) {
 /** Apply URL query filters to validator records. Pure function. */
 export function filterValidators(records, params) {
   if (!Array.isArray(records)) return [];
-  let out = records.filter(r => r && r.role === 'validator');
+  let out = records.filter(isValidatorRecord);
 
   const countries = (params.get('country') || '').split(',').filter(Boolean);
   if (countries.length > 0) {
@@ -320,32 +334,101 @@ export function filterValidators(records, params) {
   return out;
 }
 
-/** Apply sort to validators. Default: stake desc. */
-export function sortValidators(records, sort = 'stake', dir = 'desc') {
+/**
+ * Competition ranking by epoch_credits (TVC rank): equal credits share a rank,
+ * the next distinct value gets 1 + number of validators ranked above it
+ * (1, 1, 1, 4, 5 ...). Records without credits get no rank. Writes _tvc_rank and
+ * _tvc_total on each record (client-side only fields) and returns the ranked count.
+ */
+export function computeTvcRanks(records) {
+  const ranked = records.filter(r => r && r.epoch_credits != null);
+  const sorted = [...ranked].sort((a, b) => b.epoch_credits - a.epoch_credits);
+  let rank = 0;
+  let prev = null;
+  sorted.forEach((r, i) => {
+    if (prev === null || r.epoch_credits !== prev) rank = i + 1;
+    prev = r.epoch_credits;
+    r._tvc_rank = rank;
+    r._tvc_total = sorted.length;
+  });
+  records.forEach(r => { if (r && r.epoch_credits == null) { r._tvc_rank = null; r._tvc_total = sorted.length; } });
+  return sorted.length;
+}
+
+/** Apply sort to validators. Default: TVC rank (best first). Ties fall back to stake desc. */
+export function sortValidators(records, sort = 'rank', dir = 'asc') {
   const out = [...records];
   const m = dir === 'asc' ? 1 : -1;
-  // For asc sorts, null/undefined values should sink to the bottom (treat as +∞),
-  // for desc, they should sink too (treat as -∞ when ascending direction multiplier flips).
+  // Null metrics sink to the bottom in both directions.
   const NULL_LO = -Infinity;
   const NULL_HI = Infinity;
+  const nullSink = () => (dir === 'asc' ? NULL_HI : NULL_LO);
   const accessor = {
+    rank: r => r._tvc_rank ?? nullSink(),
     stake: r => r.activated_stake_lamports || 0,
     name: r => (r.name || '').toLowerCase(),
     city: r => (r.geolocation?.city || '').toLowerCase(),
-    skip: r => r.skip_rate ?? (dir === 'asc' ? NULL_HI : NULL_LO),
-    credits: r => r.epoch_credits ?? (dir === 'asc' ? NULL_HI : NULL_LO),
-    slot: r => r.slot_duration_median ?? (dir === 'asc' ? NULL_HI : NULL_LO),
-    vlat: r => r.median_vote_latency ?? (dir === 'asc' ? NULL_HI : NULL_LO),
-    ibrl: r => r.ibrl?.ibrl_score ?? (dir === 'asc' ? NULL_HI : NULL_LO),
+    skip: r => r.skip_rate ?? nullSink(),
+    credits: r => r.epoch_credits ?? nullSink(),
+    slot: r => r.slot_duration_median ?? nullSink(),
+    vlat: r => r.median_vote_latency ?? nullSink(),
+    ibrl: r => r.ibrl?.ibrl_score ?? nullSink(),
     commission: r => r.commission ?? -1,
     country: r => r.geolocation?.country_code || '',
     asn: r => r.geolocation?.asn || '',
-  }[sort] || (r => r.activated_stake_lamports || 0);
+  }[sort] || (r => r._tvc_rank ?? nullSink());
+  const stakeOf = r => r.activated_stake_lamports || 0;
   out.sort((a, b) => {
     const va = accessor(a), vb = accessor(b);
     if (va < vb) return -1 * m;
     if (va > vb) return 1 * m;
-    return 0;
+    // Tie-break: larger stake first, then identity for a stable order.
+    const sa = stakeOf(a), sb = stakeOf(b);
+    if (sa !== sb) return sb - sa;
+    return (a.identity_pubkey || '') < (b.identity_pubkey || '') ? -1 : 1;
   });
+  return out;
+}
+
+/**
+ * Group validator records by ASN number. Raw asn_name differs between geo providers
+ * for the same ASN (DB-IP "TERASWITCH" vs ipinfo "TeraSwitch Networks Inc."), so the
+ * label is the most frequent raw name for that ASN; ties prefer the DB-IP variant.
+ * Records without geolocation are grouped under asn 'unknown'.
+ * Returns entries sorted by stake desc: { asn, name, count, delinquent, stake_lamports, stake_pct }.
+ */
+export function aggregateByAsn(records) {
+  const vals = (records || []).filter(isValidatorRecord);
+  const totalStake = vals.reduce((s, r) => s + (r.activated_stake_lamports || 0), 0);
+  const map = new Map();
+  for (const r of vals) {
+    const geo = r.geolocation || null;
+    const asn = geo?.asn || 'unknown';
+    if (!map.has(asn)) {
+      map.set(asn, { asn, name: null, count: 0, delinquent: 0, stake_lamports: 0, stake_pct: 0, _names: new Map() });
+    }
+    const e = map.get(asn);
+    e.count++;
+    if (r.delinquent) e.delinquent++;
+    e.stake_lamports += r.activated_stake_lamports || 0;
+    const rawName = geo?.asn_name;
+    if (rawName) {
+      const n = e._names.get(rawName) || { count: 0, dbip: 0 };
+      n.count++;
+      if (geo.primary_source === 'dbip') n.dbip++;
+      e._names.set(rawName, n);
+    }
+  }
+  const out = [...map.values()].map(e => {
+    let best = null;
+    for (const [name, n] of e._names) {
+      if (!best || n.count > best.n.count || (n.count === best.n.count && n.dbip > best.n.dbip)) best = { name, n };
+    }
+    e.name = best ? best.name : (e.asn === 'unknown' ? 'Unknown ASN' : e.asn);
+    e.stake_pct = totalStake > 0 ? (e.stake_lamports / totalStake) * 100 : 0;
+    delete e._names;
+    return e;
+  });
+  out.sort((a, b) => b.stake_lamports - a.stake_lamports || b.count - a.count);
   return out;
 }

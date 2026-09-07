@@ -117,7 +117,8 @@ const CLIENT_COLORS = {
   'HarmonicAgave':            '#22d3ee',
   'HarmonicFrankendancer':    '#06b6d4',
   'HarmonicFiredancer':       '#0891b2',
-  'Harmonic_Major':           '#0e7490',
+  'HarmonicMajor':            '#0e7490',
+  'Harmonic_Major':           '#0e7490',  // legacy Trillium-style key, kept for cached responses
   'FD_Harmonic':              '#0891b2',
   // Frankendancer family — magenta
   'Frankendancer':            '#e879f9',
@@ -135,4 +136,43 @@ const CLIENT_COLORS = {
 export function clientColor(client) {
   if (!client) return '#6b7280';
   return CLIENT_COLORS[client] || '#6b7280';
+}
+
+/**
+ * Display form of a client_type. Backend passes unmapped gossip client ids through as
+ * "Unknown(N)"; show them as "Unknown" and keep the raw code for the tooltip.
+ * Returns { label, tip } where tip is null when nothing extra to say.
+ */
+export function displayClient(client) {
+  if (!client) return { label: '', tip: null };
+  const m = /^Unknown\((\d+)\)$/.exec(client);
+  if (m) return { label: 'Unknown', tip: `Unrecognized client id ${m[1]} reported in gossip` };
+  return { label: client, tip: null };
+}
+
+/**
+ * Compact number: 1300929 -> "1.30M", 171863416367 -> "171.9B", 4321 -> "4.32k", 987 -> "987".
+ * Three significant digits keep neighbouring validators distinguishable in a column.
+ */
+export function fmtCompact(n) {
+  if (n == null || Number.isNaN(n)) return '--';
+  const neg = n < 0 ? '-' : '';
+  const abs = Math.abs(n);
+  const sig = (v) => (v >= 99.95 ? v.toFixed(0) : v >= 9.995 ? v.toFixed(1) : v.toFixed(2));
+  const units = [[1e12, 'T'], [1e9, 'B'], [1e6, 'M'], [1e3, 'k']];
+  for (const [div, suffix] of units) {
+    // 0.9995 guard: 999.6k rounds up to 1.00M instead of printing 1000k
+    if (abs / div >= 0.9995) return neg + sig(abs / div) + suffix;
+  }
+  return neg + String(Math.round(abs));
+}
+
+/**
+ * Short region code of a Jito BAM node from its name: "fra-mainnet-bam-2-tee" -> "FRA".
+ * bam_region in the data carries the full node name, so the prefix is the only short form.
+ */
+export function bamRegionCode(nodeName) {
+  if (!nodeName) return '';
+  const head = String(nodeName).split('-')[0];
+  return head ? head.toUpperCase() : '';
 }

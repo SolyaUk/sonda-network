@@ -67,6 +67,7 @@ import Footer from '../components/Footer.astro';
       <div class="sort-controls">
         <label class="sort-label" for="sort-select">Sort by:</label>
         <select id="sort-select" class="sort-select">
+          <option value="rank-asc" selected>TVC rank (best first)</option>
           <option value="stake-desc">Stake (high to low)</option>
           <option value="stake-asc">Stake (low to high)</option>
           <option value="name-asc">Name (A–Z)</option>
@@ -334,6 +335,7 @@ import Footer from '../components/Footer.astro';
     margin-top: 0.15rem;
     font-family: var(--font-mono);
   }
+  .cell-commission .comm-commission { color: var(--accent-amber); }
   .cell-commission .mev-commission { color: var(--accent-cyan); }
 
   /* Group 5: location */
@@ -347,8 +349,10 @@ import Footer from '../components/Footer.astro';
   .cell-infra { display: flex; flex-direction: column; gap: 0.3rem; }
   .infra-badge {
     display: inline-flex;
-    align-items: center;
+    align-items: baseline;
     gap: 0.3rem;
+    white-space: nowrap;
+    line-height: 1.3;
     background: var(--bg-card-hover);
     border: 1px solid var(--border);
     border-radius: 4px;
@@ -357,7 +361,7 @@ import Footer from '../components/Footer.astro';
     color: var(--text-secondary);
     max-width: 100%;
   }
-  .infra-badge-name { font-family: var(--font-mono); font-size: 0.7rem; }
+  .infra-badge-name { font-family: var(--font-mono); font-size: 0.7rem; line-height: 1.3; }
   .infra-badge-dz { border-color: rgba(167, 139, 250, 0.4); color: var(--accent-violet); }
   .infra-badge-bam { border-color: rgba(6, 182, 212, 0.4); color: var(--accent-cyan); }
   .infra-badge-mc { border-color: rgba(232, 121, 249, 0.4); color: var(--accent-magenta); }
@@ -373,13 +377,22 @@ import Footer from '../components/Footer.astro';
   }
 
   /* Group 7: performance metrics inline. Value first, label second. */
-  .cell-perf { display: grid; grid-template-columns: max-content auto; gap: 0.05rem 0.55rem; font-size: 0.75rem; font-family: var(--font-mono); }
+  .cell-perf { display: grid; grid-template-columns: max-content auto; gap: 0.05rem 0.55rem; font-size: 0.75rem; font-family: var(--font-mono); align-items: baseline; }
+  .perf-rank {
+    color: var(--text-muted);
+    font-size: 0.65rem;
+    margin-left: 0.35rem;
+    letter-spacing: 0;
+    text-transform: none;
+  }
   .perf-val { color: var(--text-primary); text-align: right; }
   .perf-label {
     color: var(--text-muted);
     font-size: 0.65rem;
     text-transform: uppercase;
     letter-spacing: 0.04em;
+  }
+  .perf-label[data-tip], .perf-label-txt[data-tip] {
     cursor: help;
     text-decoration: underline dotted var(--border) 1px;
     text-underline-offset: 2px;
@@ -402,6 +415,9 @@ import Footer from '../components/Footer.astro';
   .vflag-sm { background: rgba(239, 68, 68, 0.15); color: var(--status-critical); border: 1px solid rgba(239, 68, 68, 0.3); }
   .vflag-sfdp { background: rgba(59, 130, 246, 0.15); color: var(--accent-blue); border: 1px solid rgba(59, 130, 246, 0.3); }
   .vflag-delinq { background: rgba(239, 68, 68, 0.15); color: var(--status-critical); border: 1px solid rgba(239, 68, 68, 0.4); }
+  .vflag-gossip { background: transparent; color: var(--text-muted); border: 1px dashed var(--border); }
+  .cell-geo-city.is-muted { color: var(--text-muted); font-weight: 400; font-style: italic; }
+  .cell-name-id { font-family: var(--font-mono); font-size: 0.82rem; color: var(--text-secondary); font-weight: 500; letter-spacing: -0.01em; }
 
   /* Custom fast tooltip — shows on hover with no delay.
      Applied via data-tip="..." attribute. Native title="" has ~1.5s delay. */
@@ -432,7 +448,12 @@ import Footer from '../components/Footer.astro';
     z-index: 200;
     box-shadow: 0 4px 12px rgba(0,0,0,0.25);
   }
-  [data-tip][data-tip-wrap]::after { white-space: normal; width: 240px; }
+  [data-tip][data-tip-wrap]::after { white-space: normal; width: 200px; }
+  /* Tooltips in the two rightmost columns open to the left edge of the element so the
+     popup never extends past the table (a hidden popup still widens the page and shows a
+     horizontal scrollbar). Interim until the shared JS tooltip lands (F-5). */
+  .cell-flags [data-tip]::after,
+  .cell-perf [data-tip]::after { left: auto; right: 0; transform: translateY(-4px); }
   [data-tip]:hover::after { opacity: 1; visibility: visible; }
   @media (hover: none) { [data-tip]:hover::after { display: none; } }
 
@@ -515,6 +536,8 @@ import Footer from '../components/Footer.astro';
   .vcard-pill-bam { background: rgba(6, 182, 212, 0.15); color: var(--accent-cyan); border: 1px solid rgba(6, 182, 212, 0.4); }
   .vcard-pill-sm { background: rgba(239, 68, 68, 0.15); color: var(--status-critical); border: 1px solid rgba(239, 68, 68, 0.3); }
   .vcard-pill-sfdp { background: rgba(59, 130, 246, 0.15); color: var(--accent-blue); border: 1px solid rgba(59, 130, 246, 0.4); }
+  .vcard-pill-gossip { background: transparent; color: var(--text-muted); border: 1px dashed var(--border); }
+  .vcard-name.is-id { font-family: var(--font-mono); font-size: 0.82rem; font-weight: 500; color: var(--text-secondary); }
 
   .vcard-body {
     display: none;
@@ -595,10 +618,13 @@ import Footer from '../components/Footer.astro';
 <script>
 import {
   bootstrapCluster, getCluster, fetchValidators, fetchSummary,
-  filterValidators, sortValidators,
+  filterValidators, sortValidators, computeTvcRanks,
+  isValidatorRecord, isInGossip,
   fmtStakeShort, concentrationLevel,
 } from '../lib/data.js';
-import { fmt, pct, shortenIdentity, fmtSol, clientColor } from '../lib/formatters.js';
+import { fmt, pct, shortenIdentity, fmtSol, clientColor, displayClient, fmtCompact, bamRegionCode } from '../lib/formatters.js';
+
+const NO_GOSSIP_TIP = 'Vote account has stake but the node is not visible in gossip: no IP, version or client data this cycle';
 
 const PAGE_SIZE = 50;
 let allRecords = [];
@@ -662,16 +688,21 @@ function renderTableRow(r) {
   const skipClass = skipRate == null ? '' :
     skipRate < 1 ? 'perf-skip-good' : skipRate < 3 ? 'perf-skip-warn' : 'perf-skip-bad';
   const skipDisp = skipRate == null ? '—' : skipRate.toFixed(2) + '%';
-  const credits = r.epoch_credits != null ? fmt(r.epoch_credits) : '—';
+  const inGossip = isInGossip(r);
+  const credits = r.epoch_credits != null ? fmtCompact(r.epoch_credits) : '—';
+  const creditsFull = r.epoch_credits != null ? fmt(r.epoch_credits) : '';
+  const rankHtml = r._tvc_rank != null
+    ? `<span class="perf-rank" data-tip="TVC rank ${r._tvc_rank} of ${r._tvc_total}" data-tip-wrap>#${r._tvc_rank}</span>`
+    : '';
   const ibrl = r.ibrl?.ibrl_score != null ? r.ibrl.ibrl_score.toFixed(0) : '—';
   const slot = r.slot_duration_median != null ? r.slot_duration_median.toFixed(0) + 'ms' : '—';
   const vlat = r.median_vote_latency != null ? r.median_vote_latency.toFixed(1) : '—';
   const stakeSol = fmtStakeShort(r.activated_stake_lamports);
   const commission = r.commission != null ? r.commission + '%' : '—';
   const mev = r.mev_commission != null ? (r.mev_commission / 100).toFixed(2) + '%' : '—';
-  const ver = r.version || '—';
-  const client = r.client_type || '';
-  const cColor = clientColor(client);
+  const ver = inGossip ? (r.version || '—') : '—';
+  const clientInfo = inGossip ? displayClient(r.client_type) : { label: '', tip: null };
+  const cColor = clientColor(r.client_type);
 
   const initial = (r.name && r.name.trim()[0]) || (r.identity_pubkey && r.identity_pubkey[0]) || '?';
   const seedHash = (s) => { let h=0; for (let i=0;i<s.length;i++) h=((h<<5)-h+s.charCodeAt(i))|0; return Math.abs(h); };
@@ -682,25 +713,26 @@ function renderTableRow(r) {
   let dzBadge = '';
   if (r.dz_connected) {
     const devName = r.dz_device_name || 'connected';
-    const short = devName.length > 14 ? devName.substring(0, 12) + '…' : devName;
-    dzBadge = `<span class="infra-badge infra-badge-dz" data-tip="DoubleZero device: ${devName}">DZ <span class="infra-badge-name">${short}</span></span>`;
+    const short = devName.length > 16 ? devName.substring(0, 14) + '…' : devName;
+    dzBadge = `<span class="infra-badge infra-badge-dz" data-tip="DoubleZero device: ${devName}" data-tip-wrap>DZ <span class="infra-badge-name">${short}</span></span>`;
   }
   let mcBadge = '';
   if (r.dz_multicast_publisher) {
-    mcBadge = `<span class="infra-badge infra-badge-mc" data-tip="Publishes shreds via DZ multicast group">DZ Multicast</span>`;
+    mcBadge = `<span class="infra-badge infra-badge-mc" data-tip="Publishes shreds via DZ multicast group" data-tip-wrap>DZ Multicast</span>`;
   }
   let bamBadge = '';
   if (r.bam_node) {
-    const region = r.bam_region || r.bam_node;
-    const short = region.length > 14 ? region.substring(0, 12) + '…' : region;
-    bamBadge = `<span class="infra-badge infra-badge-bam" data-tip="Jito BAM node region: ${region}">BAM <span class="infra-badge-name">${short}</span></span>`;
+    // bam_region carries the full node name in the data; the region is its first segment.
+    const code = bamRegionCode(r.bam_region || r.bam_node);
+    bamBadge = `<span class="infra-badge infra-badge-bam" data-tip="Jito BAM node: ${r.bam_node}" data-tip-wrap>BAM <span class="infra-badge-name">${code || r.bam_node}</span></span>`;
   }
 
   // Flags column — only what is actually meaningful
   let flags = '';
   if (r.delinquent) flags += '<span class="vflag vflag-delinq" data-tip="Not voting last epoch">Delinquent</span>';
-  if (r.is_superminority) flags += '<span class="vflag vflag-sm" data-tip="Part of the superminority — top 33% of stake by validator count">SM</span>';
-  if (r.sfdp_state === 'Approved') flags += '<span class="vflag vflag-sfdp" data-tip="Solana Foundation Delegation Program: Approved">SFDP</span>';
+  if (r.is_superminority) flags += '<span class="vflag vflag-sm" data-tip="Part of the superminority: the smallest set of validators holding 33% of stake" data-tip-wrap>SM</span>';
+  if (r.sfdp_state === 'Approved') flags += '<span class="vflag vflag-sfdp" data-tip="Solana Foundation Delegation Program: Approved" data-tip-wrap>SFDP</span>';
+  if (!inGossip) flags += `<span class="vflag vflag-gossip" data-tip="${NO_GOSSIP_TIP}" data-tip-wrap>No gossip</span>`;
 
   return `
     <tr data-href="${voteHref}">
@@ -711,29 +743,31 @@ function renderTableRow(r) {
         </span>
       </td>
       <td>
-        <div class="cell-name-row">
-          <span class="cell-name">${r.name || '<span style="color:var(--text-muted);font-style:italic">unnamed</span>'}</span>
-        </div>
+        <div class="cell-name-row">${r.name
+          ? `<span class="cell-name">${r.name}</span>`
+          : `<span class="cell-name cell-name-id" data-tip="No name registered on-chain; this is the identity pubkey" data-tip-wrap>${shortenIdentity(r.identity_pubkey, 6, 6)}</span>`}</div>
         <div class="cell-keys">
-          <div class="cell-key-row"><span class="cell-key-label">id</span><span class="cell-key-val">${shortenIdentity(r.identity_pubkey, 4, 4)}</span></div>
+          ${r.name ? `<div class="cell-key-row"><span class="cell-key-label">id</span><span class="cell-key-val">${shortenIdentity(r.identity_pubkey, 4, 4)}</span></div>` : ''}
           <div class="cell-key-row"><span class="cell-key-label">vt</span><span class="cell-key-val">${shortenIdentity(r.vote_account, 4, 4)}</span></div>
           ${r.bls_pubkey ? `<div class="cell-key-row"><span class="cell-key-label">bls</span><span class="cell-key-val">${shortenIdentity(r.bls_pubkey, 4, 4)}</span></div>` : ''}
         </div>
       </td>
       <td>
         <div class="cell-ver-main">${ver}</div>
-        ${client ? `<div class="cell-ver-client" style="color:${cColor}">${client}</div>` : ''}
+        ${clientInfo.label ? `<div class="cell-ver-client" style="color:${cColor}"${clientInfo.tip ? ` data-tip="${clientInfo.tip}" data-tip-wrap` : ''}>${clientInfo.label}</div>` : ''}
       </td>
       <td>
         <div class="cell-stake-main">${stakeSol} SOL</div>
-        <div class="cell-commission">comm ${commission}${r.mev_commission != null ? ` · <span class="mev-commission" data-tip="MEV commission (Jito tips)">mev ${mev}</span>` : ''}</div>
+        <div class="cell-commission"><span class="comm-commission" data-tip="Inflation commission: share of staking rewards kept by the validator" data-tip-wrap>comm ${commission}</span>${r.mev_commission != null ? ` · <span class="mev-commission" data-tip="MEV commission: share of Jito tips kept by the validator" data-tip-wrap>mev ${mev}</span>` : ''}</div>
       </td>
       <td>
         <div class="cell-geo">
           ${flagSrc ? `<span style="display:inline-block;width:20px;height:20px;border-radius:50%;overflow:hidden;background:var(--bg-card-hover);border:1px solid var(--border);flex-shrink:0" data-tip="${geo.country || geo.country_code || ''}"><img src="${flagSrc}" width="20" height="20" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block"/></span>` : '<span style="display:inline-block;width:20px;height:20px;border-radius:50%;background:var(--bg-card-hover);border:1px solid var(--border);flex-shrink:0;text-align:center;line-height:18px;color:var(--text-muted);font-size:0.7em">?</span>'}
           <div class="cell-geo-text">
-            <div class="cell-geo-city">${geo.city || 'Unknown'}</div>
-            <div class="cell-geo-asn" data-tip="${geo.asn_name || ''}">${shortAsnName(geo.asn_name || geo.asn || '')}${geo.asn ? ` <span class="cell-geo-asn-code">${geo.asn}</span>` : ''}</div>
+            ${inGossip
+              ? `<div class="cell-geo-city">${geo.city || 'Unknown'}</div>
+            <div class="cell-geo-asn" data-tip="${geo.asn_name || ''}">${shortAsnName(geo.asn_name || geo.asn || '')}${geo.asn ? ` <span class="cell-geo-asn-code">${geo.asn}</span>` : ''}</div>`
+              : `<div class="cell-geo-city is-muted" data-tip="${NO_GOSSIP_TIP}" data-tip-wrap>Not in gossip</div>`}
           </div>
         </div>
       </td>
@@ -747,7 +781,7 @@ function renderTableRow(r) {
       </td>
       <td>
         <div class="cell-perf">
-          <span class="perf-val">${credits}</span><span class="perf-label" data-tip="Vote credits this epoch">credits</span>
+          <span class="perf-val"${creditsFull ? ` data-tip="${creditsFull} vote credits this epoch" data-tip-wrap` : ''}>${credits}</span><span class="perf-label"><span class="perf-label-txt" data-tip="Vote credits this epoch. #N is the TVC rank: position by credits, ties share a rank" data-tip-wrap>credits</span>${rankHtml}</span>
           <span class="perf-val ${skipClass}">${skipDisp}</span><span class="perf-label" data-tip="Leader slots skipped">skip</span>
           ${r.slot_duration_median != null ? `<span class="perf-val perf-slot">${slot}</span><span class="perf-label perf-slot" data-tip="Median slot duration">slot time</span>` : ''}
           ${r.median_vote_latency != null ? `<span class="perf-val perf-vlat">${vlat}</span><span class="perf-label perf-vlat" data-tip="Median vote latency, slots">v.lat</span>` : ''}
@@ -771,11 +805,15 @@ function renderMobileCard(r) {
   const h = seedHash(r.identity_pubkey || r.name || 'unknown');
   const hue = h % 360, sat = 35 + ((h >> 8) % 20);
 
+  const inGossip = isInGossip(r);
   const skipDisp = r.skip_rate != null ? r.skip_rate.toFixed(2) + '%' : '—';
   const commission = r.commission != null ? r.commission + '%' : '—';
   const mev = r.mev_commission != null ? (r.mev_commission / 100).toFixed(2) + '%' : null;
-  const client = r.client_type || '';
-  const cColor = clientColor(client);
+  const clientInfo = inGossip ? displayClient(r.client_type) : { label: '', tip: null };
+  const client = clientInfo.label;
+  const cColor = clientColor(r.client_type);
+  const creditsTxt = r.epoch_credits != null ? fmtCompact(r.epoch_credits) : '0';
+  const rankTxt = r._tvc_rank != null ? ` · rank #${r._tvc_rank}` : '';
 
   // Visual badges shown inline in collapsed card
   const cardBadges = [];
@@ -785,11 +823,12 @@ function renderMobileCard(r) {
   if (r.bam_node) cardBadges.push('<span class="vcard-pill vcard-pill-bam">BAM</span>');
   if (r.is_superminority) cardBadges.push('<span class="vcard-pill vcard-pill-sm">SM</span>');
   if (r.sfdp_state === 'Approved') cardBadges.push('<span class="vcard-pill vcard-pill-sfdp">SFDP</span>');
+  if (!inGossip) cardBadges.push('<span class="vcard-pill vcard-pill-gossip">No gossip</span>');
 
   let connectionsTxt = [];
   if (r.dz_connected) connectionsTxt.push(`DZ ${r.dz_device_name || ''}`.trim());
   if (r.dz_multicast_publisher) connectionsTxt.push('DZ Multicast');
-  if (r.bam_node) connectionsTxt.push(`BAM ${r.bam_region || r.bam_node}`.trim());
+  if (r.bam_node) connectionsTxt.push(`BAM ${bamRegionCode(r.bam_region || r.bam_node) || r.bam_node}`.trim());
   const connectionsStr = connectionsTxt.length > 0 ? connectionsTxt.join(', ') : 'none';
 
   return `
@@ -800,12 +839,12 @@ function renderMobileCard(r) {
           <span style="${r.icon_url ? 'display:none;' : 'display:flex;'}width:100%;height:100%;align-items:center;justify-content:center;color:white;font-weight:600;font-size:1em;font-family:var(--font-display)">${initial.toUpperCase()}</span>
         </span>
         <div class="vcard-main">
-          <div class="vcard-name">${r.name || '<span style="color:var(--text-muted);font-style:italic">unnamed</span>'}</div>
+          <div class="vcard-name${r.name ? '' : ' is-id'}">${r.name || shortenIdentity(r.identity_pubkey, 6, 6)}</div>
           <div class="vcard-meta">
             ${flagSrc ? `<span style="display:inline-block;width:13px;height:13px;border-radius:50%;overflow:hidden;border:1px solid var(--border);vertical-align:middle;margin-right:0.25rem"><img src="${flagSrc}" width="13" height="13" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block"/></span>` : ''}
             <span class="vcard-stake-inline">${stakeSol} SOL</span>
             <span class="vcard-meta-sep">·</span>
-            <span>${geo.city || '?'}</span>
+            <span>${inGossip ? (geo.city || '?') : 'not in gossip'}</span>
             ${client ? `<span class="vcard-meta-sep">·</span><span style="color:${cColor}">${client}</span>` : ''}
           </div>
           ${cardBadges.length > 0 ? `<div class="vcard-badges">${cardBadges.join('')}</div>` : ''}
@@ -816,11 +855,11 @@ function renderMobileCard(r) {
       </div>
       <div class="vcard-body">
         <div class="vcard-body-row"><span class="vcard-body-label">Vote</span><span class="vcard-body-val" style="font-family:var(--font-mono);font-size:0.72rem">${shortenIdentity(r.vote_account, 6, 6)}</span></div>
-        <div class="vcard-body-row"><span class="vcard-body-label">Version</span><span class="vcard-body-val">${r.version || '—'}</span></div>
+        <div class="vcard-body-row"><span class="vcard-body-label">Version</span><span class="vcard-body-val">${inGossip ? (r.version || '—') : '—'}</span></div>
         <div class="vcard-body-row"><span class="vcard-body-label">Commission</span><span class="vcard-body-val">${commission}${mev ? ' · mev ' + mev : ''}</span></div>
-        <div class="vcard-body-row"><span class="vcard-body-label">Location</span><span class="vcard-body-val">${geo.city || 'Unknown'}, ${geo.country_code || '??'} · ${shortAsnName(geo.asn_name || geo.asn || '')}</span></div>
+        <div class="vcard-body-row"><span class="vcard-body-label">Location</span><span class="vcard-body-val">${inGossip ? `${geo.city || 'Unknown'}, ${geo.country_code || '??'} · ${shortAsnName(geo.asn_name || geo.asn || '')}` : 'Not in gossip'}</span></div>
         <div class="vcard-body-row"><span class="vcard-body-label">Connections</span><span class="vcard-body-val">${connectionsStr}</span></div>
-        <div class="vcard-body-row"><span class="vcard-body-label">Performance</span><span class="vcard-body-val">credits ${r.epoch_credits != null ? fmt(r.epoch_credits) : '0'} · skip ${skipDisp}</span></div>
+        <div class="vcard-body-row"><span class="vcard-body-label">Performance</span><span class="vcard-body-val">credits ${creditsTxt}${rankTxt} · skip ${skipDisp}</span></div>
       </div>
     </div>
   `;
@@ -885,7 +924,8 @@ async function loadAndRender() {
 
   try {
     const data = await fetchValidators(cluster);
-    allRecords = (data?.records || []).filter(r => r && r.role === 'validator');
+    allRecords = (data?.records || []).filter(isValidatorRecord);
+    computeTvcRanks(allRecords);
 
     // Compute cluster-aware visibility flags
     const hasConnections = allRecords.some(r => r.dz_connected || r.bam_node || r.dz_multicast_publisher);
@@ -914,7 +954,9 @@ async function loadAndRender() {
     const totalStake = allRecords.reduce((s, r) => s + (r.activated_stake_lamports || 0), 0);
     document.getElementById('vsum-total').textContent = fmt(allRecords.length);
     const active = allRecords.filter(r => !r.delinquent).length;
-    document.getElementById('vsum-active').textContent = `${active} active · ${allRecords.length - active} delinquent`;
+    const noGossip = allRecords.filter(r => !isInGossip(r)).length;
+    document.getElementById('vsum-active').textContent =
+      `${active} active · ${allRecords.length - active} delinquent${noGossip > 0 ? ` · ${noGossip} not in gossip` : ''}`;
     document.getElementById('vsum-stake').textContent = fmtStakeShort(totalStake);
     const countries = new Set(allRecords.map(r => r.geolocation?.country_code).filter(c => c && c !== '??'));
     document.getElementById('vsum-countries').textContent = countries.size;

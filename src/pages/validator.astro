@@ -179,6 +179,15 @@ import Footer from '../components/Footer.astro';
   .v-name-badges { display: flex; flex-wrap: wrap; gap: 0.35rem; margin: 0 0 0.7rem; }
   .vpill { display: inline-block; font-size: 0.68rem; padding: 0.18rem 0.5rem; border-radius: 5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
   .vpill-delinq { background: rgba(239, 68, 68, 0.15); color: var(--status-critical); border: 1px solid rgba(239, 68, 68, 0.4); }
+  .vpill-gossip { background: transparent; color: var(--text-muted); border: 1px dashed var(--border); }
+  /* Unnamed validator: the identity pubkey stands in for the name. Full key on wide
+     screens, shortened where it would not fit. */
+  .v-name-id { font-family: var(--font-mono); font-size: clamp(1rem, 2.2vw, 1.35rem); font-weight: 500; color: var(--text-secondary); letter-spacing: -0.01em; }
+  .v-name-id-short { display: none; }
+  @media (max-width: 760px) {
+    .v-name-id-full { display: none; }
+    .v-name-id-short { display: inline; }
+  }
   .vpill-sm { background: rgba(239, 68, 68, 0.12); color: var(--status-critical); border: 1px solid rgba(239, 68, 68, 0.3); }
   .vpill-dz { background: rgba(167, 139, 250, 0.15); color: var(--accent-violet); border: 1px solid rgba(167, 139, 250, 0.4); }
   .vpill-mc { background: rgba(232, 121, 249, 0.15); color: var(--accent-magenta); border: 1px solid rgba(232, 121, 249, 0.4); }
@@ -326,8 +335,8 @@ import Footer from '../components/Footer.astro';
 </style>
 
 <script>
-import { bootstrapCluster, getCluster, fetchValidators, fetchSummary, fmtStakeShort } from '../lib/data.js';
-import { fmt, shortenIdentity, clientColor } from '../lib/formatters.js';
+import { bootstrapCluster, getCluster, fetchValidators, fetchSummary, fmtStakeShort, isValidatorRecord, isInGossip } from '../lib/data.js';
+import { fmt, shortenIdentity, clientColor, bamRegionCode, displayClient } from '../lib/formatters.js';
 
 const params = new URLSearchParams(window.location.search);
 const validatorId = params.get('id');
@@ -352,7 +361,7 @@ async function loadValidator() {
 
   try {
     const data = await fetchValidators(cluster);
-    const records = (data?.records || []).filter(r => r && r.role === 'validator');
+    const records = (data?.records || []).filter(isValidatorRecord);
     allRecordsForRank = records;
     const r = records.find(x => x.vote_account === validatorId || x.identity_pubkey === validatorId);
     if (!r) {
@@ -362,7 +371,7 @@ async function loadValidator() {
       await Promise.all(otherClusters.map(async oc => {
         try {
           const od = await fetchValidators(oc);
-          const orecs = (od?.records || []).filter(x => x && x.role === 'validator');
+          const orecs = (od?.records || []).filter(isValidatorRecord);
           const found = orecs.find(x => x.vote_account === validatorId || x.identity_pubkey === validatorId);
           if (found) linked.push({ cluster: oc, record: found });
         } catch {}
@@ -454,7 +463,13 @@ function renderValidator(r, cluster) {
       <span style="${r.icon_url ? 'display:none;' : 'display:flex;'}width:100%;height:100%;align-items:center;justify-content:center;color:white;font-weight:600;font-size:2rem;font-family:var(--font-display);position:absolute;top:0;left:0">${initial.toUpperCase()}</span>
     </span>`;
 
-  document.getElementById('v-name').textContent = r.name || 'Unnamed validator';
+  const nameEl = document.getElementById('v-name');
+  if (r.name) {
+    nameEl.textContent = r.name;
+  } else {
+    // No name registered on-chain: show the identity pubkey instead of a placeholder word.
+    nameEl.innerHTML = `<span class="v-name-id" data-tip="Identity pubkey (no name registered)"><span class="v-name-id-full">${r.identity_pubkey}</span><span class="v-name-id-short">${shortenIdentity(r.identity_pubkey, 8, 8)}</span></span>`;
+  }
   document.getElementById('v-identity').textContent = shortenIdentity(r.identity_pubkey, 6, 6);
   document.getElementById('v-identity-full').textContent = r.identity_pubkey;
   document.getElementById('v-vote').textContent = shortenIdentity(r.vote_account, 6, 6);
@@ -474,6 +489,7 @@ function renderValidator(r, cluster) {
   if (r.bam_node) badges.push('<span class="vpill vpill-bam">BAM</span>');
   if (r.is_rakurai) badges.push('<span class="vpill vpill-rakurai">Rakurai</span>');
   if (r.sfdp_state === 'Approved') badges.push('<span class="vpill vpill-sfdp">SFDP</span>');
+  if (!isInGossip(r)) badges.push('<span class="vpill vpill-gossip" data-tip="Vote account has stake but the node is not visible in gossip: no IP, version or client data this cycle">No gossip</span>');
   document.getElementById('v-name-badges').innerHTML = badges.join('');
 
   const statusPill = r.delinquent
@@ -489,16 +505,19 @@ function renderValidator(r, cluster) {
   document.getElementById('qs-skip').textContent = r.skip_rate != null ? `${r.skip_rate.toFixed(2)}%` : '—';
   document.getElementById('qs-credits').textContent = r.epoch_credits != null ? fmt(r.epoch_credits) : '—';
 
-  // Rank by epoch_credits (current snapshot)
+  // TVC rank by epoch_credits (current snapshot), competition ranking: equal credits
+  // share a rank, the next distinct value gets 1 + number ranked above (1, 1, 1, 4 ...).
   if (r.epoch_credits != null && allRecordsForRank.length > 0) {
-    const sorted = [...allRecordsForRank].filter(x => x.epoch_credits != null).sort((a, b) => b.epoch_credits - a.epoch_credits);
-    const rank = sorted.findIndex(x => x.identity_pubkey === r.identity_pubkey) + 1;
-    if (rank > 0) {
-      document.getElementById('qs-credits-rank').textContent = `current epoch · #${rank} of ${sorted.length}`;
-    }
+    const ranked = allRecordsForRank.filter(x => x.epoch_credits != null);
+    const above = ranked.filter(x => x.epoch_credits > r.epoch_credits).length;
+    const ties = ranked.filter(x => x.epoch_credits === r.epoch_credits).length - 1;
+    const rank = above + 1;
+    document.getElementById('qs-credits-rank').textContent =
+      `current epoch · TVC rank #${rank} of ${ranked.length}${ties > 0 ? ` (shared with ${ties})` : ''}`;
   }
 
   const geo = r.geolocation || {};
+  const inGossip = isInGossip(r);
   const cc = (geo.country_code || '??').toLowerCase();
   const flagSrc = cc !== '??' ? `https://flagcdn.com/w80/${cc}.png` : '';
   document.getElementById('v-loc-row').innerHTML = `
@@ -506,8 +525,8 @@ function renderValidator(r, cluster) {
       ${flagSrc ? `<img src="${flagSrc}" width="36" height="36" style="width:100%;height:100%;object-fit:cover;display:block"/>` : '<span style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:var(--text-muted)">?</span>'}
     </span>
     <div class="v-loc-text">
-      <div class="v-loc-city">${geo.city || 'Unknown city'}</div>
-      <div class="v-loc-country">${geo.region ? geo.region + ', ' : ''}${geo.country || geo.country_code || 'Unknown'}</div>
+      <div class="v-loc-city">${inGossip ? (geo.city || 'Unknown city') : 'Not in gossip'}</div>
+      <div class="v-loc-country">${inGossip ? `${geo.region ? geo.region + ', ' : ''}${geo.country || geo.country_code || 'Unknown'}` : 'No IP is visible for this node this cycle'}</div>
     </div>`;
 
   // Geo Confidence is a string ("high"/"medium"/"low"), not a number. Render as-is with color.
@@ -541,7 +560,7 @@ function renderValidator(r, cluster) {
     cells.push(`<div class="v-infra-cell"><div class="v-infra-cell-label" data-tip="Publishes shreds via DZ multicast group">DZ Multicast</div><div class="v-infra-cell-val">${mcVal}</div></div>`);
   }
   if (clusterHas('bam')) {
-    const bamVal = r.bam_node ? `<span class="yes">${r.bam_region || r.bam_node}</span>` : '<span class="no">No</span>';
+    const bamVal = r.bam_node ? `<span class="yes" data-tip="Jito BAM node: ${r.bam_node}">${bamRegionCode(r.bam_region || r.bam_node) || r.bam_node}</span>` : '<span class="no">No</span>';
     cells.push(`<div class="v-infra-cell"><div class="v-infra-cell-label" data-tip="Jito BAM (Block Assembly Marketplace) — decentralized block production">Jito BAM</div><div class="v-infra-cell-val">${bamVal}</div></div>`);
   }
   // Note: 'Rakurai' is intentionally NOT shown as a separate Yes/No cell — the Version
@@ -550,7 +569,8 @@ function renderValidator(r, cluster) {
     cells.push(`<div class="v-infra-cell"><div class="v-infra-cell-label" data-tip="Solana Foundation Delegation Program status">SFDP</div><div class="v-infra-cell-val">${sfdpStatePill(r.sfdp_state)}</div></div>`);
   }
   const cColor = clientColor(r.client_type);
-  cells.push(`<div class="v-infra-cell"><div class="v-infra-cell-label">Version</div><div class="v-infra-cell-val">${r.version || '—'}</div>${r.client_type ? `<div class="v-infra-cell-sub" style="color:${cColor};font-weight:600">${r.client_type}</div>` : ''}</div>`);
+  const clientInfo = inGossip ? displayClient(r.client_type) : { label: '', tip: null };
+  cells.push(`<div class="v-infra-cell"><div class="v-infra-cell-label">Version</div><div class="v-infra-cell-val">${inGossip ? (r.version || '—') : '—'}</div>${clientInfo.label ? `<div class="v-infra-cell-sub" style="color:${cColor};font-weight:600"${clientInfo.tip ? ` data-tip="${clientInfo.tip}"` : ''}>${clientInfo.label}</div>` : ''}</div>`);
   if (r.bls_pubkey) {
     cells.push('<div class="v-infra-cell"><div class="v-infra-cell-label" data-tip="BLS pubkey — required for Alpenglow consensus participation">BLS Pubkey</div><div class="v-infra-cell-val"><span class="yes">Registered</span></div></div>');
   }
@@ -631,7 +651,7 @@ async function populateCrossCluster(r, currentCluster) {
   await Promise.all(otherClusters.map(async oc => {
     try {
       const od = await fetchValidators(oc);
-      const orecs = (od?.records || []).filter(x => x && x.role === 'validator');
+      const orecs = (od?.records || []).filter(isValidatorRecord);
       const found = orecs.find(x => candidates.includes(x.identity_pubkey) || candidates.includes(x.vote_account) || candidates.includes(x.testnet_pubkey) || candidates.includes(x.mainnet_pubkey));
       if (found) matches.push({ cluster: oc, record: found });
     } catch {}
