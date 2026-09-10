@@ -1490,6 +1490,19 @@ function pickPalette(kind: 'stake' | 'rpc' | 'rpc-secondary' | 'dz' | 'jito' | '
 
 // ───────── Helpers ─────────
 
+// analyzer v3.11 keys every ASN distribution by number ("AS20326") and ships the
+// canonical names in metrics.asn_names. Before v3.11 the keys ARE the names, so the
+// map is empty and the key passes through. Set once per summary load (setAsnNames).
+let ASN_NAMES: Record<string, string> = {};
+function setAsnNames(d: any) {
+  const m = d?.metrics?.asn_names;
+  ASN_NAMES = (m && typeof m === 'object') ? m : {};
+}
+function asnLabel(key: string): string {
+  if (key === '??' || key === 'N/A') return 'Unknown';
+  return shortenLabel(ASN_NAMES[key] || key);
+}
+
 function getClientColor(name: string): string {
   const base = name.replace(/\s*\(\d+\)\s*$/, '').trim();
   return clientColor(base);
@@ -1807,8 +1820,8 @@ function renderMainnetStories(records: any[], d: any): string {
   const ibrlOnly = dzConnected.filter(r => r?.dz_connection_type === 'ibrl').length;
   const dzTotal = Math.max(1, dzConnected.length);
 
-  // Matrix — active only
-  const active = records.filter(r => !r.delinquent);
+  // Matrix — active only (validator universe: co-hosted records carry no delinquent flag)
+  const active = records.filter(r => isValidatorRecord(r) && !r.delinquent);
   let both = 0, bam = 0, dz_only = 0, neither = 0;
   for (const r of active) {
     const hb = !!r.bam_node, hd = !!r.dz_connected;
@@ -2009,7 +2022,8 @@ function renderMainnetStories(records: any[], d: any): string {
 
 // ───────── Performance brackets (Variant D) ─────────
 // Top: ≥97% of max credits | Mid: 65–97% | Lagging: <65%
-function computePerformanceBrackets(records: any[]) {
+function computePerformanceBrackets(recordsAll: any[]) {
+  const records = recordsAll.filter(isValidatorRecord);
   const active = records.filter(r => !r.delinquent);
   const credits = active.map(r => r.epoch_credits || 0).filter(c => c > 0);
   if (credits.length === 0) return { top: 0, mid: 0, lagging: 0, max: 0, total: active.length, delinq: records.length - active.length };
@@ -2027,7 +2041,7 @@ function computePerformanceBrackets(records: any[]) {
 function renderTestnetDevnetStories(records: any[], d: any, cluster: 'testnet' | 'devnet', sfdpPlaceholder: boolean): string {
   const overall = d?.metrics?.overall || {};
   const totalNodes = (overall.total ?? 0) - (d?.record_counts?.['unknown-node'] ?? 0);
-  const activeValidators = d?.metrics?.validators?.total ?? records.filter(r => !r.delinquent).length;
+  const activeValidators = records.filter(r => isValidatorRecord(r) && !r.delinquent).length || (d?.metrics?.validators?.total ?? 0);
   const activeRpcs = d?.metrics?.rpc?.total ?? 0;
 
   const perf = computePerformanceBrackets(records);
@@ -2204,7 +2218,7 @@ function renderTestnetDevnetStories(records: any[], d: any, cluster: 'testnet' |
 function renderAlpenglowStories(records: any[], d: any): string {
   const m = d?.metrics || {};
   const v = m.validators || {};
-  const activeValidators = v.total ?? records.filter(r => !r.delinquent).length;
+  const activeValidators = records.filter(r => isValidatorRecord(r) && !r.delinquent).length || (v.total ?? 0);
   const activeRpcs = m.rpc?.total ?? 0;
   const epochPct = d?.epoch_completed_percent ?? 0;
   const consensus = detectConsensus(d);
@@ -2279,7 +2293,7 @@ function renderAlpenglowStories(records: any[], d: any): string {
   // ── Card: Validators by stake (span-2) ── donut top-7 + Other (same as devnet)
   const TOP_N = 7;
   const stakeSorted = records
-    .filter(r => !r.delinquent && (r.activated_stake_lamports ?? 0) > 0)
+    .filter(r => isValidatorRecord(r) && !r.delinquent && (r.activated_stake_lamports ?? 0) > 0)
     .sort((a, b) => (b.activated_stake_lamports ?? 0) - (a.activated_stake_lamports ?? 0));
   const topStake = stakeSorted.slice(0, TOP_N);
   const restStake = stakeSorted.slice(TOP_N);
@@ -3043,7 +3057,7 @@ function makeDonutItems(
   const top = entries.slice(0, topN);
   const rest = entries.slice(topN);
   const items = top.map(([k, v], i) => ({
-    label: k === '??' ? 'Unknown' : shortenLabel(k),
+    label: asnLabel(k),
     value: v as number,
     color: palette[i % palette.length],
   }));
@@ -3157,7 +3171,7 @@ function renderPath(d: any) {
 
   const topAsnEntries = Object.entries(stakeByAsn).filter(([k]) => k !== 'OFFLINE').sort((a, b) => (b[1] as number) - (a[1] as number));
   const topAsn = topAsnEntries[0];
-  const topAsnName = topAsn ? topAsn[0] : '--';
+  const topAsnName = topAsn ? asnLabel(topAsn[0]) : '--';
   const topAsnPct = topAsn ? Number(topAsn[1]) : 0;
 
   const topCountries = Object.entries(stakeByCountry).filter(([k]) => k !== 'OFFLINE').sort((a, b) => (b[1] as number) - (a[1] as number)).slice(0, 3);
@@ -3259,7 +3273,7 @@ function renderGeo(d: any) {
         const cls = stakeNum > 25 ? 'crit' : stakeNum > 15 ? 'warn' : 'normal';
         const w = Math.round((count as number / maxA) * 100);
         return `<div class="geo-row">
-          <div class="geo-country"><span class="geo-cc" data-tip="${escapeHtml(asn as string)}">${escapeHtml(asn as string)}</span></div>
+          <div class="geo-country"><span class="geo-cc" data-tip="${escapeHtml(asn as string)}">${escapeHtml(asnLabel(asn as string))}</span></div>
           <div class="geo-bar-wrap"><div class="geo-bar ${cls}" style="width:${w}%"></div></div>
           <div class="geo-count">${fmt(count)}</div>
           <div class="geo-stake">${stake != null ? pct(stakeNum, 1) : ''}</div>
@@ -3589,6 +3603,7 @@ async function loadAll(cluster: string, isClusterChange: boolean = false) {
   let summary: any = null;
   try {
     summary = await fetchSummary(cluster);
+    setAsnNames(summary);
     renderHeroAndStrip(summary);
     try { renderInfra(summary); } catch (e) { console.warn('renderInfra:', e); }
     try { renderRpcSummary(summary); } catch (e) { console.warn('renderRpcSummary:', e); }

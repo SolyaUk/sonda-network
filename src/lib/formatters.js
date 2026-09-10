@@ -129,6 +129,7 @@ const CLIENT_COLORS = {
   'Rakurai':                  '#eab308',
   'Raiku':                    '#fbbf24',
   'Agave':                    '#14b8a6',
+  'Mithril':                  '#a3e635',  // Overclock client (gossip id 19785), canonical since analyzer v3.11
   'Unknown':                  '#6b7280',
 };
 
@@ -143,10 +144,12 @@ export function clientColor(client) {
  * "Unknown(N)"; show them as "Unknown" and keep the raw code for the tooltip.
  * Returns { label, tip } where tip is null when nothing extra to say.
  */
-export function displayClient(client) {
+export function displayClient(client, clientIdRaw) {
   if (!client) return { label: '', tip: null };
   const m = /^Unknown\((\d+)\)$/.exec(client);
   if (m) return { label: 'Unknown', tip: `Unrecognized client id ${m[1]} reported in gossip` };
+  // analyzer v3.11: unknown codes arrive as client_type "Unknown" with client_id_raw
+  if (client === 'Unknown' && clientIdRaw != null) return { label: 'Unknown', tip: `Unrecognized client id ${clientIdRaw} reported in gossip` };
   return { label: client, tip: null };
 }
 

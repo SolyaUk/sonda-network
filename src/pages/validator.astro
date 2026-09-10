@@ -569,7 +569,7 @@ function renderValidator(r, cluster) {
     cells.push(`<div class="v-infra-cell"><div class="v-infra-cell-label" data-tip="Solana Foundation Delegation Program status">SFDP</div><div class="v-infra-cell-val">${sfdpStatePill(r.sfdp_state)}</div></div>`);
   }
   const cColor = clientColor(r.client_type);
-  const clientInfo = inGossip ? displayClient(r.client_type) : { label: '', tip: null };
+  const clientInfo = inGossip ? displayClient(r.client_type, r.client_id_raw) : { label: '', tip: null };
   cells.push(`<div class="v-infra-cell"><div class="v-infra-cell-label">Version</div><div class="v-infra-cell-val">${inGossip ? (r.version || '—') : '—'}</div>${clientInfo.label ? `<div class="v-infra-cell-sub" style="color:${cColor};font-weight:600"${clientInfo.tip ? ` data-tip="${clientInfo.tip}"` : ''}>${clientInfo.label}</div>` : ''}</div>`);
   if (r.bls_pubkey) {
     cells.push('<div class="v-infra-cell"><div class="v-infra-cell-label" data-tip="BLS pubkey — required for Alpenglow consensus participation">BLS Pubkey</div><div class="v-infra-cell-val"><span class="yes">Registered</span></div></div>');

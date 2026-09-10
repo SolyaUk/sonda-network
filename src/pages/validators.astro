@@ -701,7 +701,7 @@ function renderTableRow(r) {
   const commission = r.commission != null ? r.commission + '%' : '—';
   const mev = r.mev_commission != null ? (r.mev_commission / 100).toFixed(2) + '%' : '—';
   const ver = inGossip ? (r.version || '—') : '—';
-  const clientInfo = inGossip ? displayClient(r.client_type) : { label: '', tip: null };
+  const clientInfo = inGossip ? displayClient(r.client_type, r.client_id_raw) : { label: '', tip: null };
   const cColor = clientColor(r.client_type);
 
   const initial = (r.name && r.name.trim()[0]) || (r.identity_pubkey && r.identity_pubkey[0]) || '?';
@@ -809,7 +809,7 @@ function renderMobileCard(r) {
   const skipDisp = r.skip_rate != null ? r.skip_rate.toFixed(2) + '%' : '—';
   const commission = r.commission != null ? r.commission + '%' : '—';
   const mev = r.mev_commission != null ? (r.mev_commission / 100).toFixed(2) + '%' : null;
-  const clientInfo = inGossip ? displayClient(r.client_type) : { label: '', tip: null };
+  const clientInfo = inGossip ? displayClient(r.client_type, r.client_id_raw) : { label: '', tip: null };
   const client = clientInfo.label;
   const cColor = clientColor(r.client_type);
   const creditsTxt = r.epoch_credits != null ? fmtCompact(r.epoch_credits) : '0';
