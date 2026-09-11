@@ -51,6 +51,23 @@ const {
     window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)},plausible.init=plausible.init||function(i){plausible.o=i||{}};
     plausible.init()
   </script>
+  <script>
+    // Shared tooltip engine for every page (data-tip attributes and (i) info boxes).
+    import { initTooltips } from '../lib/tooltip.js';
+    initTooltips();
+
+    // Back-to-top button: long lists (the full mainnet table) are a long way back up.
+    const toTop = document.createElement('button');
+    toTop.className = 'to-top';
+    toTop.type = 'button';
+    toTop.setAttribute('aria-label', 'Back to top');
+    toTop.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 15 12 9 18 15"/></svg>';
+    document.body.appendChild(toTop);
+    toTop.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+    const onScroll = () => toTop.classList.toggle('is-visible', window.scrollY > 800);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+  </script>
 
   <script type="application/ld+json">
     {

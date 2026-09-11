@@ -14,7 +14,7 @@ import Footer from '../components/Footer.astro';
   <div class="dev-banner">
     <div class="dev-banner-inner">
       <span class="dev-badge">BETA</span>
-      Dashboard is under active development. Some sections are incomplete.
+      SONDA is under active development. Some sections are incomplete.
       <a href="https://github.com/SolyaUk/sonda-network" target="_blank" rel="noopener" class="dev-link">View on GitHub</a>
     </div>
   </div>
@@ -24,31 +24,33 @@ import Footer from '../components/Footer.astro';
 
     <section class="page-hero">
       <h1 class="page-title">Validators</h1>
-      <p class="page-sub">All active validators across the selected cluster. Search, sort, and filter by location, infrastructure, and performance</p>
     </section>
 
-    <!-- Header summary cards (v0: counts + 2 simple donuts).
-         v1 will replace with Insights-style story cards (geography multi-layered donut, ASN donut, BAM×DZ Coverage, performance brackets, etc.) -->
-    <section class="vsummary">
-      <div class="vsum-card">
-        <div class="vsum-label">VALIDATORS</div>
-        <div class="vsum-val mono" id="vsum-total">—</div>
-        <div class="vsum-sub" id="vsum-active">—</div>
+    <!-- One-line cluster summary (replaced the 4 KPI tiles on 2026-09-10, F-A.1). -->
+    <div class="vsummary-line" id="vsummary-line">Loading cluster summary…</div>
+
+    <!-- Breakdown: aggregate cards in the homepage Insights language (story card, stacked
+         stake bar, legend rows). Card set comes from VALIDATOR_CARDS in the script below and
+         depends on the cluster. Hidden until data arrives; rolled out cluster by cluster
+         (AGG_CARDS_CLUSTERS). Rows carry data-fkey/data-fval for the phase 2 filters. -->
+    <section class="vagg" id="vagg" hidden>
+      <div class="vagg-head">
+        <button class="vagg-toggle" id="vagg-toggle" type="button" aria-expanded="true" aria-controls="vagg-grid">
+          <span class="vagg-title">Breakdown</span>
+          <span class="vagg-hint">click an entry to filter the table, click again to remove; filters combine</span>
+        </button>
+        <button class="filter-clear vagg-clear" id="filter-clear-top" type="button" style="display:none">Clear all filters &times;</button>
+        <button class="vagg-toggle-pill" id="vagg-toggle-pill" type="button" aria-expanded="true" aria-controls="vagg-grid"><span class="vagg-toggle-txt">Hide</span><svg class="vagg-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></button>
       </div>
-      <div class="vsum-card">
-        <div class="vsum-label">TOTAL STAKE</div>
-        <div class="vsum-val mono" id="vsum-stake">—</div>
-        <div class="vsum-sub">SOL</div>
-      </div>
-      <div class="vsum-card">
-        <div class="vsum-label">COUNTRIES</div>
-        <div class="vsum-val mono" id="vsum-countries">—</div>
-        <div class="vsum-sub" id="vsum-cities">— cities</div>
-      </div>
-      <div class="vsum-card">
-        <div class="vsum-label">NETWORK PROVIDERS</div>
-        <div class="vsum-val mono" id="vsum-asns">—</div>
-        <div class="vsum-sub">ASN</div>
+      <div id="vagg-grid" class="vagg-body">
+        <div class="vagg-block" data-group="software">
+          <button class="vagg-block-title" type="button" aria-expanded="true"><svg class="vagg-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>Validator software</button>
+          <div class="vagg-grid vagg-grid-software" id="vagg-group-software"></div>
+        </div>
+        <div class="vagg-block" data-group="decentralization">
+          <button class="vagg-block-title" type="button" aria-expanded="true"><svg class="vagg-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>Validator decentralization</button>
+          <div class="vagg-grid vagg-grid-3" id="vagg-group-decentralization"></div>
+        </div>
       </div>
     </section>
 
@@ -58,7 +60,7 @@ import Footer from '../components/Footer.astro';
         <input type="search" class="filter-search" id="filter-search" placeholder="Search name, identity or vote account…" />
       </div>
       <div class="filter-chips" id="active-filters"></div>
-      <button class="filter-clear" id="filter-clear" style="display:none">Clear filters</button>
+      <button class="filter-clear" id="filter-clear" style="display:none">Clear all filters &times;</button>
     </section>
 
     <!-- Active filter / sort indicator -->
@@ -69,6 +71,10 @@ import Footer from '../components/Footer.astro';
         <select id="sort-select" class="sort-select">
           <option value="rank-asc" selected>TVC rank (best first)</option>
           <option value="stake-desc">Stake (high to low)</option>
+          <option value="delinquent-desc">Delinquent first</option>
+          <option value="sfdp-asc">SFDP approved first</option>
+          <option value="client-asc">Client (A to Z)</option>
+          <option value="version-desc">Version (newest first)</option>
           <option value="stake-asc">Stake (low to high)</option>
           <option value="name-asc">Name (A–Z)</option>
           <option value="city-asc">City (A–Z)</option>
@@ -152,40 +158,168 @@ import Footer from '../components/Footer.astro';
     margin: 0;
   }
 
-  /* Summary cards */
-  .vsummary {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 0.85rem;
-    margin: 1.5rem 0 1.2rem;
-  }
-  .vsum-card {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 0.85rem 1.05rem 0.95rem;
-  }
-  .vsum-label {
-    font-size: 0.6rem;
-    letter-spacing: 0.1em;
+  /* One-line cluster summary (same pattern as the stat rows on homepage cards) */
+  .vsummary-line {
+    margin: 1.25rem 0 1rem;
+    font-size: 0.82rem;
     color: var(--text-muted);
-    text-transform: uppercase;
-    margin-bottom: 0.4rem;
+    line-height: 1.7;
   }
-  .vsum-val {
-    font-family: var(--font-display);
-    font-size: 1.5rem;
-    font-weight: 700;
+  .vsummary-line b {
+    font-family: var(--font-mono);
+    font-weight: 600;
     color: var(--text-primary);
-    line-height: 1;
   }
-  .vsum-sub {
-    font-size: 0.72rem;
-    color: var(--text-muted);
-    margin-top: 0.25rem;
+  .vsummary-line .vsl-sep { margin: 0 0.45rem; opacity: 0.6; }
+  .vsummary-line .vsl-warn b { color: var(--status-critical); }
+
+  /* Breakdown section: collapsible grid of story cards */
+  .vagg { margin: 0 0 1.4rem; }
+  .vagg-head { display: flex; align-items: center; gap: 0.6rem; margin: 0 0 0.6rem; }
+  .vagg-toggle {
+    display: flex; align-items: center; gap: 0.6rem; flex: 1 1 auto; min-width: 0;
+    background: none; border: 0; padding: 0.35rem 0; margin: 0;
+    color: var(--text-primary); cursor: pointer; text-align: left; font-family: inherit;
   }
-  @media (max-width: 768px) { .vsummary { grid-template-columns: repeat(2, 1fr); gap: 0.6rem; } }
-  @media (max-width: 380px) { .vsum-val { font-size: 1.3rem; } }
+  .vagg-clear { flex-shrink: 0; }
+  .vagg-title { font-family: var(--font-display); font-size: 1.05rem; font-weight: 700; }
+  .vagg-hint { font-size: 0.74rem; color: var(--text-muted); font-weight: 400; }
+  @media (max-width: 760px) { .vagg-hint { display: none; } }
+  .vagg-toggle-pill {
+    flex-shrink: 0; display: inline-flex; align-items: center; gap: 0.35rem;
+    padding: 0.28rem 0.7rem; border: 1px solid var(--border); border-radius: 999px;
+    background: var(--bg-card); color: var(--text-secondary); font-size: 0.74rem; font-weight: 500;
+    cursor: pointer; font-family: inherit;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .vagg-toggle:hover ~ .vagg-toggle-pill, .vagg-toggle-pill:hover { border-color: var(--border-accent); color: var(--text-primary); }
+  .vagg-chevron { color: var(--text-muted); transition: transform 0.2s ease; }
+  .vagg.is-collapsed .vagg-chevron { transform: rotate(-90deg); }
+  .vagg.is-collapsed .vagg-body { display: none; }
+  .vagg-block { margin-bottom: 0.9rem; }
+  .vagg-block.is-collapsed { margin-bottom: 0.4rem; }
+  .vagg-block-title {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    background: none; border: 0; padding: 0.15rem 0; margin: 0 0 0.45rem 0; cursor: pointer;
+    font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted);
+  }
+  .vagg-block-title:hover { color: var(--text-secondary); }
+  .vagg-block.is-collapsed .vagg-block-title .vagg-chevron { transform: rotate(-90deg); }
+  .vagg-block.is-collapsed .vagg-grid { display: none; }
+  .vagg-grid { display: grid; gap: 0.85rem; align-items: stretch; }
+  /* software: two wide cards + narrow status card (~22%) */
+  .vagg-grid-software { grid-template-columns: minmax(0, 1.75fr) minmax(0, 1.75fr) minmax(0, 1fr); }
+  .vagg-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  @media (max-width: 1100px) { .vagg-grid-3, .vagg-grid-software { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 640px) { .vagg-grid-software, .vagg-grid-3 { grid-template-columns: 1fr; } }
+
+  /* Status card: big number (validators in view) + bar rows, the DZ/BAM-card language.
+     Track = share of validators in view; number and fill take the flag's own colour. */
+  /* Compact: number and caption share a line so the card is no taller than its neighbours */
+  .vagg-status-head { display: flex; align-items: baseline; gap: 0.45rem; margin-top: 0.1rem; }
+  .vagg-view-status .story-big { font-size: 1.7rem; line-height: 1; margin: 0; }
+  .vagg-view-status .story-sub { margin: 0; }
+  .vagg-view-status .bar-rows-wrap.with-divider { padding-top: 0.45rem; margin-top: 0.5rem; gap: 0.15rem; }
+  .vagg-view-status .bar-row { grid-template-columns: minmax(0, 1fr) 72px 34px; cursor: pointer; padding: 0.18rem 0.3rem; margin: 0 -0.3rem; border-radius: 6px; }
+  .vagg-view-status .bar-row .bar-row-label { color: var(--text-primary); }
+  .vagg-view-status .bar-row.is-dim { opacity: 0.38; }
+  .vagg-view-status .bar-row-fill.crit { background: var(--status-critical); }
+  .vagg-view-status .bar-row-fill.cluster { background: var(--cluster-accent); }
+  .vagg-view-status .bar-row-fill.warn { background: var(--accent-amber); }
+  .vagg-view-status .bar-row-fill.neutral { background: var(--text-muted); opacity: 0.7; }
+  .vagg-view-status .bar-row-num.crit { color: var(--status-critical); }
+  .vagg-view-status .bar-row-num.cluster { color: var(--cluster-accent); }
+
+  /* Click-to-filter states (F-A.2) */
+  .vagg-card [data-fkey] { cursor: pointer; border-radius: 6px; transition: background 0.12s, opacity 0.12s; }
+  .vagg-card [data-fkey]:hover { background: var(--bg-card-hover); }
+  .vagg-card [data-fkey].is-selected { background: color-mix(in srgb, var(--cluster-accent) 14%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cluster-accent) 45%, transparent); }
+  .vagg-card [data-fkey].is-dim { opacity: 0.38; }
+  .vagg-card [data-fkey].is-dim:hover { opacity: 0.7; }
+  .vagg-card .stacked-legend-item[data-fkey] { padding: 0.1rem 0.3rem; margin: 0 -0.3rem; }
+  .vagg-card .vagg-row[data-fkey] { padding: 0.15rem 0.3rem; margin: 0 -0.3rem; }
+
+  .vagg-card { gap: 0.4rem; padding: 1rem 1.05rem 0.9rem; }
+  .vagg-card .story-title { font-size: 0.9rem; }
+  .vagg-meta { font-family: var(--font-mono); font-size: 0.66rem; color: var(--text-muted); white-space: nowrap; }
+  .vagg-card .stacked-bar { height: 28px; margin: 0.35rem 0 0.2rem; }
+  .vagg-card .stacked-segment { font-size: 0.68rem; }
+
+  .vagg-rows { display: flex; flex-direction: column; gap: 0.2rem; margin-top: 0.3rem; }
+  /* Expanded lists scroll inside the card instead of stretching the whole grid */
+  .vagg-card.is-expanded .vagg-rows { max-height: 330px; overflow-y: auto; padding: 0 0.3rem; margin-left: -0.3rem; margin-right: -0.3rem; scrollbar-width: thin; }
+  .vagg-foot { margin-top: auto; padding-top: 0.45rem; min-height: 1.6rem; display: flex; align-items: center; }
+  .vagg-row {
+    display: grid; grid-template-columns: 18px minmax(0, 1fr) auto auto;
+    gap: 0.4rem; align-items: center;
+    font-size: 0.78rem; padding: 0.15rem 0; min-width: 0;
+  }
+  .vagg-name .legend-leader { margin-right: 0; }
+  .vagg-row.has-bar { grid-template-columns: 18px minmax(0, 1fr) 56px auto auto; }
+  .vagg-track { height: 5px; background: var(--bg-primary); border: 1px solid var(--border); border-radius: 3px; overflow: hidden; }
+  .vagg-track-fill { height: 100%; border-radius: 2px; background: var(--cluster-accent); min-width: 1px; }
+  .vagg-row.is-special .vagg-track-fill { background: var(--text-muted); opacity: 0.5; }
+  .vagg-row.is-extra { display: none; }
+  .vagg-card.is-expanded .vagg-row.is-extra { display: grid; }
+  /* Donut view: bigger and thicker than the homepage donuts, rows to the right */
+  .vagg-donut { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 0.9rem; align-items: center; margin-top: 0.35rem; }
+  .vagg-donut .donut-svg { width: 150px; height: 150px; }
+  .vagg-donut .vagg-rows { margin-top: 0; }
+  .vagg-donut .vagg-row { grid-template-columns: 18px minmax(0, 1fr) auto auto; gap: 0.4rem; }
+  @media (max-width: 480px) { .vagg-donut { grid-template-columns: 1fr; } .vagg-donut .donut-svg { margin: 0 auto; } }
+  /* City marker: map-pin shape with the country flag inside (circle is the country marker) */
+  .vagg-pin { width: 17px; height: 17px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); overflow: hidden; border: 1px solid var(--border); background: var(--bg-card-hover); flex-shrink: 0; margin: 0 1px 2px 0; }
+  .vagg-pin img { width: 100%; height: 100%; object-fit: cover; display: block; transform: rotate(45deg) scale(1.4); }
+  /* Software cards reuse the homepage legend; version status colours the name (as in the table) */
+  .vagg-card .stacked-legend { margin-top: 0.6rem; }
+  .vagg-card .stacked-legend-item.is-extra { display: none; }
+  .vagg-card.is-expanded .stacked-legend-item.is-extra { display: flex; }
+  .vagg-card.is-expanded .vagg-other { display: none; }
+  /* Scrolling lists clip at their box; the row highlight extends 0.3rem to the left, so give
+     the scroll box that much padding and pull it back with a margin. */
+  .vagg-card.is-expanded .stacked-legend { max-height: 260px; overflow-y: auto; padding: 0 0.3rem; margin-left: -0.3rem; margin-right: -0.3rem; scrollbar-width: thin; }
+  .vagg-card .vagg-other { cursor: pointer; }
+  .vagg-card .stacked-legend-name.ver-outdated { color: var(--accent-amber); }
+  .vagg-card .stacked-legend-name.ver-ancient { color: var(--status-critical); }
+  .vagg-card .stacked-legend-item.is-special .stacked-legend-name { color: var(--text-muted); font-style: italic; font-weight: 400; }
+  .vagg-card .stacked-legend-stat .vagg-delinq { margin-right: 0.35rem; }
+  .vagg-row.is-special .vagg-name { color: var(--text-muted); font-style: italic; }
+  .vagg-name { color: var(--text-primary); font-weight: 500; min-width: 0; display: flex; align-items: center; gap: 0.35rem; }
+  .vagg-name > span:first-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 0 1 auto; }
+  .vagg-count { font-family: var(--font-mono); font-size: 0.74rem; color: var(--text-secondary); text-align: right; white-space: nowrap; display: inline-flex; align-items: baseline; justify-content: flex-end; }
+  /* Delinquent part of a count: thin red divider instead of a dot (35 | 3 reads as two numbers, 35.3 read as a decimal) */
+  .vagg-delinq { color: var(--status-critical); font-size: 0.66rem; margin-left: 0.3rem; padding-left: 0.3rem; border-left: 1px solid color-mix(in srgb, var(--status-critical) 55%, transparent); line-height: 1; cursor: help; }
+  .vagg-stake { font-family: var(--font-mono); font-size: 0.74rem; color: var(--text-primary); font-weight: 600; text-align: right; min-width: 3.4em; }
+
+  /* Row markers: colour dot, round flag, round provider logo with initial as fallback */
+  .vagg-dot { width: 9px; height: 9px; border-radius: 2px; margin: 0 auto; }
+  .vagg-flag, .vagg-logo {
+    width: 18px; height: 18px; border-radius: 50%; overflow: hidden; position: relative;
+    background: var(--bg-card-hover); border: 1px solid var(--border); flex-shrink: 0;
+  }
+  .vagg-flag img, .vagg-logo img { width: 100%; height: 100%; object-fit: cover; display: block; position: relative; z-index: 1; }
+  .vagg-logo::before {
+    content: attr(data-initial); position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-mono); font-size: 0.58rem; font-weight: 600; color: var(--text-muted);
+  }
+  .vagg-marker-muted { width: 18px; height: 18px; border-radius: 50%; border: 1px dashed var(--border); }
+  .vagg-empty { display: flex; align-items: center; justify-content: center; width: 150px; height: 150px; border-radius: 50%; border: 1px dashed var(--border); color: var(--text-muted); font-size: 0.72rem; }
+  .vagg-more {
+    padding: 0; background: none; border: 0; color: var(--cluster-accent); font-size: 0.74rem;
+    cursor: pointer; font-family: inherit;
+  }
+  .vagg-more:hover { text-decoration: underline; }
+
+  /* Version status (F-18): current has no accent; outdated amber; ancient red */
+  .ver-tag {
+    font-family: var(--font-mono); font-size: 0.58rem; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.05em; padding: 0.05rem 0.3rem; border-radius: 3px; flex-shrink: 0;
+  }
+  .ver-tag-outdated { color: var(--accent-amber); border: 1px solid color-mix(in srgb, var(--accent-amber) 45%, transparent); }
+  .ver-tag-ancient { color: var(--status-critical); border: 1px solid color-mix(in srgb, var(--status-critical) 45%, transparent); }
+  .cell-ver-main.ver-outdated { color: var(--accent-amber); }
+  .cell-ver-main.ver-ancient { color: var(--status-critical); }
 
   /* Filters */
   .filters-bar {
@@ -227,15 +361,16 @@ import Footer from '../components/Footer.astro';
   }
   .filter-chip .chip-x:hover { color: var(--status-critical); }
   .filter-clear {
-    background: none;
-    border: 1px solid var(--border);
-    color: var(--text-secondary);
-    border-radius: 8px;
-    padding: 0.4rem 0.75rem;
+    background: color-mix(in srgb, var(--cluster-accent) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--cluster-accent) 55%, transparent);
+    color: var(--text-primary);
+    border-radius: 999px;
+    padding: 0.4rem 0.85rem;
     font-size: 0.78rem;
+    font-weight: 600;
     cursor: pointer;
   }
-  .filter-clear:hover { color: var(--text-primary); }
+  .filter-clear:hover { background: color-mix(in srgb, var(--cluster-accent) 22%, transparent); }
 
   .result-line {
     display: flex;
@@ -309,6 +444,8 @@ import Footer from '../components/Footer.astro';
 
   /* Group 1: icon (delinquent indicator moved to flags column) */
   .cell-icon { position: relative; }
+  /* Position in the current list (sorted + filtered), under the icon: quiet, mono */
+  .row-pos { font-family: var(--font-mono); font-size: 0.6rem; color: var(--text-muted); text-align: center; margin-top: 0.2rem; letter-spacing: 0; }
 
   /* Group 2: name, identity, vote, BLS */
   .cell-name-row { display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap; margin-bottom: 0.15rem; }
@@ -335,8 +472,8 @@ import Footer from '../components/Footer.astro';
     margin-top: 0.15rem;
     font-family: var(--font-mono);
   }
-  .cell-commission .comm-commission { color: var(--accent-amber); }
-  .cell-commission .mev-commission { color: var(--accent-cyan); }
+  .cell-commission .comm-commission { color: var(--accent-amber); white-space: nowrap; }
+  .cell-commission .mev-commission { color: var(--accent-cyan); white-space: nowrap; }
 
   /* Group 5: location */
   .cell-geo { display: flex; align-items: center; gap: 0.45rem; line-height: 1.3; }
@@ -346,7 +483,7 @@ import Footer from '../components/Footer.astro';
   .cell-geo-asn-code { font-size: 0.65rem; color: var(--text-muted); opacity: 0.7; background: var(--bg-card-hover); border: 1px solid var(--border); border-radius: 3px; padding: 0 0.3rem; }
 
   /* Group 6: infrastructure badges */
-  .cell-infra { display: flex; flex-direction: column; gap: 0.3rem; }
+  .cell-infra { display: flex; flex-wrap: wrap; gap: 0.3rem; align-items: flex-start; align-content: flex-start; }
   .infra-badge {
     display: inline-flex;
     align-items: baseline;
@@ -402,9 +539,11 @@ import Footer from '../components/Footer.astro';
   .perf-skip-bad { color: var(--status-critical); }
 
   /* Group 8: flags */
-  .cell-flags { display: flex; flex-direction: column; gap: 0.25rem; }
+  /* Badges are as wide as their text and wrap into rows (Viktor: two per row when they fit) */
+  .cell-flags { display: flex; flex-wrap: wrap; gap: 0.25rem; align-items: flex-start; align-content: flex-start; }
   .vflag {
     display: inline-block;
+    white-space: nowrap;
     font-size: 0.65rem;
     letter-spacing: 0.05em;
     text-transform: uppercase;
@@ -421,41 +560,7 @@ import Footer from '../components/Footer.astro';
 
   /* Custom fast tooltip — shows on hover with no delay.
      Applied via data-tip="..." attribute. Native title="" has ~1.5s delay. */
-  [data-tip] { position: relative; cursor: help; }
-  [data-tip]::after {
-    content: attr(data-tip);
-    position: absolute;
-    bottom: 100%;
-    left: 50%;
-    transform: translateX(-50%) translateY(-4px);
-    background: var(--bg-secondary);
-    border: 1px solid var(--border);
-    color: var(--text-primary);
-    padding: 0.35rem 0.55rem;
-    border-radius: 6px;
-    font-family: var(--font-display);
-    font-size: 0.72rem;
-    font-weight: 400;
-    line-height: 1.35;
-    letter-spacing: normal;
-    text-transform: none;
-    white-space: nowrap;
-    max-width: 280px;
-    pointer-events: none;
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.08s ease, visibility 0.08s ease;
-    z-index: 200;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
-  }
-  [data-tip][data-tip-wrap]::after { white-space: normal; width: 200px; }
-  /* Tooltips in the two rightmost columns open to the left edge of the element so the
-     popup never extends past the table (a hidden popup still widens the page and shows a
-     horizontal scrollbar). Interim until the shared JS tooltip lands (F-5). */
-  .cell-flags [data-tip]::after,
-  .cell-perf [data-tip]::after { left: auto; right: 0; transform: translateY(-4px); }
-  [data-tip]:hover::after { opacity: 1; visibility: visible; }
-  @media (hover: none) { [data-tip]:hover::after { display: none; } }
+  /* Tooltips: shared engine in src/lib/tooltip.js + .sonda-tip in global.css */
 
   /* Load more */
   .load-more-wrap { text-align: center; margin-top: 1.2rem; }
@@ -618,11 +723,12 @@ import Footer from '../components/Footer.astro';
 <script>
 import {
   bootstrapCluster, getCluster, fetchValidators, fetchSummary,
-  filterValidators, sortValidators, computeTvcRanks,
-  isValidatorRecord, isInGossip,
+  filterValidators, sortValidators, computeTvcRanks, aggregateByAsn,
+  isValidatorRecord, isInGossip, clientLabel,
   fmtStakeShort, concentrationLevel,
 } from '../lib/data.js';
-import { fmt, pct, shortenIdentity, fmtSol, clientColor, displayClient, fmtCompact, bamRegionCode } from '../lib/formatters.js';
+import { fmt, pct, shortenIdentity, fmtSol, clientColor, versionColor, displayClient, fmtCompact, bamRegionCode } from '../lib/formatters.js';
+import { renderDonut } from '../lib/charts.js';
 
 const NO_GOSSIP_TIP = 'Vote account has stake but the node is not visible in gossip: no IP, version or client data this cycle';
 
@@ -630,6 +736,7 @@ const PAGE_SIZE = 50;
 let allRecords = [];
 let filtered = [];
 let renderedCount = 0;
+let latestSummary = null;
 
 const params = new URLSearchParams(window.location.search);
 
@@ -640,35 +747,90 @@ function setUrlParam(key, value) {
   window.history.replaceState(null, '', url.toString());
 }
 
+const FILTER_LABELS = {
+  country: 'Country', city: 'City', asn: 'Provider', client: 'Client', version: 'Version',
+  dz: 'DZ', bam: 'BAM', rakurai: 'Rakurai',
+  sfdp: 'SFDP', delinquent: 'Delinquent', superminority: 'Superminority', gossip: 'Gossip',
+};
+const LIST_FILTERS = ['country', 'city', 'asn', 'client', 'version'];
+
+function listParam(key) {
+  return (params.get(key) || '').split(',').map(v => v.trim()).filter(Boolean);
+}
+
+// One chip per value so a single value of a multi-select can be removed alone.
 function getActiveFilterChips() {
   const chips = [];
-  const labels = {
-    country: 'Country', asn: 'ASN', city: 'City',
-    dz: 'DZ', bam: 'BAM', rakurai: 'Rakurai',
-    sfdp: 'SFDP', delinquent: 'Delinquent', superminority: 'Superminority',
-  };
-  for (const [key, label] of Object.entries(labels)) {
-    const v = params.get(key);
-    if (v) chips.push({ key, label, value: v });
+  for (const [key, label] of Object.entries(FILTER_LABELS)) {
+    if (LIST_FILTERS.includes(key)) {
+      listParam(key).forEach(v => chips.push({ key, label, value: v }));
+    } else {
+      const v = params.get(key);
+      if (v) chips.push({ key, label, value: v });
+    }
   }
   return chips;
 }
 
+// Toggle one value inside a list filter (country=NL,DE); other keys combine as AND.
+function toggleFilterValue(key, value) {
+  if (LIST_FILTERS.includes(key)) {
+    const cur = listParam(key);
+    const next = cur.includes(value) ? cur.filter(v => v !== value) : cur.concat(value);
+    if (next.length > 0) params.set(key, next.join(',')); else params.delete(key);
+    setUrlParam(key, next.join(','));
+  } else {
+    if (params.get(key) === value) { params.delete(key); setUrlParam(key, null); }
+    else { params.set(key, value); setUrlParam(key, value); }
+  }
+  applyAndRender();
+}
+
+function removeFilterValue(key, value) {
+  if (LIST_FILTERS.includes(key)) {
+    const next = listParam(key).filter(v => v !== value);
+    if (next.length > 0) params.set(key, next.join(',')); else params.delete(key);
+    setUrlParam(key, next.join(','));
+  } else {
+    params.delete(key);
+    setUrlParam(key, null);
+  }
+  applyAndRender();
+}
+
+// Human text for a chip: boolean-ish filters read as one word, list filters as key: value.
+function chipText(key, value) {
+  if (key === 'gossip') return value === 'no' ? 'Not in gossip' : 'In gossip';
+  if (key === 'delinquent') return value === 'true' ? 'Delinquent' : 'Not delinquent';
+  if (key === 'superminority') return 'Superminority';
+  if (key === 'sfdp') return `SFDP ${value.toLowerCase()}`;
+  if (key === 'bam') return 'Jito BAM';
+  if (key === 'rakurai') return 'Rakurai';
+  if (key === 'dz') return value === 'no' ? 'No DoubleZero' : value === 'multicast' ? 'DZ multicast' : 'DZ connected';
+  return `${FILTER_LABELS[key] || key}: ${value}`;
+}
+
+function isFilterActive(key, value) {
+  return LIST_FILTERS.includes(key) ? listParam(key).includes(value) : params.get(key) === value;
+}
+
+function clearAllFilters() {
+  Object.keys(FILTER_LABELS).forEach(k => { params.delete(k); setUrlParam(k, null); });
+  applyAndRender();
+}
+
 function renderFilterChips() {
   const wrap = document.getElementById('active-filters');
-  const clear = document.getElementById('filter-clear');
   const chips = getActiveFilterChips();
   wrap.innerHTML = chips.map(c =>
-    `<span class="filter-chip">${c.label}: ${c.value}<span class="chip-x" data-key="${c.key}">&times;</span></span>`
+    `<span class="filter-chip">${escapeAttr(chipText(c.key, c.value))}<span class="chip-x" data-key="${c.key}" data-value="${escapeAttr(c.value)}">&times;</span></span>`
   ).join('');
-  clear.style.display = chips.length > 0 ? 'inline-block' : 'none';
+  ['filter-clear', 'filter-clear-top'].forEach(id => {
+    const b = document.getElementById(id);
+    if (b) b.style.display = chips.length > 0 ? 'inline-block' : 'none';
+  });
   wrap.querySelectorAll('.chip-x').forEach(x => {
-    x.addEventListener('click', e => {
-      const k = e.target.dataset.key;
-      params.delete(k);
-      setUrlParam(k, null);
-      applyAndRender();
-    });
+    x.addEventListener('click', e => removeFilterValue(e.target.dataset.key, e.target.dataset.value));
   });
 }
 
@@ -678,7 +840,7 @@ function shortAsnName(name) {
   return name.substring(0, 20) + '…';
 }
 
-function renderTableRow(r) {
+function renderTableRow(r, pos) {
   const cluster = getCluster();
   const voteHref = `/validator?id=${r.vote_account || r.identity_pubkey}&cluster=${cluster}`;
   const geo = r.geolocation || {};
@@ -692,7 +854,7 @@ function renderTableRow(r) {
   const credits = r.epoch_credits != null ? fmtCompact(r.epoch_credits) : '—';
   const creditsFull = r.epoch_credits != null ? fmt(r.epoch_credits) : '';
   const rankHtml = r._tvc_rank != null
-    ? `<span class="perf-rank" data-tip="TVC rank ${r._tvc_rank} of ${r._tvc_total}" data-tip-wrap>#${r._tvc_rank}</span>`
+    ? `<span class="perf-rank" data-tip="TVC rank ${r._tvc_rank} of ${r._tvc_total}">#${r._tvc_rank}</span>`
     : '';
   const ibrl = r.ibrl?.ibrl_score != null ? r.ibrl.ibrl_score.toFixed(0) : '—';
   const slot = r.slot_duration_median != null ? r.slot_duration_median.toFixed(0) + 'ms' : '—';
@@ -701,6 +863,7 @@ function renderTableRow(r) {
   const commission = r.commission != null ? r.commission + '%' : '—';
   const mev = r.mev_commission != null ? (r.mev_commission / 100).toFixed(2) + '%' : '—';
   const ver = inGossip ? (r.version || '—') : '—';
+  const verStatus = inGossip ? versionStatusInfo(r.version_status) : null;
   const clientInfo = inGossip ? displayClient(r.client_type, r.client_id_raw) : { label: '', tip: null };
   const cColor = clientColor(r.client_type);
 
@@ -714,25 +877,25 @@ function renderTableRow(r) {
   if (r.dz_connected) {
     const devName = r.dz_device_name || 'connected';
     const short = devName.length > 16 ? devName.substring(0, 14) + '…' : devName;
-    dzBadge = `<span class="infra-badge infra-badge-dz" data-tip="DoubleZero device: ${devName}" data-tip-wrap>DZ <span class="infra-badge-name">${short}</span></span>`;
+    dzBadge = `<span class="infra-badge infra-badge-dz" data-tip="DoubleZero device: ${devName}">DZ <span class="infra-badge-name">${short}</span></span>`;
   }
   let mcBadge = '';
   if (r.dz_multicast_publisher) {
-    mcBadge = `<span class="infra-badge infra-badge-mc" data-tip="Publishes shreds via DZ multicast group" data-tip-wrap>DZ Multicast</span>`;
+    mcBadge = `<span class="infra-badge infra-badge-mc" data-tip="Publishes shreds via DZ multicast group">DZ Multicast</span>`;
   }
   let bamBadge = '';
   if (r.bam_node) {
     // bam_region carries the full node name in the data; the region is its first segment.
     const code = bamRegionCode(r.bam_region || r.bam_node);
-    bamBadge = `<span class="infra-badge infra-badge-bam" data-tip="Jito BAM node: ${r.bam_node}" data-tip-wrap>BAM <span class="infra-badge-name">${code || r.bam_node}</span></span>`;
+    bamBadge = `<span class="infra-badge infra-badge-bam" data-tip="Jito BAM node: ${r.bam_node}">BAM <span class="infra-badge-name">${code || r.bam_node}</span></span>`;
   }
 
   // Flags column — only what is actually meaningful
   let flags = '';
   if (r.delinquent) flags += '<span class="vflag vflag-delinq" data-tip="Not voting last epoch">Delinquent</span>';
-  if (r.is_superminority) flags += '<span class="vflag vflag-sm" data-tip="Part of the superminority: the smallest set of validators holding 33% of stake" data-tip-wrap>SM</span>';
-  if (r.sfdp_state === 'Approved') flags += '<span class="vflag vflag-sfdp" data-tip="Solana Foundation Delegation Program: Approved" data-tip-wrap>SFDP</span>';
-  if (!inGossip) flags += `<span class="vflag vflag-gossip" data-tip="${NO_GOSSIP_TIP}" data-tip-wrap>No gossip</span>`;
+  if (r.is_superminority) flags += '<span class="vflag vflag-sm" data-tip="Part of the superminority: the smallest set of validators holding 33% of stake">SM</span>';
+  if (r.sfdp_state === 'Approved') flags += '<span class="vflag vflag-sfdp" data-tip="Solana Foundation Delegation Program: Approved">SFDP</span>';
+  if (!inGossip) flags += `<span class="vflag vflag-gossip" data-tip="${NO_GOSSIP_TIP}">No gossip</span>`;
 
   return `
     <tr data-href="${voteHref}">
@@ -741,11 +904,12 @@ function renderTableRow(r) {
           ${r.icon_url ? `<img src="${r.icon_url}" width="32" height="32" loading="lazy" referrerpolicy="no-referrer" style="width:100%;height:100%;object-fit:cover;display:block" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/>` : ''}
           <span style="${r.icon_url ? 'display:none;' : 'display:flex;'}width:100%;height:100%;align-items:center;justify-content:center;color:white;font-weight:600;font-size:0.85em;font-family:var(--font-display)">${initial.toUpperCase()}</span>
         </span>
+        ${pos != null ? `<div class="row-pos" data-tip="#${pos} in this list with the current sort and filters">#${pos}</div>` : ''}
       </td>
       <td>
         <div class="cell-name-row">${r.name
           ? `<span class="cell-name">${r.name}</span>`
-          : `<span class="cell-name cell-name-id" data-tip="No name registered on-chain; this is the identity pubkey" data-tip-wrap>${shortenIdentity(r.identity_pubkey, 6, 6)}</span>`}</div>
+          : `<span class="cell-name cell-name-id" data-tip="No name registered on-chain; this is the identity pubkey">${shortenIdentity(r.identity_pubkey, 6, 6)}</span>`}</div>
         <div class="cell-keys">
           ${r.name ? `<div class="cell-key-row"><span class="cell-key-label">id</span><span class="cell-key-val">${shortenIdentity(r.identity_pubkey, 4, 4)}</span></div>` : ''}
           <div class="cell-key-row"><span class="cell-key-label">vt</span><span class="cell-key-val">${shortenIdentity(r.vote_account, 4, 4)}</span></div>
@@ -753,12 +917,12 @@ function renderTableRow(r) {
         </div>
       </td>
       <td>
-        <div class="cell-ver-main">${ver}</div>
-        ${clientInfo.label ? `<div class="cell-ver-client" style="color:${cColor}"${clientInfo.tip ? ` data-tip="${clientInfo.tip}" data-tip-wrap` : ''}>${clientInfo.label}</div>` : ''}
+        <div class="cell-ver-main${verStatus ? ` ver-${verStatus.key}` : ''}"${verStatus ? ` data-tip="${verStatus.tip}"` : ''}>${ver}</div>
+        ${clientInfo.label ? `<div class="cell-ver-client" style="color:${cColor}"${clientInfo.tip ? ` data-tip="${clientInfo.tip}"` : ''}>${clientInfo.label}</div>` : ''}
       </td>
       <td>
         <div class="cell-stake-main">${stakeSol} SOL</div>
-        <div class="cell-commission"><span class="comm-commission" data-tip="Inflation commission: share of staking rewards kept by the validator" data-tip-wrap>comm ${commission}</span>${r.mev_commission != null ? ` · <span class="mev-commission" data-tip="MEV commission: share of Jito tips kept by the validator" data-tip-wrap>mev ${mev}</span>` : ''}</div>
+        <div class="cell-commission"><span class="comm-commission" data-tip="Inflation commission: share of staking rewards kept by the validator">comm ${commission}</span>${r.mev_commission != null ? ` · <span class="mev-commission" data-tip="MEV commission: share of Jito tips kept by the validator">mev ${mev}</span>` : ''}</div>
       </td>
       <td>
         <div class="cell-geo">
@@ -767,7 +931,7 @@ function renderTableRow(r) {
             ${inGossip
               ? `<div class="cell-geo-city">${geo.city || 'Unknown'}</div>
             <div class="cell-geo-asn" data-tip="${geo.asn_name || ''}">${shortAsnName(geo.asn_name || geo.asn || '')}${geo.asn ? ` <span class="cell-geo-asn-code">${geo.asn}</span>` : ''}</div>`
-              : `<div class="cell-geo-city is-muted" data-tip="${NO_GOSSIP_TIP}" data-tip-wrap>Not in gossip</div>`}
+              : `<div class="cell-geo-city is-muted" data-tip="${NO_GOSSIP_TIP}">Not in gossip</div>`}
           </div>
         </div>
       </td>
@@ -781,19 +945,19 @@ function renderTableRow(r) {
       </td>
       <td>
         <div class="cell-perf">
-          <span class="perf-val"${creditsFull ? ` data-tip="${creditsFull} vote credits this epoch" data-tip-wrap` : ''}>${credits}</span><span class="perf-label"><span class="perf-label-txt" data-tip="Vote credits this epoch. #N is the TVC rank: position by credits, ties share a rank" data-tip-wrap>credits</span>${rankHtml}</span>
+          <span class="perf-val"${creditsFull ? ` data-tip="${creditsFull} vote credits this epoch"` : ''}>${credits}</span><span class="perf-label"><span class="perf-label-txt" data-tip="Vote credits this epoch. #N is the TVC rank: position by credits, ties share a rank">credits</span>${rankHtml}</span>
           <span class="perf-val ${skipClass}">${skipDisp}</span><span class="perf-label" data-tip="Leader slots skipped">skip</span>
           ${r.slot_duration_median != null ? `<span class="perf-val perf-slot">${slot}</span><span class="perf-label perf-slot" data-tip="Median slot duration">slot time</span>` : ''}
           ${r.median_vote_latency != null ? `<span class="perf-val perf-vlat">${vlat}</span><span class="perf-label perf-vlat" data-tip="Median vote latency, slots">v.lat</span>` : ''}
           ${r.ibrl?.ibrl_score != null ? `<span class="perf-val perf-ibrl">${ibrl}</span><span class="perf-label perf-ibrl" data-tip="Block production quality 0-100">ibrl</span>` : ''}
         </div>
       </td>
-      <td class="cell-flags">${flags || '<span style="color:var(--text-muted);font-size:0.7rem">—</span>'}</td>
+      <td class="cell-flags">${flags}</td>
     </tr>
   `;
 }
 
-function renderMobileCard(r) {
+function renderMobileCard(r, pos) {
   const cluster = getCluster();
   const voteHref = `/validator?id=${r.vote_account || r.identity_pubkey}&cluster=${cluster}`;
   const geo = r.geolocation || {};
@@ -876,6 +1040,7 @@ function applyAndRender() {
   document.getElementById('result-count').textContent =
     `${filtered.length} validator${filtered.length === 1 ? '' : 's'}`;
   renderFilterChips();
+  renderAggCards(allRecords, filtered, getCluster(), latestSummary);
 }
 
 function renderNext() {
@@ -883,10 +1048,10 @@ function renderNext() {
   const slice = filtered.slice(renderedCount, end);
 
   const tbody = document.getElementById('vtable-body');
-  tbody.insertAdjacentHTML('beforeend', slice.map(renderTableRow).join(''));
+  tbody.insertAdjacentHTML('beforeend', slice.map((r, i) => renderTableRow(r, renderedCount + i + 1)).join(''));
 
   const cwrap = document.getElementById('vcards-wrap');
-  cwrap.insertAdjacentHTML('beforeend', slice.map(renderMobileCard).join(''));
+  cwrap.insertAdjacentHTML('beforeend', slice.map((r, i) => renderMobileCard(r, renderedCount + i + 1)).join(''));
 
   renderedCount = end;
   const loadMore = document.getElementById('load-more');
@@ -909,6 +1074,416 @@ function renderNext() {
   });
 }
 
+// ----- Version status (F-18) -----
+// Backend rates versions inside each client family: current / outdated / ancient / null.
+function versionStatusInfo(status) {
+  if (status === 'outdated') return { key: 'outdated', tip: 'Outdated: a newer release of this client family is current' };
+  if (status === 'ancient') return { key: 'ancient', tip: 'Ancient: two or more releases behind the current one for this client' };
+  return null;
+}
+
+// ----- One-line cluster summary -----
+function renderSummaryLine(records) {
+  const el = document.getElementById('vsummary-line');
+  if (!el) return;
+  const total = records.length;
+  const active = records.filter(r => !r.delinquent).length;
+  const delinq = total - active;
+  const noGossip = records.filter(r => !isInGossip(r)).length;
+  const totalStake = records.reduce((s, r) => s + (r.activated_stake_lamports || 0), 0);
+  const countries = new Set(records.map(r => r.geolocation?.country_code).filter(c => c && c !== '??')).size;
+  const cities = new Set(records.map(r => r.geolocation?.city).filter(c => c && c !== 'Unknown')).size;
+  const asns = new Set(records.map(r => r.geolocation?.asn).filter(Boolean)).size;
+  const parts = [
+    `<b>${fmt(total)}</b> validators`,
+    `<b>${fmt(active)}</b> voting`,
+    `<span class="${delinq > 0 ? 'vsl-warn' : ''}"><b>${fmt(delinq)}</b> delinquent</span>`,
+  ];
+  if (noGossip > 0) parts.push(`<span data-tip="${NO_GOSSIP_TIP}"><b>${fmt(noGossip)}</b> not in gossip</span>`);
+  parts.push(`<b>${fmtStakeShort(totalStake)}</b> SOL`, `<b>${fmt(countries)}</b> countries`, `<b>${fmt(cities)}</b> cities`, `<b>${fmt(asns)}</b> providers`);
+  el.innerHTML = parts.join('<span class="vsl-sep">·</span>');
+}
+
+// ----- Breakdown cards (F-A.1 + F-A.2) -----
+// Registry: each card groups the validator universe (all vote accounts, same as the table)
+// into segments {key, label, count, delinquent, stake, marker, special, status} via build(). Cards are
+// rendered only for clusters in AGG_CARDS_CLUSTERS (rollout gate) and only when the card's
+// `clusters` allows it ('*' = every cluster). Groups: 'software' (stacked bars, homepage
+// Software-card layout) and 'decentralization' (big donuts). Every entry is a click filter:
+// its key/value toggles a URL param (country=NL,DE), the table and the other cards
+// re-aggregate on the filtered set, entries with nothing left are dimmed.
+const AGG_CARDS_CLUSTERS = ['mainnet-beta', 'testnet', 'devnet', 'alpenglow-community'];
+const AGG_ROWS_VISIBLE = 6;
+const DC_LOGO_BASE = 'https://data.sonda.network/assets/dc';
+const SEQ_PALETTE = ['#a78bfa', '#22d3ee', '#4ade80', '#fbbf24', '#f472b6', '#60a5fa', '#fb923c', '#2dd4bf', '#e879f9', '#facc15', '#38bdf8', '#a3e635'];
+const NOT_IN_GOSSIP_KEY = '__nogossip';
+const UNRESOLVED_KEY = '__unresolved';
+
+// Cards the user expanded with "Show all": a filter click re-renders every card, and the
+// expansion must survive that.
+const expandedCards = new Set();
+
+const CARD_GROUPS = [
+  { id: 'software', title: 'Validator software' },
+  { id: 'decentralization', title: 'Validator decentralization' },
+];
+
+function seqColor(i) { return SEQ_PALETTE[i % SEQ_PALETTE.length]; }
+
+function escapeAttr(v) {
+  return String(v ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+}
+
+// Generic grouping: keyFn(record) -> key or null (null = skipped); decorate(key) adds
+// label/marker/special. Special keys are listed last regardless of stake.
+function groupRecords(records, keyFn, decorate) {
+  const map = new Map();
+  for (const r of records) {
+    const key = keyFn(r);
+    if (key == null) continue;
+    if (!map.has(key)) map.set(key, { key, count: 0, delinquent: 0, stake: 0 });
+    const g = map.get(key);
+    g.count++;
+    if (r.delinquent) g.delinquent++;
+    g.stake += r.activated_stake_lamports || 0;
+  }
+  return [...map.values()].map(g => Object.assign(g, decorate(g.key, g)));
+}
+
+const specialRow = (label, filter) => ({ label, special: true, marker: { type: 'muted' }, filter: filter || null });
+const NOT_IN_GOSSIP_ROW = () => specialRow('Not in gossip', { key: 'gossip', val: 'no' });
+
+const VALIDATOR_CARDS = [
+  {
+    id: 'clients', group: 'software', tag: 'Clients', title: 'Validator clients', clusters: '*',
+    fkey: 'client', view: 'stacked', stat: 'share',
+    build(records) {
+      return groupRecords(records,
+        r => (isInGossip(r) ? (clientLabel(r) || 'Unknown') : NOT_IN_GOSSIP_KEY),
+        key => key === NOT_IN_GOSSIP_KEY ? NOT_IN_GOSSIP_ROW() : { label: key, marker: { type: 'dot', color: clientColor(key) } });
+    },
+  },
+  {
+    id: 'versions', group: 'software', tag: 'Versions', title: 'Client versions', clusters: '*',
+    fkey: 'version', view: 'stacked', stat: 'stake',
+    build(records) {
+      const status = new Map();
+      records.forEach(r => { if (r.version && r.version !== 'unknown' && r.version_status) status.set(r.version, r.version_status); });
+      return groupRecords(records,
+        r => (isInGossip(r) && r.version && r.version !== 'unknown' ? r.version : NOT_IN_GOSSIP_KEY),
+        key => key === NOT_IN_GOSSIP_KEY ? NOT_IN_GOSSIP_ROW() : { label: key, marker: { type: 'dot', color: versionColor(key) }, status: versionStatusInfo(status.get(key)) });
+    },
+  },
+  {
+    // Status flags as click filters for the boolean keys. SFDP row appears only where the
+    // cluster carries sfdp_state (mainnet; testnet once the backend links it).
+    id: 'status', group: 'software', tag: 'Status', title: 'Validator status', clusters: '*',
+    fkey: null, view: 'status',
+    build(records) {
+      const has = (fn) => records.some(fn);
+      const rows = [
+        { key: 'superminority', label: 'Superminority', filter: { key: 'superminority', val: 'true' }, fill: 'warn', count: records.filter(r => r.is_superminority).length },
+        { key: 'delinquent', label: 'Delinquent', filter: { key: 'delinquent', val: 'true' }, fill: 'crit', count: records.filter(r => r.delinquent).length },
+        { key: 'gossip', label: 'Not in gossip', filter: { key: 'gossip', val: 'no' }, fill: 'neutral', count: records.filter(r => !isInGossip(r)).length },
+      ];
+      if (has(r => r.sfdp_state)) rows.unshift({ key: 'sfdp', label: 'SFDP approved', filter: { key: 'sfdp', val: 'Approved' }, fill: 'cluster', count: records.filter(r => r.sfdp_state === 'Approved').length });
+      return rows.map(r => Object.assign(r, { delinquent: 0, stake: 0, special: true }));
+    },
+  },
+  {
+    id: 'countries', group: 'decentralization', tag: 'Countries', title: 'Validators by country', clusters: '*',
+    fkey: 'country', view: 'donut',
+    build(records) {
+      const names = new Map();
+      records.forEach(r => { const g = r.geolocation; if (g?.country_code && g.country) names.set(g.country_code, g.country); });
+      return groupRecords(records,
+        r => (!r.geolocation ? NOT_IN_GOSSIP_KEY : (r.geolocation.country_code && r.geolocation.country_code !== '??' ? r.geolocation.country_code : UNRESOLVED_KEY)),
+        key => key === NOT_IN_GOSSIP_KEY ? NOT_IN_GOSSIP_ROW()
+          : key === UNRESOLVED_KEY ? specialRow('Unresolved location')
+          : { label: names.get(key) || key, marker: { type: 'flag', cc: key } });
+    },
+  },
+  {
+    id: 'cities', group: 'decentralization', tag: 'Cities', title: 'Validators by city', clusters: '*',
+    fkey: 'city', view: 'donut',
+    build(records) {
+      const cc = new Map();
+      records.forEach(r => { const g = r.geolocation; if (g?.city && g.city !== 'Unknown' && g.country_code) cc.set(g.city, g.country_code); });
+      return groupRecords(records,
+        r => (!r.geolocation ? NOT_IN_GOSSIP_KEY : (r.geolocation.city && r.geolocation.city !== 'Unknown' ? r.geolocation.city : UNRESOLVED_KEY)),
+        key => key === NOT_IN_GOSSIP_KEY ? NOT_IN_GOSSIP_ROW()
+          : key === UNRESOLVED_KEY ? specialRow('Unresolved city')
+          : { label: key, marker: { type: 'pin', cc: cc.get(key) || '' }, tip: cc.get(key) ? `${key}, ${cc.get(key)}` : key });
+    },
+  },
+  {
+    id: 'providers', group: 'decentralization', tag: 'Providers', title: 'Validators by network provider', clusters: '*',
+    fkey: 'asn', view: 'donut',
+    build(records, ctx) {
+      const asnNames = ctx?.summary?.metrics?.asn_names || {};
+      return aggregateByAsn(records).map(e => e.asn === 'unknown'
+        ? Object.assign({ key: NOT_IN_GOSSIP_KEY, count: e.count, delinquent: e.delinquent, stake: e.stake_lamports }, NOT_IN_GOSSIP_ROW())
+        : { key: e.asn, label: asnNames[e.asn] || e.name, count: e.count, delinquent: e.delinquent, stake: e.stake_lamports, tip: `${asnNames[e.asn] || e.name} (${e.asn})`, marker: { type: 'logo', asn: e.asn, initial: (asnNames[e.asn] || e.name || '?').charAt(0).toUpperCase() } });
+    },
+  },
+];
+
+function markerHtml(m) {
+  if (!m) return '<span></span>';
+  if (m.type === 'dot') return `<span class="vagg-dot" style="background:${m.color}"></span>`;
+  if (m.type === 'flag') return `<span class="vagg-flag"><img src="https://flagcdn.com/w40/${m.cc.toLowerCase()}.png" alt="" loading="lazy"></span>`;
+  if (m.type === 'pin') return m.cc ? `<span class="vagg-pin"><img src="https://flagcdn.com/w40/${m.cc.toLowerCase()}.png" alt="" loading="lazy"></span>` : '<span class="vagg-pin"></span>';
+  if (m.type === 'logo') return `<span class="vagg-logo" data-initial="${escapeAttr(m.initial)}"><img src="${DC_LOGO_BASE}/${m.asn}.png" alt="" loading="lazy" onerror="this.remove()"></span>`;
+  return '<span class="vagg-marker-muted"></span>';
+}
+
+function segmentColor(seg, i) {
+  if (seg.special) return 'var(--text-muted)';
+  if (seg.marker?.type === 'dot') return seg.marker.color;
+  return seqColor(i);
+}
+
+// Merge full-universe entries (labels, markers, order of existence) with counts from the
+// filtered set. Entries absent from the filtered set keep zero counts and get dimmed.
+function mergeSegments(all, filteredSegs) {
+  const f = new Map(filteredSegs.map(x => [x.key, x]));
+  const merged = all.map(seg => {
+    const m = f.get(seg.key);
+    return Object.assign({}, seg, { count: m ? m.count : 0, delinquent: m ? m.delinquent : 0, stake: m ? m.stake : 0 });
+  });
+  merged.sort((a, b) => (a.special === b.special ? (b.stake - a.stake || b.count - a.count) : (a.special ? 1 : -1)));
+  return merged;
+}
+
+function delinqHtml(seg, withTip = true) {
+  if (!(seg.delinquent > 0)) return '';
+  return `<span class="vagg-delinq"${withTip ? ` data-tip="${seg.delinquent} of ${seg.count} delinquent"` : ''}>${seg.delinquent}</span>`;
+}
+
+// Filter pair for an entry: the card key by default, an explicit pair for special rows
+// (Not in gossip -> gossip=no); null means the entry is not clickable.
+function entryFilter(card, seg) {
+  if (seg.special) return seg.filter || null;
+  return { key: card.fkey, val: String(seg.key) };
+}
+function fattr(card, seg) {
+  const f = entryFilter(card, seg);
+  return f ? ` data-fkey="${f.key}" data-fval="${escapeAttr(f.val)}"` : '';
+}
+function rowClasses(card, seg) {
+  const cls = [];
+  const f = entryFilter(card, seg);
+  if (f && isFilterActive(f.key, f.val)) cls.push('is-selected');
+  else if (seg.count === 0) cls.push('is-dim');
+  if (seg.special) cls.push('is-special');
+  return cls.join(' ');
+}
+
+const SOFT_ROWS_VISIBLE = 8;
+
+// Software cards (clients, versions): stacked bar and legend are stake-weighted, so one
+// large validator on its own build counts as much as its stake says. Legend shows
+// count|delinquent and the stake share; the top 8 entries plus an "Other" row are
+// visible, "Show all" reveals the rest in a scrolling legend.
+function renderSoftwareCard(card, segs, totals) {
+  const { total, totalStake } = totals;
+  const stakePct = seg => (totalStake > 0 ? (seg.stake / totalStake) * 100 : 0);
+  const sharePct = seg => (total > 0 ? (seg.count / total) * 100 : 0);
+  const live = segs.filter(x => !x.special);
+  const specials = segs.filter(x => x.special);
+  const top = live.slice(0, SOFT_ROWS_VISIBLE);
+  const rest = live.slice(SOFT_ROWS_VISIBLE);
+  const restAgg = { key: '__other', label: `Other (${rest.length})`, count: rest.reduce((a, x) => a + x.count, 0), delinquent: rest.reduce((a, x) => a + x.delinquent, 0), stake: rest.reduce((a, x) => a + x.stake, 0) };
+
+  const segTip = (seg) => `${seg.label}: ${seg.count} validators (${sharePct(seg).toFixed(1)}%), ${stakePct(seg).toFixed(1)}% of stake`;
+  const segHtml = (seg, color) => {
+    const w = stakePct(seg);
+    return w > 0 ? `<div class="stacked-segment" data-tip="${escapeAttr(segTip(seg))}" style="width:${w}%; background:${color};">${w >= 8 ? `${w.toFixed(0)}%` : ''}</div>` : '';
+  };
+  const barHtml = top.map((seg, i) => segHtml(seg, segmentColor(seg, i))).join('')
+    + (rest.length ? segHtml(restAgg, '#4b4f63') : '')
+    + specials.map(seg => segHtml(seg, 'var(--text-muted)')).join('');
+
+  // Legend rows show the count only (stake share lives in the bar and the tooltip), which
+  // keeps mainnet's 14+ versions readable. One tooltip per row carries everything.
+  const rowTip = (seg) => `${seg.label}: ${seg.count} validators (${sharePct(seg).toFixed(1)}%)${seg.delinquent ? `, ${seg.delinquent} delinquent` : ''}, ${stakePct(seg).toFixed(1)}% of stake${seg.status ? `\n${seg.status.tip}` : ''}`;
+  const item = (seg, i, extraCls, clickable) => {
+    const status = seg.status ? ` ver-${seg.status.key}` : '';
+    const fa = clickable ? fattr(card, seg) : '';
+    const cls = clickable ? rowClasses(card, seg) : (seg.special ? 'is-special' : '');
+    return `<span class="stacked-legend-item ${cls}${extraCls}"${fa} data-tip="${escapeAttr(rowTip(seg))}">
+      <span class="stacked-legend-dot" style="background:${i == null ? 'var(--text-muted)' : segmentColor(seg, i)};"></span>
+      <span class="stacked-legend-name${status}">${escapeAttr(seg.label)}</span>
+      <span class="legend-leader"></span>
+      <span class="stacked-legend-stat">${fmt(seg.count)}${delinqHtml(seg, false)}</span>
+    </span>`;
+  };
+  const legend = top.map((seg, i) => item(seg, i, '', true)).join('')
+    + rest.map((seg, i) => item(seg, SOFT_ROWS_VISIBLE + i, ' is-extra', true)).join('')
+    + (rest.length ? `<span class="stacked-legend-item is-special vagg-other" data-more="1" data-tip="${escapeAttr(rowTip(restAgg))}. Click to show all"><span class="stacked-legend-dot" style="background:#4b4f63;"></span><span class="stacked-legend-name">${restAgg.label}</span><span class="legend-leader"></span><span class="stacked-legend-stat">${fmt(restAgg.count)}${delinqHtml(restAgg, false)}</span></span>` : '')
+    + specials.map(seg => item(seg, null, '', true)).join('');
+  const more = rest.length ? `<button class="vagg-more" type="button" data-more="${live.length}">Show all ${live.length}</button>` : '';
+
+  return `<div class="story vagg-card vagg-view-stacked" data-card="${card.id}">
+    <div class="story-header">
+      <span class="story-tag cluster-tag">${card.tag}</span>
+      <span class="vagg-meta">${fmt(segs.length)} ${segs.length === 1 ? 'entry' : 'entries'} · by stake</span>
+    </div>
+    <div class="story-title">${card.title}</div>
+    <div class="stacked-bar"><div class="stacked-bar-inner">${barHtml || '<div class="stacked-segment" style="width:100%;background:var(--bg-card-hover)"></div>'}</div></div>
+    <div class="stacked-legend">${legend}</div>
+    <div class="vagg-foot">${more}</div>
+  </div>`;
+}
+
+function renderDonutCard(card, segs, totals) {
+  const { total, totalStake } = totals;
+  const stakePct = seg => (totalStake > 0 ? (seg.stake / totalStake) * 100 : 0);
+  const live = segs.filter(x => !x.special && x.count > 0);
+  const top = live.slice(0, AGG_ROWS_VISIBLE);
+  const rest = live.slice(AGG_ROWS_VISIBLE);
+  const restStake = rest.reduce((a, x) => a + x.stake, 0);
+  const restCount = rest.reduce((a, x) => a + x.count, 0);
+  const items = top.map((seg, i) => ({ label: seg.label, value: seg.stake, color: segmentColor(seg, i), title: `${seg.label}: ${seg.count} validators, ${stakePct(seg).toFixed(1)}% stake` }));
+  if (restStake > 0) items.push({ label: 'Other', value: restStake, color: '#4b4f63', title: `Other (${rest.length}): ${restCount} validators, ${((restStake / totalStake) * 100).toFixed(1)}% stake` });
+  const donut = items.length > 0 ? renderDonut(items, { size: 150, ringR: 70, innerR: 44 }).svg : '<div class="vagg-empty">no match</div>';
+  const colorOf = new Map(top.map((seg, i) => [seg.key, segmentColor(seg, i)]));
+
+  const rowsHtml = segs.map((seg, i) => {
+    const name = `<span class="vagg-name"><span${seg.tip ? ` data-tip="${escapeAttr(seg.tip)}"` : ' data-tip-ellipsis'}>${escapeAttr(seg.label)}</span><span class="legend-leader"></span></span>`;
+    return `<div class="vagg-row ${rowClasses(card, seg)}${i >= AGG_ROWS_VISIBLE ? ' is-extra' : ''}"${fattr(card, seg)}>
+      ${markerHtml(seg.marker)}
+      ${name}
+      <span class="vagg-count">${fmt(seg.count)}${delinqHtml(seg)}</span>
+      <span class="vagg-stake"${colorOf.has(seg.key) ? ` style="color:${colorOf.get(seg.key)}"` : ''}>${stakePct(seg).toFixed(1)}%</span>
+    </div>`;
+  }).join('');
+  const more = segs.length > AGG_ROWS_VISIBLE ? `<button class="vagg-more" type="button" data-more="${segs.length}">Show all ${segs.length}</button>` : '';
+  return `<div class="story vagg-card vagg-view-donut" data-card="${card.id}">
+    <div class="story-header">
+      <span class="story-tag cluster-tag">${card.tag}</span>
+      <span class="vagg-meta">${fmt(segs.length)} ${segs.length === 1 ? 'entry' : 'entries'}</span>
+    </div>
+    <div class="story-title">${card.title}</div>
+    <div class="vagg-donut"><div class="donut-svg">${donut}</div><div class="vagg-rows">${rowsHtml}</div></div>
+    <div class="vagg-foot">${more}</div>
+  </div>`;
+}
+
+function renderStatusCard(card, rowsAll, rowsFiltered, totals) {
+  const f = new Map(rowsFiltered.map(x => [x.key, x]));
+  const denom = Math.max(1, totals.total);
+  // Bars are relative to the largest row, like the DZ/BAM cards on the homepage: the
+  // rows compare with each other, the share of all validators is in the tooltip.
+  const maxRow = Math.max(1, ...rowsAll.map(r => f.get(r.key)?.count ?? 0));
+  const rows = rowsAll.map(row => {
+    const cur = f.get(row.key)?.count ?? 0;
+    const active = isFilterActive(row.filter.key, row.filter.val);
+    const cls = active ? 'is-selected' : (cur === 0 ? 'is-dim' : '');
+    const numCls = (row.fill === 'crit' || row.fill === 'cluster') ? row.fill : '';
+    return `<div class="bar-row ${cls}" data-fkey="${row.filter.key}" data-fval="${escapeAttr(row.filter.val)}" data-tip="${row.label}: ${cur} of ${totals.total} validators in view (${((cur / denom) * 100).toFixed(1)}%)">
+      <div class="bar-row-label">${row.label}</div>
+      <div class="bar-row-track"><div class="bar-row-fill ${row.fill}" style="width:${cur > 0 ? Math.max(3, (cur / maxRow) * 100) : 0}%"></div></div>
+      <div class="bar-row-num ${numCls}">${fmt(cur)}</div>
+    </div>`;
+  }).join('');
+  return `<div class="story vagg-card vagg-view-status" data-card="${card.id}">
+    <div class="story-header">
+      <span class="story-tag cluster-tag">${card.tag}</span>
+    </div>
+    <div class="story-title">${card.title}</div>
+    <div class="vagg-status-head"><span class="story-big mono">${fmt(totals.total)}</span><span class="story-sub">validators in view</span></div>
+    <div class="bar-rows-wrap with-divider">${rows}</div>
+  </div>`;
+}
+
+function renderAggCards(records, filteredRecords, cluster, summary) {
+  const section = document.getElementById('vagg');
+  if (!section) return;
+  const grids = CARD_GROUPS.map(g => document.getElementById(`vagg-group-${g.id}`));
+  if (!AGG_CARDS_CLUSTERS.includes(cluster) || records.length === 0) {
+    section.hidden = true;
+    grids.forEach(g => { if (g) g.innerHTML = ''; });
+    return;
+  }
+  const ctx = { summary, cluster };
+  const totals = { total: filteredRecords.length, totalStake: filteredRecords.reduce((s, r) => s + (r.activated_stake_lamports || 0), 0) };
+  const cards = VALIDATOR_CARDS.filter(c => c.clusters === '*' || c.clusters.includes(cluster));
+  CARD_GROUPS.forEach((g, gi) => {
+    const grid = grids[gi];
+    if (!grid) return;
+    const html = cards.filter(c => c.group === g.id).map(card => {
+      if (card.view === 'status') return renderStatusCard(card, card.build(records, ctx), card.build(filteredRecords, ctx), totals);
+      const segs = mergeSegments(card.build(records, ctx), card.build(filteredRecords, ctx));
+      return card.view === 'donut' ? renderDonutCard(card, segs, totals) : renderSoftwareCard(card, segs, totals);
+    }).join('');
+    grid.innerHTML = html;
+    const block = grid.closest('.vagg-block');
+    if (block) block.hidden = html === '';
+  });
+  const setExpanded = (cardEl, expanded) => {
+    cardEl.classList.toggle('is-expanded', expanded);
+    const btn = cardEl.querySelector('.vagg-more');
+    if (btn) btn.textContent = expanded ? 'Show less' : `Show all ${btn.dataset.more}`;
+    if (expanded) expandedCards.add(cardEl.dataset.card); else expandedCards.delete(cardEl.dataset.card);
+  };
+  const toggleExpand = (cardEl) => setExpanded(cardEl, !cardEl.classList.contains('is-expanded'));
+  section.querySelectorAll('.vagg-card').forEach(cardEl => { if (expandedCards.has(cardEl.dataset.card)) setExpanded(cardEl, true); });
+  section.querySelectorAll('.vagg-more, .vagg-other').forEach(el => {
+    el.addEventListener('click', (e) => { e.stopPropagation(); toggleExpand(el.closest('.vagg-card')); });
+  });
+  section.hidden = false;
+}
+
+// One delegated click handler for every filterable entry in the cards.
+function initAggFilterClicks() {
+  const section = document.getElementById('vagg');
+  if (!section) return;
+  section.addEventListener('click', (e) => {
+    const t = e.target instanceof Element ? e.target.closest('[data-fkey]') : null;
+    if (!t || !section.contains(t)) return;
+    toggleFilterValue(t.dataset.fkey, t.dataset.fval);
+  });
+}
+
+// Block toggles (software / decentralization), remembered per block.
+function initAggBlockToggles() {
+  document.querySelectorAll('.vagg-block').forEach(block => {
+    const btn = block.querySelector('.vagg-block-title');
+    if (!btn) return;
+    const key = `sonda-vcards-block-${block.dataset.group}`;
+    const apply = (open) => { block.classList.toggle('is-collapsed', !open); btn.setAttribute('aria-expanded', String(open)); };
+    apply(localStorage.getItem(key) !== '0');
+    btn.addEventListener('click', () => {
+      const nowOpen = block.classList.contains('is-collapsed');
+      apply(nowOpen);
+      localStorage.setItem(key, nowOpen ? '1' : '0');
+    });
+  });
+}
+
+// Section toggle: remembered per browser; default open on desktop, collapsed on mobile.
+function initAggToggle() {
+  const section = document.getElementById('vagg');
+  const btns = [document.getElementById('vagg-toggle'), document.getElementById('vagg-toggle-pill')].filter(Boolean);
+  if (!section || btns.length === 0) return;
+  const txt = section.querySelector('.vagg-toggle-txt');
+  const apply = (open) => {
+    section.classList.toggle('is-collapsed', !open);
+    btns.forEach(b => b.setAttribute('aria-expanded', String(open)));
+    if (txt) txt.textContent = open ? 'Hide' : 'Show';
+  };
+  // Narrow screens always start collapsed (the list is what a phone user came for);
+  // on desktop the last choice is remembered.
+  const stored = localStorage.getItem('sonda-vcards-open');
+  apply(window.innerWidth <= 900 ? false : (stored != null ? stored === '1' : true));
+  btns.forEach(b => b.addEventListener('click', () => {
+    const nowOpen = section.classList.contains('is-collapsed');
+    apply(nowOpen);
+    localStorage.setItem('sonda-vcards-open', nowOpen ? '1' : '0');
+  }));
+}
+
 async function loadAndRender() {
   document.getElementById('result-count').textContent = 'Loading…';
   const cluster = getCluster();
@@ -916,11 +1491,20 @@ async function loadAndRender() {
   // Activate cluster banner (sticky, top of page)
   if (window.sondaSetClusterBanner) window.sondaSetClusterBanner(cluster);
 
-  // Fire-and-forget summary fetch to populate StatusStrip, footer-ts, and header pill.
-  // All UI updates are handled centrally by sondaUpdateStrip.
-  fetchSummary(cluster).then(s => {
+  // Clear cluster-specific summary and cards right away: stale cards recoloured in the new
+  // accent and then vanishing was disorienting when switching clusters.
+  const aggSection = document.getElementById('vagg');
+  if (aggSection) { aggSection.hidden = true; aggSection.querySelectorAll('.vagg-grid').forEach(g => { g.innerHTML = ''; }); }
+  latestSummary = null;
+  const sumLine = document.getElementById('vsummary-line');
+  if (sumLine) sumLine.textContent = 'Loading cluster summary…';
+
+  // Summary fetch in parallel with validators: feeds StatusStrip/footer/header pill via
+  // sondaUpdateStrip and provides metrics.asn_names for the breakdown cards.
+  const summaryPromise = fetchSummary(cluster).then(s => {
     if (s && window.sondaUpdateStrip) window.sondaUpdateStrip(s);
-  }).catch(() => {});
+    return s;
+  }).catch(() => null);
 
   try {
     const data = await fetchValidators(cluster);
@@ -947,24 +1531,14 @@ async function loadAndRender() {
     // If selected option became hidden, fall back to stake-desc
     const cur = sortSel.value;
     if ((cur.startsWith('slot') && !hasSlot) || (cur.startsWith('vlat') && !hasVlat) || (cur.startsWith('ibrl') && !hasIbrl)) {
-      sortSel.value = 'stake-desc';
+      sortSel.value = 'rank-asc';
     }
 
-    // Summary cards
-    const totalStake = allRecords.reduce((s, r) => s + (r.activated_stake_lamports || 0), 0);
-    document.getElementById('vsum-total').textContent = fmt(allRecords.length);
-    const active = allRecords.filter(r => !r.delinquent).length;
-    const noGossip = allRecords.filter(r => !isInGossip(r)).length;
-    document.getElementById('vsum-active').textContent =
-      `${active} active · ${allRecords.length - active} delinquent${noGossip > 0 ? ` · ${noGossip} not in gossip` : ''}`;
-    document.getElementById('vsum-stake').textContent = fmtStakeShort(totalStake);
-    const countries = new Set(allRecords.map(r => r.geolocation?.country_code).filter(c => c && c !== '??'));
-    document.getElementById('vsum-countries').textContent = countries.size;
-    const cities = new Set(allRecords.map(r => r.geolocation?.city).filter(c => c && c !== 'Unknown'));
-    document.getElementById('vsum-cities').textContent = `${cities.size} cities`;
-    const asns = new Set(allRecords.map(r => r.geolocation?.asn).filter(Boolean));
-    document.getElementById('vsum-asns').textContent = asns.size;
-
+    // Summary line + breakdown cards
+    renderSummaryLine(allRecords);
+    // Cards need metrics.asn_names (analyzer v3.11) for provider labels when available;
+    // the summary fetch runs in parallel, wait for it here (small file) before the first render.
+    latestSummary = await summaryPromise;
     applyAndRender();
   } catch (e) {
     document.getElementById('result-count').textContent = 'Failed to load data.';
@@ -973,6 +1547,9 @@ async function loadAndRender() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  initAggToggle();
+  initAggBlockToggles();
+  initAggFilterClicks();
   bootstrapCluster();
 
   // Pre-fill search from URL
@@ -1001,12 +1578,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('load-more').addEventListener('click', renderNext);
 
-  document.getElementById('filter-clear').addEventListener('click', () => {
-    ['country','asn','city','dz','bam','rakurai','sfdp','delinquent','superminority'].forEach(k => {
-      params.delete(k);
-      setUrlParam(k, null);
-    });
-    applyAndRender();
+  ['filter-clear', 'filter-clear-top'].forEach(id => {
+    const b = document.getElementById(id);
+    if (b) b.addEventListener('click', clearAllFilters);
   });
 
   loadAndRender();

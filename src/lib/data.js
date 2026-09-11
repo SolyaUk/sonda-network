@@ -17,6 +17,21 @@ export function isInGossip(r) {
   return !!r && r.role === 'validator';
 }
 
+// Display label of a record's client: unmapped gossip ids arrive as "Unknown(N)" before
+// analyzer v3.11 and as "Unknown" + client_id_raw after it; both read as "Unknown".
+export function clientLabel(r) {
+  const c = r?.client_type;
+  if (!c) return '';
+  return /^Unknown\(\d+\)$/.test(c) ? 'Unknown' : c;
+}
+
+// Sortable form of a version string: numeric segments zero-padded so "4.2.2" and
+// "0.1105.40200" compare as numbers segment by segment. Unknown versions sort last.
+export function versionSortKey(v) {
+  if (!v || v === 'unknown') return '';
+  return String(v).split(/[.-]/).map(seg => (/^\d+$/.test(seg) ? seg.padStart(6, '0') : seg)).join('.');
+}
+
 // Apply cluster to <html data-cluster=...> for global tinting
 export function applyClusterToHtml(cluster) {
   if (typeof document === 'undefined') return;
@@ -295,11 +310,26 @@ export function filterValidators(records, params) {
     out = out.filter(r => countries.includes(r.geolocation?.country_code));
   }
 
-  const asn = params.get('asn');
-  if (asn) out = out.filter(r => r.geolocation?.asn === asn);
+  // List params (comma separated) combine as OR inside the key; different keys are AND.
+  const list = (key) => (params.get(key) || '').split(',').map(v => v.trim()).filter(Boolean);
 
-  const city = params.get('city');
-  if (city) out = out.filter(r => r.geolocation?.city === city);
+  const asns = list('asn');
+  if (asns.length > 0) out = out.filter(r => asns.includes(r.geolocation?.asn));
+
+  const cities = list('city');
+  if (cities.length > 0) out = out.filter(r => cities.includes(r.geolocation?.city));
+
+  // client / version apply to gossip-visible records only: nodes outside gossip carry
+  // placeholder values ("Unknown" / "unknown") that are not real observations.
+  const clients = list('client');
+  if (clients.length > 0) out = out.filter(r => isInGossip(r) && clients.includes(clientLabel(r)));
+
+  const versions = list('version');
+  if (versions.length > 0) out = out.filter(r => isInGossip(r) && versions.includes(r.version));
+
+  const gossip = params.get('gossip');
+  if (gossip === 'no') out = out.filter(r => !isInGossip(r));
+  else if (gossip === 'yes') out = out.filter(r => isInGossip(r));
 
   const dz = params.get('dz');
   if (dz === 'connected') out = out.filter(r => r.dz_connected);
@@ -376,13 +406,25 @@ export function sortValidators(records, sort = 'rank', dir = 'asc') {
     commission: r => r.commission ?? -1,
     country: r => r.geolocation?.country_code || '',
     asn: r => r.geolocation?.asn || '',
+    client: r => (isInGossip(r) ? clientLabel(r).toLowerCase() : '') || (dir === 'asc' ? '\uffff' : ''),
+    version: r => (isInGossip(r) ? versionSortKey(r.version) : '') || (dir === 'desc' ? '' : '\uffff'),
+    // SFDP: Approved first when asc; other states, then none
+    sfdp: r => (r.sfdp_state === 'Approved' ? 0 : r.sfdp_state ? 1 : 2),
+    // Delinquent first when desc
+    delinquent: r => (r.delinquent ? 1 : 0),
   }[sort] || (r => r._tvc_rank ?? nullSink());
   const stakeOf = r => r.activated_stake_lamports || 0;
   out.sort((a, b) => {
     const va = accessor(a), vb = accessor(b);
     if (va < vb) return -1 * m;
     if (va > vb) return 1 * m;
-    // Tie-break: larger stake first, then identity for a stable order.
+    // Tie-break: TVC rank (best first) for every sort except rank itself, then larger
+    // stake first, then identity for a stable order. Grouping sorts (client, version,
+    // SFDP, delinquent) therefore read as "the TVC table, grouped".
+    if (sort !== 'rank') {
+      const ra = a._tvc_rank ?? Infinity, rb = b._tvc_rank ?? Infinity;
+      if (ra !== rb) return ra - rb;
+    }
     const sa = stakeOf(a), sb = stakeOf(b);
     if (sa !== sb) return sb - sa;
     return (a.identity_pubkey || '') < (b.identity_pubkey || '') ? -1 : 1;

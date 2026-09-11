@@ -1,0 +1,186 @@
+/* Shared card kit for SONDA pages. Moved 1:1 from src/pages/index.astro on 2026-09-10 so
+   /validators (aggregate cards, F-A.1) and future pages use the same visual language as the
+   homepage Insights cards: story card + tag pills, bar rows, stacked bar with legend, info
+   tooltip. Do not restyle here without checking the homepage. Imported by global.css. */
+
+/* ---- story ---- */
+.story {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px;
+  padding: 1.25rem; display: flex; flex-direction: column; gap: 0.5rem;
+  position: relative; transition: border-color 0.15s;
+}
+.story:hover { border-color: var(--border-accent); }
+
+/* Subtle background tints per card type */
+.story.tint-dz { background: linear-gradient(135deg, color-mix(in srgb, var(--accent-violet) 4%, var(--bg-card)), var(--bg-card)); }
+.story.tint-bam { background: linear-gradient(135deg, color-mix(in srgb, var(--accent-cyan) 4%, var(--bg-card)), var(--bg-card)); }
+.story.tint-sfdp { background: linear-gradient(135deg, color-mix(in srgb, var(--accent-blue) 4%, var(--bg-card)), var(--bg-card)); }
+.story.tint-cluster { background: linear-gradient(135deg, color-mix(in srgb, var(--cluster-accent) 4%, var(--bg-card)), var(--bg-card)); }
+.story.tint-both { background: linear-gradient(135deg, color-mix(in srgb, var(--accent-violet) 3%, var(--bg-card)), color-mix(in srgb, var(--accent-cyan) 3%, var(--bg-card))); }
+
+.story-header { display: flex; align-items: center; justify-content: space-between; }
+.story-tag { font-family: var(--font-mono); font-size: 0.6rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; padding: 0.2rem 0.5rem; border-radius: 4px; }
+.dz-tag { background: rgba(167,139,250,0.15); color: var(--accent-violet); }
+.bam-tag { background: rgba(34,211,238,0.15); color: var(--accent-cyan); }
+.both-tag { background: linear-gradient(90deg, rgba(167,139,250,0.15), rgba(34,211,238,0.15)); color: var(--accent-violet); }
+.sfdp-tag { background: rgba(59,130,246,0.15); color: var(--accent-blue); }
+.cluster-tag { background: color-mix(in srgb, var(--cluster-accent) 15%, transparent); color: var(--cluster-accent); }
+.neutral-tag { background: var(--bg-card-hover); color: var(--text-muted); }
+
+.story-title { font-size: 0.95rem; font-weight: 600; color: var(--text-primary); }
+.story-big { font-size: clamp(2rem, 4vw, 2.8rem); font-weight: 700; line-height: 1; margin: 0.25rem 0; }
+.story-sub { font-size: 0.85rem; color: var(--text-secondary); }
+.story-link { font-size: 0.78rem; color: var(--cluster-accent); text-decoration: none; margin-top: auto; padding-top: 0.5rem; }
+.story-link:hover { text-decoration: underline; }
+.story-dz .story-big { color: var(--accent-violet); }
+.story-bam .story-big { color: var(--accent-cyan); }
+
+/* ---- bar-row ---- */
+/* Generic stacked progress row — used by DZ breakdown, software versions, SFDP states */
+.bar-row { display: grid; grid-template-columns: 1fr 70px 38px; gap: 0.6rem; align-items: center; font-size: 0.78rem; padding: 0.15rem 0; }
+.bar-row-label { color: var(--text-secondary); white-space: nowrap; min-width: 0; cursor: default; position: relative; }
+.bar-row-label[data-tip] { cursor: help; }
+/* Labels with tooltip can't have overflow:hidden because it clips the tooltip popup.
+   Long labels will wrap naturally; current set of labels is short enough not to need ellipsis. */
+.bar-row-track { height: 5px; background: var(--bg-primary); border: 1px solid var(--border); border-radius: 3px; overflow: hidden; }
+.bar-row-fill { height: 100%; border-radius: 2px; transition: width 0.4s ease; min-width: 1px; }
+.bar-row-fill.violet { background: var(--accent-violet); }
+.bar-row-fill.violet-dim { background: var(--accent-violet); opacity: 0.45; }
+.bar-row-fill.cyan { background: var(--accent-cyan); }
+.bar-row-fill.cyan-dim { background: var(--accent-cyan); opacity: 0.45; }
+.bar-row-fill.cluster { background: var(--cluster-accent); }
+.bar-row-fill.good { background: var(--status-good); }
+.bar-row-fill.warn { background: var(--status-warning); }
+.bar-row-fill.neutral { background: var(--text-muted); opacity: 0.55; }
+.bar-row-fill.info { background: var(--accent-blue); }
+.bar-row-fill.muted { background: var(--text-muted); }
+.bar-row-fill.crit { background: var(--status-critical); }
+.bar-row-num { font-family: var(--font-mono); font-weight: 600; color: var(--text-primary); text-align: right; font-size: 0.78rem; }
+.bar-rows-wrap { display: flex; flex-direction: column; gap: 0.3rem; }
+.bar-rows-wrap.with-divider { padding-top: 0.5rem; margin-top: 0.5rem; border-top: 1px solid var(--border); }
+
+/* ---- stacked ---- */
+/* Stacked bar (clients/versions) */
+.stacked-bar { position: relative; height: 38px; border-radius: 6px; background: var(--bg-secondary); margin: 0.5rem 0; }
+.stacked-bar-inner { display: flex; height: 100%; width: 100%; border-radius: 6px; overflow: hidden; }
+.stacked-segment {
+  height: 100%; display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-mono); font-size: 0.78rem; font-weight: 600; color: #fff;
+  white-space: nowrap; overflow: hidden; transition: width 0.4s ease;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.4); cursor: help;
+}
+/* segment tooltips: data-tip via src/lib/tooltip.js */
+
+.stacked-legend {
+  display: grid; grid-template-columns: repeat(2, 1fr);
+  gap: 0.4rem 1.6rem;
+  font-size: 0.78rem; color: var(--text-secondary);
+  margin-top: 0.7rem;
+}
+.stacked-legend-item {
+  display: flex; align-items: center; gap: 0.45rem;
+  min-width: 0;
+}
+.stacked-legend-dot { width: 9px; height: 9px; border-radius: 2px; flex-shrink: 0; }
+.stacked-legend-name {
+  color: var(--text-primary); font-weight: 500;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  flex: 0 1 auto; min-width: 0;
+}
+.stacked-legend-stat {
+  color: var(--text-muted); font-family: var(--font-mono); font-size: 0.7rem;
+  flex-shrink: 0; margin-left: auto;
+}
+/* Dot leader between a legend label and its number (like a book's table of contents):
+   faint, so the eye links label to value without the row reading as a line. Works as a
+   flex item (stacked legends) and as a grid cell (row grids); hidden in tight legends. */
+.legend-leader {
+  flex: 1 1 12px; min-width: 12px; height: 2px; align-self: center;
+  background-image: radial-gradient(circle, color-mix(in srgb, var(--text-muted) 24%, transparent) 0.9px, transparent 1.1px);
+  background-size: 5px 2px; background-repeat: repeat-x; background-position: 0 center;
+  margin: 0 0.3rem;
+}
+.stacked-legend-item .legend-leader { margin-right: 0; }
+.stacked-legend-item .stacked-legend-stat { margin-left: 0; }
+.donut-legend .legend-leader { display: none; }
+@media (max-width: 480px) {
+  .stacked-legend { grid-template-columns: 1fr; }
+}
+
+/* ---- tooltip ---- */
+.tooltip-wrap { position: relative; display: inline-flex; align-items: center; }
+.tooltip-icon {
+  width: 15px; height: 15px; border-radius: 50%;
+  background: var(--bg-card-hover); border: 1px solid var(--border);
+  color: var(--text-muted); cursor: help; flex-shrink: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  user-select: none;
+}
+.tooltip-icon:hover { color: var(--text-secondary); border-color: var(--text-muted); }
+.tooltip-icon svg { display: block; }
+.tooltip-box {
+  /* Opened and positioned (position: fixed) by src/lib/tooltip.js on hover, focus or tap. */
+  display: none; position: fixed; left: 0; top: 0;
+  background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px;
+  padding: 0.55rem 0.75rem; font-size: 0.74rem; color: var(--text-secondary);
+  width: 260px; max-width: calc(100vw - 1rem); line-height: 1.55; z-index: 1000;
+  text-transform: none; letter-spacing: 0; font-weight: 400; text-align: left;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+}
+.tooltip-box.is-open { display: block; }
+
+/* ---- donut ---- */
+/* Stake donut (devnet 4th card, RPC summary) */
+.donut-wrap { display: grid; grid-template-columns: auto 1fr; gap: 1rem; align-items: center; margin-top: 0.5rem; flex: 1; }
+.donut-svg { width: 130px; height: 130px; flex-shrink: 0; }
+.donut-svg svg { width: 100%; height: 100%; display: block; }
+
+/* 2-column legend with shared grid alignment.
+   Six tracks: [dot] [label] [num]   [dot] [label] [num]
+   Items use display:contents so their three children flow directly into the
+   parent grid. Result: all dots align, all labels start at same x and END at
+   the longest-label width, all percents align right after labels. No more big
+   gaps between short names and their percentages. */
+.donut-legend-2col {
+  display: grid;
+  /* per column: dot | label (text + leader inside) | num */
+  grid-template-columns: auto minmax(0, 1fr) auto auto minmax(0, 1fr) auto;
+  column-gap: 0.4rem;
+  row-gap: 0.32rem;
+  align-items: center;
+  font-size: 0.74rem;
+  min-width: 0;
+}
+.donut-legend-2col .donut-legend-item { display: contents; }
+/* Base item style for non-2col contexts (RPC summary). */
+.donut-legend-item { display: flex; align-items: center; gap: 0.4rem; min-width: 0; }
+/* Add visual breathing room between the two legend columns by indenting the
+   second column's dot. Only applies when there's actually a 2nd column item. */
+.donut-legend-2col > .donut-legend-item:nth-child(even) > .donut-legend-dot {
+  margin-left: 0.7rem;
+}
+
+.donut-legend-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+/* Label is a flex row: text + leader, so the leader starts right after the text and runs
+   up to the number (a separate leader track would start at the column edge instead). */
+.donut-legend-label {
+  color: var(--text-secondary);
+  display: flex; align-items: center; min-width: 0;
+}
+.donut-legend-label .legend-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.donut-legend .donut-legend-label { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.donut-legend-num {
+  color: var(--text-muted); font-family: var(--font-mono); font-size: 0.7rem;
+  white-space: nowrap;
+}
+
+@media (max-width: 480px) {
+  /* Single visual column on narrow screens. Three sub-tracks. */
+  .donut-legend-2col {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+  .donut-legend-2col > .donut-legend-item:nth-child(even) > .donut-legend-dot {
+    margin-left: 0;
+  }
+  .donut-svg { width: 110px; height: 110px; }
+}

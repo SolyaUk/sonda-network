@@ -13,7 +13,7 @@ import ClusterBanner from '../components/ClusterBanner.astro';
   <div class="dev-banner">
     <div class="dev-banner-inner">
       <span class="dev-badge">BETA</span>
-      Dashboard is under active development. Some sections are incomplete.
+      SONDA is under active development. Some sections are incomplete.
       <a href="https://github.com/SolyaUk/sonda-network" target="_blank" rel="noopener" class="dev-link">View on GitHub</a>
     </div>
   </div>
@@ -453,7 +453,7 @@ import ClusterBanner from '../components/ClusterBanner.astro';
                     <div class="phase-block-bar-fill" style="width:100%; background: var(--status-good);"></div>
                   </div>
                   <div class="phase-block-desc">
-                    <strong>Public dashboard launched.</strong> Live homepage on all three clusters. Cluster switching, decentralization metrics, live infrastructure status, geographic distribution, Path to better decentralization, About + Roadmap. Twitter @SondaNetwork. Hosted on sonda.network.
+                    <strong>sonda.network launched.</strong> Live homepage on all three clusters. Cluster switching, decentralization metrics, live infrastructure status, geographic distribution, Path to better decentralization, About + Roadmap. Twitter @SondaNetwork. Hosted on sonda.network.
                   </div>
                 </div>
 
@@ -684,63 +684,13 @@ import ClusterBanner from '../components/ClusterBanner.astro';
   line-height: 1.4;
 }
 
-.story {
-  background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px;
-  padding: 1.25rem; display: flex; flex-direction: column; gap: 0.5rem;
-  position: relative; transition: border-color 0.15s;
-}
-.story:hover { border-color: var(--border-accent); }
-
-/* Subtle background tints per card type */
-.story.tint-dz { background: linear-gradient(135deg, color-mix(in srgb, var(--accent-violet) 4%, var(--bg-card)), var(--bg-card)); }
-.story.tint-bam { background: linear-gradient(135deg, color-mix(in srgb, var(--accent-cyan) 4%, var(--bg-card)), var(--bg-card)); }
-.story.tint-sfdp { background: linear-gradient(135deg, color-mix(in srgb, var(--accent-blue) 4%, var(--bg-card)), var(--bg-card)); }
-.story.tint-cluster { background: linear-gradient(135deg, color-mix(in srgb, var(--cluster-accent) 4%, var(--bg-card)), var(--bg-card)); }
-.story.tint-both { background: linear-gradient(135deg, color-mix(in srgb, var(--accent-violet) 3%, var(--bg-card)), color-mix(in srgb, var(--accent-cyan) 3%, var(--bg-card))); }
-
-.story-header { display: flex; align-items: center; justify-content: space-between; }
-.story-tag { font-family: var(--font-mono); font-size: 0.6rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; padding: 0.2rem 0.5rem; border-radius: 4px; }
-.dz-tag { background: rgba(167,139,250,0.15); color: var(--accent-violet); }
-.bam-tag { background: rgba(34,211,238,0.15); color: var(--accent-cyan); }
-.both-tag { background: linear-gradient(90deg, rgba(167,139,250,0.15), rgba(34,211,238,0.15)); color: var(--accent-violet); }
-.sfdp-tag { background: rgba(59,130,246,0.15); color: var(--accent-blue); }
-.cluster-tag { background: color-mix(in srgb, var(--cluster-accent) 15%, transparent); color: var(--cluster-accent); }
-.neutral-tag { background: var(--bg-card-hover); color: var(--text-muted); }
-
-.story-title { font-size: 0.95rem; font-weight: 600; color: var(--text-primary); }
-.story-big { font-size: clamp(2rem, 4vw, 2.8rem); font-weight: 700; line-height: 1; margin: 0.25rem 0; }
-.story-sub { font-size: 0.85rem; color: var(--text-secondary); }
-.story-link { font-size: 0.78rem; color: var(--cluster-accent); text-decoration: none; margin-top: auto; padding-top: 0.5rem; }
-.story-link:hover { text-decoration: underline; }
-.story-dz .story-big { color: var(--accent-violet); }
-.story-bam .story-big { color: var(--accent-cyan); }
+/* story card-kit CSS moved to src/styles/cards.css (2026-09-10) */
 .bam-stake { font-weight: 600; }
 .bam-stake.good { color: var(--status-good); }
 .bam-stake.warn { color: var(--accent-amber); }
 .bam-stake.crit { color: var(--status-critical); }
 
-/* Generic stacked progress row — used by DZ breakdown, software versions, SFDP states */
-.bar-row { display: grid; grid-template-columns: 1fr 70px 38px; gap: 0.6rem; align-items: center; font-size: 0.78rem; padding: 0.15rem 0; }
-.bar-row-label { color: var(--text-secondary); white-space: nowrap; min-width: 0; cursor: default; position: relative; }
-.bar-row-label[data-tip] { cursor: help; }
-/* Labels with tooltip can't have overflow:hidden because it clips the tooltip popup.
-   Long labels will wrap naturally; current set of labels is short enough not to need ellipsis. */
-.bar-row-track { height: 5px; background: var(--bg-primary); border: 1px solid var(--border); border-radius: 3px; overflow: hidden; }
-.bar-row-fill { height: 100%; border-radius: 2px; transition: width 0.4s ease; min-width: 1px; }
-.bar-row-fill.violet { background: var(--accent-violet); }
-.bar-row-fill.violet-dim { background: var(--accent-violet); opacity: 0.45; }
-.bar-row-fill.cyan { background: var(--accent-cyan); }
-.bar-row-fill.cyan-dim { background: var(--accent-cyan); opacity: 0.45; }
-.bar-row-fill.cluster { background: var(--cluster-accent); }
-.bar-row-fill.good { background: var(--status-good); }
-.bar-row-fill.warn { background: var(--status-warning); }
-.bar-row-fill.neutral { background: var(--text-muted); opacity: 0.55; }
-.bar-row-fill.info { background: var(--accent-blue); }
-.bar-row-fill.muted { background: var(--text-muted); }
-.bar-row-fill.crit { background: var(--status-critical); }
-.bar-row-num { font-family: var(--font-mono); font-weight: 600; color: var(--text-primary); text-align: right; font-size: 0.78rem; }
-.bar-rows-wrap { display: flex; flex-direction: column; gap: 0.3rem; }
-.bar-rows-wrap.with-divider { padding-top: 0.5rem; margin-top: 0.5rem; border-top: 1px solid var(--border); }
+/* bar-row card-kit CSS moved to src/styles/cards.css (2026-09-10) */
 
 /* Matrix */
 .matrix-grid { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 0; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin: 0.5rem 0; }
@@ -753,48 +703,7 @@ import ClusterBanner from '../components/ClusterBanner.astro';
 .matrix-cell[data-cell="dz"] .matrix-num { color: var(--accent-violet); }
 .matrix-cell-label { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
 
-/* Stacked bar (clients/versions) */
-.stacked-bar { position: relative; height: 38px; border-radius: 6px; background: var(--bg-secondary); margin: 0.5rem 0; }
-.stacked-bar-inner { display: flex; height: 100%; width: 100%; border-radius: 6px; overflow: hidden; }
-.stacked-segment {
-  height: 100%; display: flex; align-items: center; justify-content: center;
-  font-family: var(--font-mono); font-size: 0.78rem; font-weight: 600; color: #fff;
-  white-space: nowrap; overflow: hidden; transition: width 0.4s ease;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.4); cursor: help;
-}
-.stacked-tooltip {
-  pointer-events: none; position: absolute; bottom: calc(100% + 6px); left: 0;
-  background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 6px;
-  padding: 0.4rem 0.6rem; font-size: 0.72rem; font-weight: 500; color: var(--text-primary);
-  white-space: nowrap; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-  text-shadow: none; opacity: 0; transition: opacity 0.15s;
-  transform: translateX(-50%);
-}
-.stacked-tooltip.show { opacity: 1; }
-
-.stacked-legend {
-  display: grid; grid-template-columns: repeat(2, 1fr);
-  gap: 0.4rem 1.25rem;
-  font-size: 0.78rem; color: var(--text-secondary);
-  margin-top: 0.7rem;
-}
-.stacked-legend-item {
-  display: flex; align-items: center; gap: 0.45rem;
-  min-width: 0;
-}
-.stacked-legend-dot { width: 9px; height: 9px; border-radius: 2px; flex-shrink: 0; }
-.stacked-legend-name {
-  color: var(--text-primary); font-weight: 500;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  flex: 0 1 auto; min-width: 0;
-}
-.stacked-legend-stat {
-  color: var(--text-muted); font-family: var(--font-mono); font-size: 0.7rem;
-  flex-shrink: 0; margin-left: auto;
-}
-@media (max-width: 480px) {
-  .stacked-legend { grid-template-columns: 1fr; }
-}
+/* stacked card-kit CSS moved to src/styles/cards.css (2026-09-10) */
 
 /* SFDP card content */
 .sfdp-grid { display: flex; flex-direction: column; gap: 0.6rem; }
@@ -836,56 +745,7 @@ import ClusterBanner from '../components/ClusterBanner.astro';
 .whatis-stat-num { font-family: var(--font-mono); font-size: 1.3rem; font-weight: 700; color: var(--cluster-accent); line-height: 1; }
 .whatis-stat-label { font-size: 0.68rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
 
-/* Stake donut (devnet 4th card, RPC summary) */
-.donut-wrap { display: grid; grid-template-columns: auto 1fr; gap: 1rem; align-items: center; margin-top: 0.5rem; flex: 1; }
-.donut-svg { width: 130px; height: 130px; flex-shrink: 0; }
-.donut-svg svg { width: 100%; height: 100%; display: block; }
-
-/* 2-column legend with shared grid alignment.
-   Six tracks: [dot] [label] [num]   [dot] [label] [num]
-   Items use display:contents so their three children flow directly into the
-   parent grid. Result: all dots align, all labels start at same x and END at
-   the longest-label width, all percents align right after labels. No more big
-   gaps between short names and their percentages. */
-.donut-legend-2col {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto auto minmax(0, 1fr) auto;
-  column-gap: 0.4rem;
-  row-gap: 0.32rem;
-  align-items: center;
-  font-size: 0.74rem;
-  min-width: 0;
-}
-.donut-legend-2col .donut-legend-item { display: contents; }
-/* Base item style for non-2col contexts (RPC summary). */
-.donut-legend-item { display: flex; align-items: center; gap: 0.4rem; min-width: 0; }
-/* Add visual breathing room between the two legend columns by indenting the
-   second column's dot. Only applies when there's actually a 2nd column item. */
-.donut-legend-2col > .donut-legend-item:nth-child(even) > .donut-legend-dot {
-  margin-left: 0.7rem;
-}
-
-.donut-legend-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
-.donut-legend-label {
-  color: var(--text-secondary);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  min-width: 0;
-}
-.donut-legend-num {
-  color: var(--text-muted); font-family: var(--font-mono); font-size: 0.7rem;
-  white-space: nowrap;
-}
-
-@media (max-width: 480px) {
-  /* Single visual column on narrow screens. Three sub-tracks. */
-  .donut-legend-2col {
-    grid-template-columns: auto minmax(0, 1fr) auto;
-  }
-  .donut-legend-2col > .donut-legend-item:nth-child(even) > .donut-legend-dot {
-    margin-left: 0;
-  }
-  .donut-svg { width: 110px; height: 110px; }
-}
+/* donut card-kit CSS moved to src/styles/cards.css (2026-09-10) */
 
 /* SFDP linked card content (testnet 4th slot) */
 .sfdp-linked-content { display: flex; flex-direction: column; gap: 0.55rem; flex: 1; }
@@ -1399,36 +1259,7 @@ import ClusterBanner from '../components/ClusterBanner.astro';
 }
 
 /* Tooltip (info-icon hover) */
-.tooltip-wrap { position: relative; display: inline-flex; align-items: center; }
-.tooltip-icon {
-  width: 15px; height: 15px; border-radius: 50%;
-  background: var(--bg-card-hover); border: 1px solid var(--border);
-  color: var(--text-muted); cursor: help; flex-shrink: 0;
-  display: inline-flex; align-items: center; justify-content: center;
-  user-select: none;
-}
-.tooltip-icon:hover { color: var(--text-secondary); border-color: var(--text-muted); }
-.tooltip-icon svg { display: block; }
-.tooltip-box {
-  display: none; position: absolute; bottom: calc(100% + 6px); right: 0;
-  background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px;
-  padding: 0.55rem 0.75rem; font-size: 0.74rem; color: var(--text-secondary);
-  width: 260px; line-height: 1.55; z-index: 50;
-  text-transform: none; letter-spacing: 0; font-weight: 400; text-align: left;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.25);
-}
-.tooltip-wrap:hover .tooltip-box { display: block; }
-@media (max-width: 600px) {
-  .tooltip-box {
-    /* JS positions via inline styles on focus; these are fallbacks. */
-    max-width: calc(100vw - 1rem);
-  }
-  /* Disable hover-on-tap (sticks until next tap, ugly during scroll). Use
-     focus-within instead — tap icon = focus on icon = tooltip shows. JS
-     handles position; scroll handler in JS clears focus to dismiss. */
-  .tooltip-wrap:hover .tooltip-box { display: none; }
-  .tooltip-wrap:focus-within .tooltip-box { display: block; }
-}
+/* tooltip card-kit CSS moved to src/styles/cards.css (2026-09-10) */
 
 /* Footer */
 .site-footer { border-top: 1px solid var(--border); padding: 2rem 0; margin-top: 2rem; }
@@ -1448,7 +1279,7 @@ import ClusterBanner from '../components/ClusterBanner.astro';
 .footer-bottom { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; font-size: 0.75rem; color: var(--text-muted); }
 
 /* Prod overlay */
-/* (Prod overlay removed in v2.4 — sonda.network now shows the dashboard directly,
+/* (Prod overlay removed in v2.4 — sonda.network now shows the site directly,
    with the BETA dev-banner at top providing the "still in development" signal.) */
 </style>
 
@@ -1456,6 +1287,7 @@ import ClusterBanner from '../components/ClusterBanner.astro';
 <script>
 import { fetchSummary, fetchValidators, fetchValidatorsCached, fetchMainnetSummaryCached, bootstrapCluster, aggregateByAsn, isValidatorRecord } from '../lib/data.js';
 import { fmt, pct, flag, fmtTimestamp, hhiRating, giniRating, nakRating, smRating, shannonRating, versionColor, clientColor } from '../lib/formatters.js';
+import { renderDonut, PIE_PALETTE } from '../lib/charts.js';
 import { savePreviousFetch } from '../lib/compare.js';
 
 // ───────── Constants ─────────
@@ -1463,7 +1295,7 @@ import { savePreviousFetch } from '../lib/compare.js';
 // Client palette lives in src/lib/formatters.js (CLIENT_COLORS, clientColor). The copy
 // that used to sit here drifted (dead Harmonic_Major key) and painted HarmonicMajor grey.
 
-const PIE_PALETTE = ['#3b82f6', '#a78bfa', '#22d3ee', '#f97316', '#22c55e', '#eab308', '#ef4444', '#e879f9', '#06b6d4', '#fbbf24', '#8b5cf6', '#10b981'];
+// PIE_PALETTE is imported from src/lib/charts.js
 
 // Different palettes per donut type so they don't all look identical at a glance.
 // Stake palette leads with violet+amber+green (matches "asset" feel).
@@ -1674,45 +1506,7 @@ function renderPulse(d: any, records: any[], cluster: string) {
 // ───────── Donut renderer (generic) ─────────
 // Used by: devnet validators-by-stake, RPC summary mini-donut, future donuts.
 // items: { label, value, color? }[]
-function renderDonut(items: { label: string; value: number; color?: string }[], opts: { size?: number; ringR?: number; innerR?: number } = {}): { svg: string; legend: string } {
-  if (items.length === 0) return { svg: '<div style="color:var(--text-muted); font-size:0.78rem;">No data</div>', legend: '' };
-  const total = items.reduce((s, it) => s + it.value, 0) || 1;
-  const size = opts.size ?? 130;
-  const cx = size/2, cy = size/2;
-  const r = opts.ringR ?? 56;
-  const ir = opts.innerR ?? 36;
-  let angle = -Math.PI/2;
-  const segs: string[] = [];
-  const legendItems: string[] = [];
-  items.forEach((it, i) => {
-    const frac = it.value / total;
-    if (frac === 0) return;
-    let pathD: string;
-    if (frac >= 0.999) {
-      pathD = `M ${cx} ${cy - r} A ${r} ${r} 0 1 1 ${cx - 0.001} ${cy - r} L ${cx - 0.001} ${cy - ir} A ${ir} ${ir} 0 1 0 ${cx} ${cy - ir} Z`;
-    } else {
-      const a2 = angle + frac * Math.PI * 2;
-      const x1 = cx + r * Math.cos(angle), y1 = cy + r * Math.sin(angle);
-      const x2 = cx + r * Math.cos(a2), y2 = cy + r * Math.sin(a2);
-      const ix1 = cx + ir * Math.cos(a2), iy1 = cy + ir * Math.sin(a2);
-      const ix2 = cx + ir * Math.cos(angle), iy2 = cy + ir * Math.sin(angle);
-      const large = frac > 0.5 ? 1 : 0;
-      pathD = `M ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} L ${ix1} ${iy1} A ${ir} ${ir} 0 ${large} 0 ${ix2} ${iy2} Z`;
-      angle = a2;
-    }
-    const color = it.color || PIE_PALETTE[i % PIE_PALETTE.length];
-    segs.push(`<path d="${pathD}" fill="${color}"><title>${escapeHtml(it.label)}: ${fmt(it.value)} (${(frac*100).toFixed(1)}%)</title></path>`);
-    legendItems.push(`<div class="donut-legend-item">
-      <span class="donut-legend-dot" style="background:${color}"></span>
-      <span class="donut-legend-label">${it.label}</span>
-      <span class="donut-legend-num">${(frac*100).toFixed(1)}%</span>
-    </div>`);
-  });
-  return {
-    svg: `<svg viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">${segs.join('')}</svg>`,
-    legend: legendItems.join(''),
-  };
-}
+// renderDonut lives in src/lib/charts.js (shared with /validators breakdown cards).
 
 // ───────── Nakamoto donut (multi-ring concentric) ─────────
 // n ≤ 10: single ring. n 11-20: 2 rings. n 21-30: 3 rings. n > 30: 3 rings + "+N" label.
@@ -1792,18 +1586,14 @@ async function renderStories(d: any, records: any[], cluster: string) {
   if (cluster === 'mainnet-beta') {
     grid.classList.add('mainnet-layout');
     grid.innerHTML = renderMainnetStories(records, d);
-    setupStackedBarTooltip('.stacked-bar', '#stacked-tooltip-clients');
   } else if (cluster === 'alpenglow-community') {
     grid.classList.add('alpenglow-layout');
     grid.innerHTML = renderAlpenglowStories(records, d);
-    setupStackedBarTooltip('.stacked-bar', '#stacked-tooltip-versions');
   } else if (cluster === 'testnet') {
     grid.innerHTML = renderTestnetDevnetStories(records, d, 'testnet', /* sfdpPlaceholder */ true);
-    setupStackedBarTooltip('.stacked-bar', '#stacked-tooltip-versions');
     renderTestnetSfdpLinkedCard(records).catch(e => console.warn('[SONDA] SFDP cross-cluster:', e));
   } else {
     grid.innerHTML = renderTestnetDevnetStories(records, d, 'devnet', false);
-    setupStackedBarTooltip('.stacked-bar', '#stacked-tooltip-versions');
   }
 }
 
@@ -1872,28 +1662,35 @@ function renderMainnetStories(records: any[], d: any): string {
   const onboarded = records.filter(r => r?.sfdp_state === 'TestnetOnboarded').length;
   const rejected = records.filter(r => r?.sfdp_state === 'Rejected').length;
 
-  // Client distribution (stacked bar)
+  // Client distribution (stacked bar), stake-weighted like the /validators cards: the bar
+  // and the legend percentage are shares of stake, the count sits next to it.
   const clientCounts: Record<string, number> = {};
+  const clientStake: Record<string, number> = {};
   let totalClient = 0;
+  let totalClientStake = 0;
   for (const r of records) {
     if (!r?.client_type) continue;
     const name = cleanClientName(r.client_type);
     clientCounts[name] = (clientCounts[name] || 0) + 1;
+    clientStake[name] = (clientStake[name] || 0) + (r.activated_stake_lamports || 0);
     totalClient++;
+    totalClientStake += r.activated_stake_lamports || 0;
   }
-  const sortedClients = Object.entries(clientCounts).sort((a, b) => b[1] - a[1]);
+  const sortedClients = Object.entries(clientCounts).sort((a, b) => (clientStake[b[0]] || 0) - (clientStake[a[0]] || 0));
   const clientSegments = sortedClients.map(([name, count]) => {
-    const w = (count / totalClient) * 100;
+    const w = totalClientStake ? (clientStake[name] / totalClientStake) * 100 : (count / totalClient) * 100;
+    const share = (count / totalClient) * 100;
     const color = getClientColor(name);
     const showLabel = w >= 8;
-    return `<div class="stacked-segment" data-seg-name="${escapeHtml(name)}" data-seg-count="${count}" data-seg-pct="${w.toFixed(1)}" style="width:${w}%; background:${color};">${showLabel ? `${w.toFixed(0)}%` : ''}</div>`;
+    return `<div class="stacked-segment" data-tip="${escapeHtml(name)}: ${count} validators (${share.toFixed(1)}%), ${w.toFixed(1)}% of stake" style="width:${w}%; background:${color};">${showLabel ? `${w.toFixed(0)}%` : ''}</div>`;
   }).join('');
   const clientLegend = sortedClients.map(([name, count]) => {
-    const w = (count / totalClient) * 100;
+    const w = totalClientStake ? (clientStake[name] / totalClientStake) * 100 : (count / totalClient) * 100;
     const color = getClientColor(name);
     return `<span class="stacked-legend-item">
       <span class="stacked-legend-dot" style="background:${color};"></span>
       <span class="stacked-legend-name">${escapeHtml(name)}</span>
+      <span class="legend-leader"></span>
       <span class="stacked-legend-stat">${count} · ${w.toFixed(1)}%</span>
     </span>`;
   }).join('');
@@ -1989,7 +1786,7 @@ function renderMainnetStories(records: any[], d: any): string {
         ${consensusBadgeHtml(d)}
       </div>
       <div class="story-title">Validator client distribution</div>
-      <div class="stacked-bar"><div class="stacked-bar-inner">${clientSegments}</div><div class="stacked-tooltip" id="stacked-tooltip-clients"></div></div>
+      <div class="stacked-bar"><div class="stacked-bar-inner">${clientSegments}</div></div>
       <div class="stacked-legend">${clientLegend}</div>
     </div>
 
@@ -2059,7 +1856,7 @@ function renderTestnetDevnetStories(records: any[], d: any, cluster: 'testnet' |
     version: v,
     current: info.currentValidators || 0,
     stake: info.currentActiveStake || 0,
-  })).filter(r => r.current > 0).sort((a, b) => b.current - a.current);
+  })).filter(r => r.current > 0).sort((a, b) => (b.stake - a.stake) || (b.current - a.current));
 
   // Fallback to record-based counting if cluster_health not available
   const versionsForRender = versionRows.length > 0 ? versionRows : (() => {
@@ -2070,12 +1867,14 @@ function renderTestnetDevnetStories(records: any[], d: any, cluster: 'testnet' |
   })();
 
   const totalVer = versionsForRender.reduce((s, r) => s + r.current, 0) || 1;
+  // Bar is stake-weighted (share of stake per version); the count share stays in the tooltip.
   const versionSegments = versionsForRender.map(r => {
-    const w = (r.current / totalVer) * 100;
+    const share = (r.current / totalVer) * 100;
+    const stakePct = totalActiveStake ? (r.stake / totalActiveStake) * 100 : 0;
+    const w = totalActiveStake ? stakePct : share;
     const color = versionColor(r.version);
     const showLabel = w >= 10;
-    const stakePct = totalActiveStake ? (r.stake / totalActiveStake) * 100 : 0;
-    return `<div class="stacked-segment" data-seg-name="${escapeHtml(r.version)}" data-seg-count="${r.current}" data-seg-pct="${w.toFixed(1)}" data-seg-stake="${stakePct.toFixed(2)}" style="width:${w}%; background:${color};">${showLabel ? `${w.toFixed(0)}%` : ''}</div>`;
+    return `<div class="stacked-segment" data-tip="${escapeHtml(r.version)}: ${r.current} validators (${share.toFixed(1)}%), ${stakePct.toFixed(2)}% of stake" style="width:${w}%; background:${color};">${showLabel ? `${w.toFixed(0)}%` : ''}</div>`;
   }).join('');
   const versionLegend = versionsForRender.slice(0, 8).map(r => {
     const w = (r.current / totalVer) * 100;
@@ -2084,10 +1883,11 @@ function renderTestnetDevnetStories(records: any[], d: any, cluster: 'testnet' |
     // Legend: 2 numbers (count + stake%). The bar already shows count-share visually,
     // and stake% reveals dominance — e.g. one version may run on a few validators
     // but hold most of the stake. Tooltip on hover keeps all three.
-    const secondary = totalActiveStake ? `${stakePct.toFixed(1)}% stake` : `${w.toFixed(1)}%`;
+    const secondary = totalActiveStake ? `${stakePct.toFixed(1)}%` : `${w.toFixed(1)}%`;
     return `<span class="stacked-legend-item">
       <span class="stacked-legend-dot" style="background:${color};"></span>
       <span class="stacked-legend-name">${escapeHtml(r.version)}</span>
+      <span class="legend-leader"></span>
       <span class="stacked-legend-stat">${r.current} · ${secondary}</span>
     </span>`;
   }).join('');
@@ -2205,7 +2005,7 @@ function renderTestnetDevnetStories(records: any[], d: any, cluster: 'testnet' |
         ${consensusBadgeHtml(d)}
       </div>
       <div class="story-title">Validator versions</div>
-      <div class="stacked-bar"><div class="stacked-bar-inner">${versionSegments}</div><div class="stacked-tooltip" id="stacked-tooltip-versions"></div></div>
+      <div class="stacked-bar"><div class="stacked-bar-inner">${versionSegments}</div></div>
       <div class="stacked-legend">${versionLegend}</div>
     </div>
 
@@ -2263,7 +2063,7 @@ function renderAlpenglowStories(records: any[], d: any): string {
     version: ver,
     current: info.currentValidators || 0,
     stake: info.currentActiveStake || 0,
-  })).filter(r => r.current > 0).sort((a, b) => b.current - a.current);
+  })).filter(r => r.current > 0).sort((a, b) => (b.stake - a.stake) || (b.current - a.current));
   const versionsForRender = versionRows.length > 0 ? versionRows : (() => {
     const counts: Record<string, number> = {};
     records.forEach(r => { const vr = r.version || 'unknown'; counts[vr] = (counts[vr] || 0) + 1; });
@@ -2271,21 +2071,24 @@ function renderAlpenglowStories(records: any[], d: any): string {
       .map(([version, current]) => ({ version, current, stake: 0 }));
   })();
   const totalVer = versionsForRender.reduce((s, r) => s + r.current, 0) || 1;
+  // Bar is stake-weighted (share of stake per version); the count share stays in the tooltip.
   const versionSegments = versionsForRender.map(r => {
-    const w = (r.current / totalVer) * 100;
+    const share = (r.current / totalVer) * 100;
+    const stakePct = totalActiveStake ? (r.stake / totalActiveStake) * 100 : 0;
+    const w = totalActiveStake ? stakePct : share;
     const color = versionColor(r.version);
     const showLabel = w >= 10;
-    const stakePct = totalActiveStake ? (r.stake / totalActiveStake) * 100 : 0;
-    return `<div class="stacked-segment" data-seg-name="${escapeHtml(r.version)}" data-seg-count="${r.current}" data-seg-pct="${w.toFixed(1)}" data-seg-stake="${stakePct.toFixed(2)}" style="width:${w}%; background:${color};">${showLabel ? `${w.toFixed(0)}%` : ''}</div>`;
+    return `<div class="stacked-segment" data-tip="${escapeHtml(r.version)}: ${r.current} validators (${share.toFixed(1)}%), ${stakePct.toFixed(2)}% of stake" style="width:${w}%; background:${color};">${showLabel ? `${w.toFixed(0)}%` : ''}</div>`;
   }).join('');
   const versionLegend = versionsForRender.slice(0, 8).map(r => {
     const w = (r.current / totalVer) * 100;
     const color = versionColor(r.version);
     const stakePct = totalActiveStake ? (r.stake / totalActiveStake) * 100 : 0;
-    const secondary = totalActiveStake ? `${stakePct.toFixed(1)}% stake` : `${w.toFixed(1)}%`;
+    const secondary = totalActiveStake ? `${stakePct.toFixed(1)}%` : `${w.toFixed(1)}%`;
     return `<span class="stacked-legend-item">
       <span class="stacked-legend-dot" style="background:${color};"></span>
       <span class="stacked-legend-name">${escapeHtml(r.version)}</span>
+      <span class="legend-leader"></span>
       <span class="stacked-legend-stat">${r.current} · ${secondary}</span>
     </span>`;
   }).join('');
@@ -2397,7 +2200,7 @@ function renderAlpenglowStories(records: any[], d: any): string {
         ${consensusBadge}
       </div>
       <div class="story-title">Validator versions</div>
-      <div class="stacked-bar"><div class="stacked-bar-inner">${versionSegments}</div><div class="stacked-tooltip" id="stacked-tooltip-versions"></div></div>
+      <div class="stacked-bar"><div class="stacked-bar-inner">${versionSegments}</div></div>
       <div class="stacked-legend">${versionLegend}</div>
     </div>
 
@@ -2517,32 +2320,7 @@ async function renderTestnetSfdpLinkedCard(testnetRecords: any[]) {
 
 // ───────── Stacked bar tooltip setup ─────────
 
-function setupStackedBarTooltip(barSelector: string, tooltipSelector: string) {
-  const bar = document.querySelector(barSelector);
-  const tooltip = document.querySelector(tooltipSelector) as HTMLElement | null;
-  if (!bar || !tooltip) return;
-
-  const segments = bar.querySelectorAll('.stacked-segment');
-  segments.forEach(seg => {
-    seg.addEventListener('mouseenter', (e) => {
-      const el = e.currentTarget as HTMLElement;
-      const name = el.dataset.segName || '';
-      const count = el.dataset.segCount || '';
-      const pctV = el.dataset.segPct || '';
-      const stakeV = el.dataset.segStake;
-      const stakeStr = (stakeV && parseFloat(stakeV) > 0) ? ` · ${stakeV}% stake` : '';
-      tooltip.innerHTML = `<strong>${escapeHtml(name)}</strong> · ${count} (${pctV}%)${stakeStr}`;
-      tooltip.classList.add('show');
-      const segRect = el.getBoundingClientRect();
-      const barRect = (bar as HTMLElement).getBoundingClientRect();
-      const left = segRect.left - barRect.left + segRect.width / 2;
-      tooltip.style.left = `${left}px`;
-    });
-    seg.addEventListener('mouseleave', () => {
-      tooltip.classList.remove('show');
-    });
-  });
-}
+// Stacked-bar segment tooltips use data-tip (shared engine, src/lib/tooltip.js).
 
 // ───────── INFRA ─────────
 
@@ -3652,7 +3430,7 @@ document.addEventListener('DOMContentLoaded', () => {
   startLoop();
   // Production overlay disabled (v2.4): the BETA dev-banner at the top of the page
   // is sufficient signaling that we're still in active development. The full-screen
-  // "IN DEVELOPMENT" overlay was blocking sonda.network visitors from the dashboard,
+  // "IN DEVELOPMENT" overlay was blocking sonda.network visitors from the site,
   // which is no longer the right tradeoff once Phase 1 stories are live.
 
   setupMobileTooltips();
@@ -3682,70 +3460,17 @@ function setupStubLinks() {
 // - On blur, reset inline styles so CSS retakes control.
 // - On scroll (>6px), blur any focused icon to dismiss.
 function setupMobileTooltips() {
+  // Tooltip positioning and toggling moved to src/lib/tooltip.js (shared engine).
+  // Only the tabindex annotation stays here: icons rendered later via innerHTML need it
+  // so taps and keyboard focus reach the engine's focusin handler.
   const annotateIcons = () => {
     document.querySelectorAll<HTMLElement>('.tooltip-icon').forEach(el => {
       if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '0');
     });
   };
   annotateIcons();
-  // Re-annotate after Stories render (innerHTML wipes attributes)
   const obs = new MutationObserver(() => annotateIcons());
-  const grid = document.getElementById('stories-grid');
-  if (grid) obs.observe(grid, { childList: true, subtree: true });
-
-  // Position tooltip via JS on mobile focus
-  document.addEventListener('focusin', (e) => {
-    if (window.innerWidth > 600) return;
-    const target = e.target as HTMLElement;
-    if (!target.classList?.contains('tooltip-icon')) return;
-    const wrap = target.closest('.tooltip-wrap') as HTMLElement;
-    if (!wrap) return;
-    const tooltip = wrap.querySelector('.tooltip-box') as HTMLElement;
-    if (!tooltip) return;
-
-    // Tooltip is now visible via :focus-within. Measure and position.
-    requestAnimationFrame(() => {
-      const iconRect = target.getBoundingClientRect();
-      const tipW = tooltip.offsetWidth;
-      const tipH = tooltip.offsetHeight;
-
-      // Center tooltip horizontally on icon, then clamp into viewport.
-      let left = iconRect.left + iconRect.width / 2 - tipW / 2;
-      left = Math.max(8, Math.min(window.innerWidth - 8 - tipW, left));
-
-      // Prefer above icon; if not enough room, place below.
-      let top = iconRect.top - tipH - 10;
-      if (top < 8) top = iconRect.bottom + 10;
-
-      tooltip.style.position = 'fixed';
-      tooltip.style.left = `${left}px`;
-      tooltip.style.top = `${top}px`;
-      tooltip.style.right = 'auto';
-      tooltip.style.bottom = 'auto';
-      tooltip.style.transform = 'none';
-      tooltip.style.maxWidth = 'calc(100vw - 1rem)';
-    });
-  });
-
-  document.addEventListener('focusout', (e) => {
-    const target = e.target as HTMLElement;
-    if (!target.classList?.contains('tooltip-icon')) return;
-    const wrap = target.closest('.tooltip-wrap') as HTMLElement;
-    const tooltip = wrap?.querySelector('.tooltip-box') as HTMLElement;
-    if (tooltip) tooltip.style.cssText = '';
-  });
-
-  // Scroll dismisses focused tooltip (otherwise hover-via-tap state sticks)
-  let lastScrollY = window.scrollY;
-  window.addEventListener('scroll', () => {
-    const dy = Math.abs(window.scrollY - lastScrollY);
-    lastScrollY = window.scrollY;
-    if (dy < 6) return;
-    const a = document.activeElement;
-    if (a instanceof HTMLElement && a.classList.contains('tooltip-icon')) {
-      a.blur();
-    }
-  }, { passive: true });
+  obs.observe(document.body, { childList: true, subtree: true });
 }
 
 // Re-render watermark on resize (mobile vs desktop)

@@ -14,7 +14,7 @@ import Footer from '../components/Footer.astro';
   <div class="dev-banner">
     <div class="dev-banner-inner">
       <span class="dev-badge">BETA</span>
-      Dashboard is under active development. Some sections are incomplete.
+      SONDA is under active development. Some sections are incomplete.
       <a href="https://github.com/SolyaUk/sonda-network" target="_blank" rel="noopener" class="dev-link">View on GitHub</a>
     </div>
   </div>
@@ -206,35 +206,7 @@ import Footer from '../components/Footer.astro';
   .vsfdp-never { background: transparent; color: var(--text-muted); border: 1px dashed rgba(107, 114, 128, 0.35); font-weight: 400; }
 
   /* Custom fast tooltip — shows on hover with 80ms delay. Native title="" is ~1.5s. */
-  [data-tip] { position: relative; cursor: help; }
-  [data-tip]::after {
-    content: attr(data-tip);
-    position: absolute;
-    bottom: 100%;
-    left: 50%;
-    transform: translateX(-50%) translateY(-4px);
-    background: var(--bg-secondary);
-    border: 1px solid var(--border);
-    color: var(--text-primary);
-    padding: 0.35rem 0.55rem;
-    border-radius: 6px;
-    font-family: var(--font-display);
-    font-size: 0.72rem;
-    font-weight: 400;
-    line-height: 1.35;
-    letter-spacing: normal;
-    text-transform: none;
-    white-space: normal;
-    width: 240px;
-    pointer-events: none;
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.08s ease, visibility 0.08s ease;
-    z-index: 200;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
-  }
-  [data-tip]:hover::after { opacity: 1; visibility: visible; }
-  @media (hover: none) { [data-tip]:hover::after { display: none; } }
+  /* Tooltips: shared engine in src/lib/tooltip.js + .sonda-tip in global.css */
   .v-keys-block { display: flex; flex-direction: column; gap: 0.35rem; }
   .v-key-row { display: flex; align-items: center; gap: 0.5rem; font-family: var(--font-mono); font-size: 0.78rem; flex-wrap: wrap; }
   .v-key-label { color: var(--text-muted); font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em; min-width: 50px; }
