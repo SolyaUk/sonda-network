@@ -184,3 +184,17 @@
   }
   .donut-svg { width: 110px; height: 110px; }
 }
+
+/* ---- dc-logo ---- */
+/* Round datacenter/provider logo slot: <span class="dc-logo" data-initial="T"><img src=".../AS20326.png" onerror="this.remove()"></span>
+   The initial shows through until the R2 logo (assets/dc/AS{n}.png, backend item #39) exists. */
+.dc-logo {
+  width: 18px; height: 18px; border-radius: 50%; overflow: hidden; position: relative;
+  background: var(--bg-card-hover); border: 1px solid var(--border); flex-shrink: 0;
+}
+.dc-logo img { width: 100%; height: 100%; object-fit: cover; display: block; position: relative; z-index: 1; }
+.dc-logo::before {
+  content: attr(data-initial); position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-mono); font-size: 0.58rem; font-weight: 600; color: var(--text-muted);
+}

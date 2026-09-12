@@ -293,16 +293,12 @@ import Footer from '../components/Footer.astro';
 
   /* Row markers: colour dot, round flag, round provider logo with initial as fallback */
   .vagg-dot { width: 9px; height: 9px; border-radius: 2px; margin: 0 auto; }
-  .vagg-flag, .vagg-logo {
+  .vagg-flag {
     width: 18px; height: 18px; border-radius: 50%; overflow: hidden; position: relative;
     background: var(--bg-card-hover); border: 1px solid var(--border); flex-shrink: 0;
   }
-  .vagg-flag img, .vagg-logo img { width: 100%; height: 100%; object-fit: cover; display: block; position: relative; z-index: 1; }
-  .vagg-logo::before {
-    content: attr(data-initial); position: absolute; inset: 0;
-    display: flex; align-items: center; justify-content: center;
-    font-family: var(--font-mono); font-size: 0.58rem; font-weight: 600; color: var(--text-muted);
-  }
+  .vagg-flag img { width: 100%; height: 100%; object-fit: cover; display: block; position: relative; z-index: 1; }
+  /* provider logo slot: .dc-logo from cards.css */
   .vagg-marker-muted { width: 18px; height: 18px; border-radius: 50%; border: 1px dashed var(--border); }
   .vagg-empty { display: flex; align-items: center; justify-content: center; width: 150px; height: 150px; border-radius: 50%; border: 1px dashed var(--border); color: var(--text-muted); font-size: 0.72rem; }
   .vagg-more {
@@ -723,7 +719,7 @@ import Footer from '../components/Footer.astro';
 <script>
 import {
   bootstrapCluster, getCluster, fetchValidators, fetchSummary,
-  filterValidators, sortValidators, computeTvcRanks, aggregateByAsn,
+  filterValidators, sortValidators, computeTvcRanks, aggregateByProvider, providerOf,
   isValidatorRecord, isInGossip, clientLabel,
   fmtStakeShort, concentrationLevel,
 } from '../lib/data.js';
@@ -748,11 +744,11 @@ function setUrlParam(key, value) {
 }
 
 const FILTER_LABELS = {
-  country: 'Country', city: 'City', asn: 'Provider', client: 'Client', version: 'Version',
+  country: 'Country', city: 'City', provider: 'Provider', asn: 'ASN', client: 'Client', version: 'Version',
   dz: 'DZ', bam: 'BAM', rakurai: 'Rakurai',
   sfdp: 'SFDP', delinquent: 'Delinquent', superminority: 'Superminority', gossip: 'Gossip',
 };
-const LIST_FILTERS = ['country', 'city', 'asn', 'client', 'version'];
+const LIST_FILTERS = ['country', 'city', 'provider', 'asn', 'client', 'version'];
 
 function listParam(key) {
   return (params.get(key) || '').split(',').map(v => v.trim()).filter(Boolean);
@@ -1093,7 +1089,7 @@ function renderSummaryLine(records) {
   const totalStake = records.reduce((s, r) => s + (r.activated_stake_lamports || 0), 0);
   const countries = new Set(records.map(r => r.geolocation?.country_code).filter(c => c && c !== '??')).size;
   const cities = new Set(records.map(r => r.geolocation?.city).filter(c => c && c !== 'Unknown')).size;
-  const asns = new Set(records.map(r => r.geolocation?.asn).filter(Boolean)).size;
+  const asns = new Set(records.map(r => providerOf(r)).filter(Boolean)).size;
   const parts = [
     `<b>${fmt(total)}</b> validators`,
     `<b>${fmt(active)}</b> voting`,
@@ -1217,13 +1213,25 @@ const VALIDATOR_CARDS = [
     },
   },
   {
+    // Provider level (R11.2): the company the node is rented from, which may run several
+    // ASNs (Cherry Servers: 7). The ASN list shows under each provider when the card is
+    // expanded; the logo comes from the provider's most common ASN.
     id: 'providers', group: 'decentralization', tag: 'Providers', title: 'Validators by network provider', clusters: '*',
-    fkey: 'asn', view: 'donut',
+    fkey: 'provider', view: 'donut',
     build(records, ctx) {
       const asnNames = ctx?.summary?.metrics?.asn_names || {};
-      return aggregateByAsn(records).map(e => e.asn === 'unknown'
+      const nameOf = (a) => asnNames[a.asn] || a.name || a.asn;
+      const segs = aggregateByProvider(records).map(e => e.provider === 'unknown'
         ? Object.assign({ key: NOT_IN_GOSSIP_KEY, count: e.count, delinquent: e.delinquent, stake: e.stake_lamports }, NOT_IN_GOSSIP_ROW())
-        : { key: e.asn, label: asnNames[e.asn] || e.name, count: e.count, delinquent: e.delinquent, stake: e.stake_lamports, tip: `${asnNames[e.asn] || e.name} (${e.asn})`, marker: { type: 'logo', asn: e.asn, initial: (asnNames[e.asn] || e.name || '?').charAt(0).toUpperCase() } });
+        : {
+            key: e.provider, label: e.provider, count: e.count, delinquent: e.delinquent, stake: e.stake_lamports,
+            // ASN details live in the tooltip only; the per-row list belongs to the datacenters page
+            tip: e.asns.length > 1
+              ? `${e.provider}: ${e.asns.length} networks\n${e.asns.map(a => `${a.asn}${nameOf(a) !== e.provider ? ` ${nameOf(a)}` : ''} · ${a.count}`).join('\n')}`
+              : (e.asns[0] ? `${e.provider} (${e.asns[0].asn}${nameOf(e.asns[0]) !== e.provider ? ` ${nameOf(e.asns[0])}` : ''})` : e.provider),
+            marker: { type: 'logo', asn: e.primary_asn, initial: (e.provider || '?').charAt(0).toUpperCase() },
+          });
+      return segs.filter(x => !x.special).concat(segs.filter(x => x.special));
     },
   },
 ];
@@ -1233,7 +1241,7 @@ function markerHtml(m) {
   if (m.type === 'dot') return `<span class="vagg-dot" style="background:${m.color}"></span>`;
   if (m.type === 'flag') return `<span class="vagg-flag"><img src="https://flagcdn.com/w40/${m.cc.toLowerCase()}.png" alt="" loading="lazy"></span>`;
   if (m.type === 'pin') return m.cc ? `<span class="vagg-pin"><img src="https://flagcdn.com/w40/${m.cc.toLowerCase()}.png" alt="" loading="lazy"></span>` : '<span class="vagg-pin"></span>';
-  if (m.type === 'logo') return `<span class="vagg-logo" data-initial="${escapeAttr(m.initial)}"><img src="${DC_LOGO_BASE}/${m.asn}.png" alt="" loading="lazy" onerror="this.remove()"></span>`;
+  if (m.type === 'logo') return `<span class="dc-logo" data-initial="${escapeAttr(m.initial)}">${m.asn ? `<img src="${DC_LOGO_BASE}/${m.asn}.png" alt="" loading="lazy" onerror="this.remove()">` : ''}</span>`;
   return '<span class="vagg-marker-muted"></span>';
 }
 

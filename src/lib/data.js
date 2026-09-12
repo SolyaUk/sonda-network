@@ -319,6 +319,11 @@ export function filterValidators(records, params) {
   const cities = list('city');
   if (cities.length > 0) out = out.filter(r => cities.includes(r.geolocation?.city));
 
+  // provider = the company the node is rented from (analyzer v3.11.1, R11.2); older
+  // records fall back to the canonical ASN name, the same key providerOf() produces.
+  const providers = list('provider');
+  if (providers.length > 0) out = out.filter(r => providers.includes(providerOf(r)));
+
   // client / version apply to gossip-visible records only: nodes outside gossip carry
   // placeholder values ("Unknown" / "unknown") that are not real observations.
   const clients = list('client');
@@ -429,6 +434,52 @@ export function sortValidators(records, sort = 'rank', dir = 'asc') {
     if (sa !== sb) return sb - sa;
     return (a.identity_pubkey || '') < (b.identity_pubkey || '') ? -1 : 1;
   });
+  return out;
+}
+
+/**
+ * Provider key of a record: geolocation.provider (v3.11.1), else the canonical ASN
+ * name, else the ASN number. Records without geolocation (outside gossip) give null.
+ */
+export function providerOf(r) {
+  const g = r?.geolocation;
+  if (!g) return null;
+  return g.provider || g.asn_name || g.asn || null;
+}
+
+/**
+ * Group validator records by provider (R11.2). Each entry lists the ASNs behind the
+ * provider so the UI can show them on expand, and names its most common ASN for the
+ * logo lookup (assets/dc/AS{n}.png, one file per ASN).
+ * Returns entries sorted by stake desc:
+ * { provider, count, delinquent, stake_lamports, stake_pct, asns: [{asn, name, count}], primary_asn }.
+ */
+export function aggregateByProvider(records) {
+  const vals = (records || []).filter(isValidatorRecord);
+  const totalStake = vals.reduce((s, r) => s + (r.activated_stake_lamports || 0), 0);
+  const map = new Map();
+  for (const r of vals) {
+    const key = providerOf(r) || 'unknown';
+    if (!map.has(key)) map.set(key, { provider: key, count: 0, delinquent: 0, stake_lamports: 0, stake_pct: 0, _asns: new Map() });
+    const e = map.get(key);
+    e.count++;
+    if (r.delinquent) e.delinquent++;
+    e.stake_lamports += r.activated_stake_lamports || 0;
+    const asn = r.geolocation?.asn;
+    if (asn) {
+      const a = e._asns.get(asn) || { asn, name: r.geolocation.asn_name || asn, count: 0 };
+      a.count++;
+      e._asns.set(asn, a);
+    }
+  }
+  const out = [...map.values()].map(e => {
+    e.asns = [...e._asns.values()].sort((a, b) => b.count - a.count);
+    e.primary_asn = e.asns.length ? e.asns[0].asn : null;
+    e.stake_pct = totalStake > 0 ? (e.stake_lamports / totalStake) * 100 : 0;
+    delete e._asns;
+    return e;
+  });
+  out.sort((a, b) => b.stake_lamports - a.stake_lamports || b.count - a.count);
   return out;
 }
 

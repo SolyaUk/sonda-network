@@ -27,15 +27,15 @@ import ClusterBanner from '../components/ClusterBanner.astro';
         </div>
       </section>
 
-      <!-- PULSE -->
-      <section class="pulse-row" id="pulse-row">
-        <div class="pulse-item"><div class="pulse-num mono sk-val">--</div><div class="pulse-label">loading</div></div>
-        <div class="pulse-divider"></div>
-        <div class="pulse-item"><div class="pulse-num mono sk-val">--</div><div class="pulse-label">loading</div></div>
-        <div class="pulse-divider"></div>
-        <div class="pulse-item"><div class="pulse-num mono sk-val">--</div><div class="pulse-label">loading</div></div>
-        <div class="pulse-divider"></div>
-        <div class="pulse-item"><div class="pulse-num mono sk-val">--</div><div class="pulse-label">loading</div></div>
+      <!-- CHAIN VITALS (F-D): consensus, slot time, throughput, validators, stake inequality -->
+      <section class="vitals" id="vitals">
+        <div class="vitals-grid" id="vitals-grid">
+          <div class="vital sk-card"><div class="sk-line" style="width:60%"></div><div class="sk-line" style="width:40%"></div></div>
+          <div class="vital sk-card"><div class="sk-line" style="width:60%"></div><div class="sk-line" style="width:40%"></div></div>
+          <div class="vital sk-card"><div class="sk-line" style="width:60%"></div><div class="sk-line" style="width:40%"></div></div>
+          <div class="vital sk-card"><div class="sk-line" style="width:60%"></div><div class="sk-line" style="width:40%"></div></div>
+          <div class="vital sk-card"><div class="sk-line" style="width:60%"></div><div class="sk-line" style="width:40%"></div></div>
+        </div>
       </section>
 
       <!-- LIVE INFRASTRUCTURE -->
@@ -123,7 +123,7 @@ import ClusterBanner from '../components/ClusterBanner.astro';
             </div>
             <div class="academic-tile-grid">
               <div class="academic-tile" data-scale-tip="hhi-country">
-                <div class="academic-tile-label">by country</div>
+                <div class="academic-tile-label">country</div>
                 <div class="academic-tile-num mono" id="hhi-country">--</div>
                 <div class="academic-scale">
                   <div class="academic-scale-track">
@@ -134,8 +134,8 @@ import ClusterBanner from '../components/ClusterBanner.astro';
                   <div class="academic-scale-pin" id="hhi-country-pin"></div>
                 </div>
               </div>
-              <div class="academic-tile" data-scale-tip="hhi-asn">
-                <div class="academic-tile-label">by ASN</div>
+              <div class="academic-tile dim-asn" data-scale-tip="hhi-asn">
+                <div class="academic-tile-label">ASN</div>
                 <div class="academic-tile-num mono" id="hhi-asn">--</div>
                 <div class="academic-scale">
                   <div class="academic-scale-track">
@@ -144,6 +144,18 @@ import ClusterBanner from '../components/ClusterBanner.astro';
                     <div class="academic-scale-seg crit" style="width:75%"></div>
                   </div>
                   <div class="academic-scale-pin" id="hhi-asn-pin"></div>
+                </div>
+              </div>
+              <div class="academic-tile dim-provider" data-scale-tip="hhi-provider" hidden>
+                <div class="academic-tile-label">provider</div>
+                <div class="academic-tile-num mono" id="hhi-provider">--</div>
+                <div class="academic-scale">
+                  <div class="academic-scale-track">
+                    <div class="academic-scale-seg good" style="width:15%"></div>
+                    <div class="academic-scale-seg warn" style="width:10%"></div>
+                    <div class="academic-scale-seg crit" style="width:75%"></div>
+                  </div>
+                  <div class="academic-scale-pin" id="hhi-provider-pin"></div>
                 </div>
               </div>
             </div>
@@ -198,7 +210,7 @@ import ClusterBanner from '../components/ClusterBanner.astro';
                   <div class="academic-scale-pin" id="shannon-country-pin"></div>
                 </div>
               </div>
-              <div class="academic-tile" data-scale-tip="shannon-asn">
+              <div class="academic-tile dim-asn" data-scale-tip="shannon-asn">
                 <div class="academic-tile-row">
                   <span class="academic-tile-label">ASN</span>
                   <span class="academic-tile-num mono small" id="shannon-asn">--</span>
@@ -210,6 +222,20 @@ import ClusterBanner from '../components/ClusterBanner.astro';
                     <div class="academic-scale-seg good" style="width:20%"></div>
                   </div>
                   <div class="academic-scale-pin" id="shannon-asn-pin"></div>
+                </div>
+              </div>
+              <div class="academic-tile dim-provider" data-scale-tip="shannon-provider" hidden>
+                <div class="academic-tile-row">
+                  <span class="academic-tile-label">provider</span>
+                  <span class="academic-tile-num mono small" id="shannon-provider">--</span>
+                </div>
+                <div class="academic-scale academic-scale-thin">
+                  <div class="academic-scale-track">
+                    <div class="academic-scale-seg crit" style="width:50%"></div>
+                    <div class="academic-scale-seg warn" style="width:30%"></div>
+                    <div class="academic-scale-seg good" style="width:20%"></div>
+                  </div>
+                  <div class="academic-scale-pin" id="shannon-provider-pin"></div>
                 </div>
               </div>
               <div class="academic-tile" data-scale-tip="shannon-validator">
@@ -239,12 +265,19 @@ import ClusterBanner from '../components/ClusterBanner.astro';
               </span>
             </div>
             <div class="nak-grid">
-              <div class="nak-tile" data-dim="asn">
+              <div class="nak-tile dim-asn" data-dim="asn">
                 <div class="nak-tile-text">
                   <div class="academic-tile-label">ASN</div>
                   <div class="academic-tile-num mono" id="nak-asn">--</div>
                 </div>
                 <div class="nak-donut" id="nak-asn-donut"></div>
+              </div>
+              <div class="nak-tile dim-provider" data-dim="provider" hidden>
+                <div class="nak-tile-text">
+                  <div class="academic-tile-label">provider</div>
+                  <div class="academic-tile-num mono" id="nak-provider">--</div>
+                </div>
+                <div class="nak-donut" id="nak-provider-donut"></div>
               </div>
               <div class="nak-tile" data-dim="country">
                 <div class="nak-tile-text">
@@ -285,7 +318,8 @@ import ClusterBanner from '../components/ClusterBanner.astro';
                 <div class="sm-block-vals">
                   <div class="sm-mini"><span class="academic-tile-num mono" id="sm33-v">--</span><span class="sm-tag">validators</span></div>
                   <div class="sm-mini"><span class="academic-tile-num mono" id="sm33-c">--</span><span class="sm-tag">countries</span></div>
-                  <div class="sm-mini"><span class="academic-tile-num mono" id="sm33-a">--</span><span class="sm-tag">ASNs</span></div>
+                  <div class="sm-mini dim-asn"><span class="academic-tile-num mono" id="sm33-a">--</span><span class="sm-tag">ASNs</span></div>
+                  <div class="sm-mini dim-provider" hidden><span class="academic-tile-num mono" id="sm33-p">--</span><span class="sm-tag">providers</span></div>
                 </div>
               </div>
               <div class="sm-block">
@@ -293,7 +327,8 @@ import ClusterBanner from '../components/ClusterBanner.astro';
                 <div class="sm-block-vals">
                   <div class="sm-mini"><span class="academic-tile-num mono" id="sm50-v">--</span><span class="sm-tag">validators</span></div>
                   <div class="sm-mini"><span class="academic-tile-num mono" id="sm50-c">--</span><span class="sm-tag">countries</span></div>
-                  <div class="sm-mini"><span class="academic-tile-num mono" id="sm50-a">--</span><span class="sm-tag">ASNs</span></div>
+                  <div class="sm-mini dim-asn"><span class="academic-tile-num mono" id="sm50-a">--</span><span class="sm-tag">ASNs</span></div>
+                  <div class="sm-mini dim-provider" hidden><span class="academic-tile-num mono" id="sm50-p">--</span><span class="sm-tag">providers</span></div>
                 </div>
               </div>
             </div>
@@ -337,10 +372,10 @@ import ClusterBanner from '../components/ClusterBanner.astro';
           </div>
           <div class="geo-block">
             <div class="card-label">
-              By network provider (ASN)
+              By network provider
               <span class="tooltip-wrap">
                 <span class="tooltip-icon" aria-label="info"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
-                <span class="tooltip-box">SFDP requires validators to avoid ASNs holding more than 25% of stake (effective May 2026). ASNs above this threshold are highlighted.</span>
+                <span class="tooltip-box">Provider = the company validators rent from, counted across all of its networks (ASNs). SFDP requires validators to avoid providers holding more than 25% of stake; providers above this threshold are highlighted.</span>
               </span>
             </div>
             <div class="geo-chart" id="geo-asns">
@@ -590,30 +625,44 @@ import ClusterBanner from '../components/ClusterBanner.astro';
 }
 
 /* PULSE */
-.pulse-row {
-  display: flex; align-items: center; gap: 0;
-  margin: 1.5rem 0 2.5rem; padding: 1.25rem 0;
-  border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+/* Chain vitals: one panel in the cluster tint with a faint dot texture and inner dividers,
+   deliberately unlike the reachability cards below (those are separate bordered cards). */
+.vitals { margin: 1.5rem 0 3rem; }
+.vitals-grid {
+  display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
+  border: 1px solid color-mix(in srgb, var(--cluster-accent) 35%, var(--border));
+  border-radius: 14px; overflow: hidden;
+  background:
+    radial-gradient(circle, color-mix(in srgb, var(--cluster-accent) 14%, transparent) 1px, transparent 1.2px) 0 0 / 14px 14px,
+    linear-gradient(120deg, color-mix(in srgb, var(--cluster-accent) 10%, var(--bg-card)), color-mix(in srgb, var(--cluster-accent) 3%, var(--bg-card)));
 }
-.pulse-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 0.3rem; padding: 0 1rem; text-align: center; min-width: 0; }
-.pulse-num { font-size: clamp(1.4rem, 2.8vw, 2rem); font-weight: 700; color: var(--text-primary); line-height: 1; }
-/* Text variant (used for consensus name on alpenglow): smaller font + accent color
-   so the slot reads as informational rather than numerical. Emoji sits inline. */
-.pulse-num.pulse-num-text {
-  font-size: clamp(1rem, 1.7vw, 1.35rem);
-  font-weight: 600;
-  color: var(--cluster-accent);
-  display: inline-flex; align-items: center; gap: 0.35rem;
+.vital { padding: 1rem 1.15rem 0.95rem; min-width: 0; border-right: 1px solid color-mix(in srgb, var(--cluster-accent) 22%, var(--border)); }
+.vital:last-child { border-right: 0; }
+.vital-head { display: flex; align-items: center; gap: 0.45rem; margin-bottom: 0.45rem; }
+.vital-label { font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); }
+.vital-main { font-family: var(--font-mono); font-size: 1.55rem; font-weight: 700; color: var(--text-primary); line-height: 1; white-space: nowrap; }
+.vital-main .vital-unit { font-size: 0.72rem; font-weight: 500; color: var(--text-muted); margin-left: 0.3rem; letter-spacing: 0; }
+.vital-main.vital-text { font-size: 1.25rem; }
+.vital-main .vital-alpenglow { color: var(--cluster-accent); }
+.vital-main.is-good { color: var(--status-good); }
+.vital-main.is-warn { color: var(--status-warning); }
+.vital-main.is-bad { color: var(--status-critical); }
+.vital-sub { font-size: 0.72rem; color: var(--text-muted); margin-top: 0.4rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 1100px) {
+  .vitals-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .vital:nth-child(3) { border-right: 0; }
+  .vital:nth-child(n+4) { border-top: 1px solid color-mix(in srgb, var(--cluster-accent) 22%, var(--border)); }
 }
-.pulse-num-emoji { font-size: 0.9em; }
-.pulse-label { font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
-.pulse-note { font-size: 0.66rem; color: var(--text-muted); font-family: var(--font-mono); margin-top: -0.1rem; }
-.pulse-divider { width: 1px; height: 36px; background: var(--border); flex-shrink: 0; }
-@media (max-width: 700px) {
-  .pulse-row { flex-wrap: wrap; padding: 1rem 0; }
-  .pulse-item { flex: 1 1 50%; padding: 0.6rem; }
-  .pulse-divider { display: none; }
+@media (max-width: 640px) {
+  /* consensus alone on row 1; rows 2 and 3 are pairs (2|3, 4|5) */
+  .vitals-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .vital { border-right: 1px solid color-mix(in srgb, var(--cluster-accent) 22%, var(--border)); border-top: 0; }
+  .vital:nth-child(2n+1), .vital.vital-consensus { border-right: 0; }
+  .vital:nth-child(n+2) { border-top: 1px solid color-mix(in srgb, var(--cluster-accent) 22%, var(--border)); }
+  .vital.vital-consensus { grid-column: 1 / -1; }
 }
+
+/* pulse-row CSS removed 2026-09-12: replaced by the chain vitals row (.vitals-grid) */
 
 /* SECTIONS */
 .section { margin-bottom: 3rem; }
@@ -995,6 +1044,9 @@ import ClusterBanner from '../components/ClusterBanner.astro';
 .card-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.3rem; }
 .geo-chart { display: flex; flex-direction: column; gap: 0.5rem; }
 .geo-row { display: grid; grid-template-columns: 75px 1fr 50px 70px; align-items: center; gap: 0.6rem; }
+/* provider rows: room for the name plus a round logo slot (dc-logo from cards.css) */
+#geo-asns .geo-row { grid-template-columns: minmax(150px, 190px) 1fr 50px 70px; }
+#geo-asns .geo-cc { color: var(--text-secondary); }
 .geo-country { display: flex; align-items: center; gap: 0.35rem; min-width: 0; }
 .geo-flag { font-size: 0.95rem; line-height: 1; }
 .geo-cc { font-size: 0.72rem; color: var(--text-muted); font-family: var(--font-mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -1020,6 +1072,7 @@ import ClusterBanner from '../components/ClusterBanner.astro';
 .academic-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
 .academic-label { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.07em; display: flex; align-items: center; gap: 0.3rem; }
 .academic-tile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; flex: 1; }
+/* provider dimension (analyzer v3.11.1) takes the ASN slot; [hidden] tiles drop out of the grids */
 .academic-tile-grid-1 { grid-template-columns: 1fr; }
 .academic-tile { display: flex; flex-direction: column; gap: 0.3rem; padding: 0.55rem 0.7rem; background: var(--bg-secondary); border-radius: 6px; justify-content: space-between; position: relative; cursor: help; }
 .academic-tile-row { display: flex; align-items: baseline; justify-content: space-between; gap: 0.4rem; }
@@ -1048,7 +1101,7 @@ import ClusterBanner from '../components/ClusterBanner.astro';
   pointer-events: none; position: fixed; z-index: 1000;
   background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 6px;
   padding: 0.5rem 0.7rem; font-size: 0.76rem; color: var(--text-primary);
-  white-space: nowrap; box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  white-space: normal; max-width: 300px; box-shadow: 0 4px 16px rgba(0,0,0,0.4);
   text-shadow: none; opacity: 0; transition: opacity 0.12s;
   font-family: var(--font-body); font-weight: 400; letter-spacing: 0;
   text-transform: none; left: 0; top: 0;
@@ -1285,8 +1338,8 @@ import ClusterBanner from '../components/ClusterBanner.astro';
 
 
 <script>
-import { fetchSummary, fetchValidators, fetchValidatorsCached, fetchMainnetSummaryCached, bootstrapCluster, aggregateByAsn, isValidatorRecord } from '../lib/data.js';
-import { fmt, pct, flag, fmtTimestamp, hhiRating, giniRating, nakRating, smRating, shannonRating, versionColor, clientColor } from '../lib/formatters.js';
+import { fetchSummary, fetchValidators, fetchValidatorsCached, fetchMainnetSummaryCached, bootstrapCluster, aggregateByAsn, aggregateByProvider, isValidatorRecord } from '../lib/data.js';
+import { fmt, pct, flag, fmtTimestamp, fmtCompact, hhiRating, giniRating, nakRating, smRating, shannonRating, versionColor, clientColor } from '../lib/formatters.js';
 import { renderDonut, PIE_PALETTE } from '../lib/charts.js';
 import { savePreviousFetch } from '../lib/compare.js';
 
@@ -1432,75 +1485,93 @@ function consensusNote(d: any): string {
   return gate[c.simd_0326] || 'SIMD-0326 not active';
 }
 
-function renderPulse(d: any, records: any[], cluster: string) {
+// Chain vitals (F-D, metrics.chain R11.5). Three data states: source "rpc" (all fields),
+// source "delta" (window_s / tps_non_vote / tx_per_slot null: derived from slot and
+// transaction-count differences between cycles), chain null (RPC did not answer).
+// Null fields are simply not drawn; cu_per_block_avg is hidden while it is always null.
+function fmtMs(ms: number): string {
+  return ms >= 1000 ? `${(ms / 1000).toFixed(1)} s` : `${Math.round(ms)} ms`;
+}
+
+// Sanity guard: a finality lag beyond this is not a lag, it is an RPC answering from two
+// different nodes (testnet 2026-09-11: 115150 slots). Treat as no data.
+const FINALITY_LAG_SANE = 5000;
+
+function renderVitals(d: any, records: any[], cluster: string) {
   const m = d?.metrics || {};
   const v = m.validators || {};
   const ch = m.cluster_health || {};
   const dz = m.doublezero;
+  const chain = m.chain && typeof m.chain === 'object' ? m.chain : null;
+  const isAlp = cluster === 'alpenglow-community';
 
-  // Counts over the same universe as /validators (all vote accounts with stake):
-  // records first, stake_by_version sums as fallback, metrics.validators.total last.
   const vals = records.filter(isValidatorRecord);
   const vc = votingCounts(d);
   const activeCount = vals.length > 0 ? vals.filter(r => !r.delinquent).length : (vc ? vc.current : v.total);
   const delinqCount = vals.length > 0 ? vals.length - activeCount : (vc ? vc.delinquent : null);
+  const totalCount = vals.length > 0 ? vals.length : (vc ? vc.total : (v.total_all ?? v.total));
 
-  // Consensus is shown on every cluster (Viktor 2026-09-07): mainnet/testnet/devnet run
-  // Tower BFT until SIMD-0326 activates there; alpenglow shows Alpenglow with its epoch.
   const consensus = detectConsensus(d);
-  const consensusItem = {
-    num: consensus || 'no data',
-    label: 'consensus',
-    emoji: consensus === 'Alpenglow' ? '🏔' : undefined,
-    note: consensusShortNote(d),
+  const lag = chain?.finality_lag_slots;
+  const lagOk = lag != null && lag >= 0 && lag <= FINALITY_LAG_SANE;
+  const finalityTxt = lagOk
+    ? `finality ${lag} slot${lag === 1 ? '' : 's'}${chain.finality_ms != null ? ` · ${fmtMs(chain.finality_ms)}` : ''}`
+    : (chain ? 'finality: no data this cycle' : consensusShortNote(d));
+  const finalityStatus = !lagOk ? 'neutral' : (consensus === 'Alpenglow' ? (lag <= 2 ? 'ok' : 'warn') : (lag <= 32 ? 'ok' : 'warn'));
+
+  const slotMs = chain?.slot_time_ms;
+  const slotOk = slotMs != null && slotMs > 0;
+  const slotStatus = !slotOk ? 'neutral' : (slotMs <= (isAlp ? 250 : 450) ? 'ok' : 'warn');
+  const windowTxt = !chain ? 'this cycle' : chain.source === 'delta' ? 'avg since last cycle' : (chain.window_s ? `avg over ${chain.window_s} s` : 'avg');
+
+  // tps 0 together with a missing slot time means the samples were empty, not an idle chain
+  const tpsOk = chain?.tps != null && !(chain.tps === 0 && !slotOk);
+  const tpsSub = [
+    chain?.tps_non_vote != null && tpsOk ? `${fmtCompact(chain.tps_non_vote)} non-vote` : '',
+    chain?.tx_per_slot != null && tpsOk ? `${fmtCompact(chain.tx_per_slot)} tx/slot` : '',
+  ].filter(Boolean).join(' · ') || (tpsOk ? (chain.source === 'delta' ? 'since last cycle' : `over ${chain.window_s || 60} s`) : 'this cycle');
+
+  // Fifth tile, same on every cluster: stake inequality (Gini across validators, shown as
+  // a percentage) with the superminority size next to it. Chosen over Nakamoto by provider,
+  // which will read 2 for years and says nothing new (Viktor 2026-09-12).
+  const dec = v.decentralization?.current || {};
+  const gini = dec.gini_validators?.value;
+  const sm33 = dec.superminority_validator_33?.value;
+  const giniR = giniRating(gini);
+  const giniTone = gini == null ? '' : giniR.cls === 'good' ? 'is-good' : giniR.cls === 'critical' ? 'is-bad' : giniR.cls === 'warning' ? 'is-warn' : '';
+  const fifth = {
+    name: 'Stake inequality',
+    tip: 'Gini coefficient of stake across validators: 0% = every validator holds the same stake, 100% = one holds everything',
+    main: gini != null ? `${(gini * 100).toFixed(1)}<span class="vital-unit">%</span>` : 'no data',
+    tone: giniTone,
+    sub: gini != null ? (sm33 != null ? `${fmt(sm33)} validators hold a third of stake` : 'Gini across validators') : 'this cycle',
+    status: gini == null ? 'neutral' : giniR.cls === 'good' ? 'ok' : giniR.cls === 'critical' ? 'bad' : giniR.cls === 'warning' ? 'warn' : 'neutral',
   };
 
-  let items: { num: string; label: string; emoji?: string; note?: string }[] = [];
-  if (cluster === 'mainnet-beta') {
-    items = [
-      { num: fmt(activeCount), label: 'active validators' },
-      { num: pct(ch.average_stake_weighted_skip_rate, 2), label: 'stake-weighted skip' },
-      { num: dz?.multicast_publishers?.stake_percent != null ? pct(dz.multicast_publishers.stake_percent, 1) : '—', label: 'stake on DZ multicast' },
-      { num: fmt(v.decentralization?.current?.superminority_validator_33?.value), label: 'superminority validators' },
-      consensusItem,
-    ];
-  } else if (cluster === 'alpenglow-community') {
-    const delinqStakePct = ch.delinquent_stake_percent;
-    items = [
-      { num: fmt(activeCount), label: 'active validators' },
-      { num: pct(ch.average_stake_weighted_skip_rate, 2), label: 'stake-weighted skip' },
-      { num: delinqStakePct != null ? pct(delinqStakePct, 1) : '—', label: 'delinquent stake' },
-      consensusItem,
-    ];
-  } else {
-    const countries = new Set<string>();
-    vals.forEach(r => {
-      const cc = r.geolocation?.country_code;
-      if (cc && cc !== '??') countries.add(cc);
-    });
-    items = [
-      { num: fmt(activeCount), label: 'active validators' },
-      { num: pct(ch.average_stake_weighted_skip_rate, 2), label: 'stake-weighted skip' },
-      { num: delinqCount != null ? fmt(delinqCount) : '—', label: 'delinquent validators' },
-      { num: fmt(countries.size), label: 'countries' },
-      consensusItem,
-    ];
-  }
+  const tiles = [
+    {
+      name: 'Consensus', cls: 'vital-consensus',
+      main: consensus ? `<span class="${consensus === 'Alpenglow' ? 'vital-alpenglow' : ''}">${consensus === 'Alpenglow' ? '🏔 ' : ''}${escapeHtml(consensus)}</span>` : 'no data',
+      textMain: true, sub: finalityTxt, status: consensus ? finalityStatus : 'neutral',
+    },
+    { name: 'Slot time', main: slotOk ? `${Math.round(slotMs)}<span class="vital-unit">ms</span>` : 'no data', sub: slotOk ? windowTxt : 'this cycle', status: slotStatus },
+    { name: 'Throughput', main: tpsOk ? `${fmtCompact(chain.tps)}<span class="vital-unit">tps</span>` : 'no data', sub: tpsSub, status: tpsOk ? 'ok' : 'neutral' },
+    {
+      name: 'Validators', main: `${fmt(activeCount)}<span class="vital-unit">active</span>`,
+      sub: `${delinqCount != null ? `${fmt(delinqCount)} delinquent · ` : ''}${fmt(totalCount)} total`,
+      status: delinqCount == null ? 'neutral' : (totalCount > 0 && delinqCount / totalCount >= 0.1 ? 'warn' : 'ok'),
+    },
+    fifth,
+  ];
 
-  const row = document.getElementById('pulse-row');
-  if (!row) return;
-  const html: string[] = [];
-  items.forEach((item, i) => {
-    if (i > 0) html.push('<div class="pulse-divider"></div>');
-    // Consensus slot renders text + optional emoji at smaller size so it visually
-    // matches the layout of numeric slots.
-    const isText = /[A-Za-z]/.test(item.num);
-    const numCls = isText ? 'pulse-num mono pulse-num-text' : 'pulse-num mono';
-    const emojiHtml = item.emoji ? `<span class="pulse-num-emoji">${item.emoji}</span>` : '';
-    const noteHtml = item.note ? `<div class="pulse-note">${escapeHtml(item.note)}</div>` : '';
-    html.push(`<div class="pulse-item"><div class="${numCls}">${emojiHtml}${escapeHtml(item.num)}</div><div class="pulse-label">${escapeHtml(item.label)}</div>${noteHtml}</div>`);
-  });
-  row.innerHTML = html.join('');
+  const grid = document.getElementById('vitals-grid');
+  if (!grid) return;
+  grid.innerHTML = tiles.map((t: any) => `
+    <div class="vital ${t.cls || ''}">
+      <div class="vital-head"><span class="infra-card-status-dot ${t.status}"></span><span class="vital-label"${t.tip ? ` data-tip="${escapeHtml(t.tip)}"` : ''}>${escapeHtml(t.name)}</span></div>
+      <div class="vital-main${t.textMain ? ' vital-text' : ''}${t.tone ? ` ${t.tone}` : ''}">${t.main}</div>
+      <div class="vital-sub">${escapeHtml(t.sub)}</div>
+    </div>`).join('');
 }
 
 // ───────── Donut renderer (generic) ─────────
@@ -2807,9 +2878,9 @@ const LABEL_SHORT: Record<string, string> = {
   'Interserver, Inc': 'Interserver',
   'Limestone Networks, Inc.': 'Limestone',
 };
-function shortenLabel(name: string): string {
+function shortenLabel(name: string, max = 17): string {
   if (LABEL_SHORT[name]) return LABEL_SHORT[name];
-  if (name.length > 17) return name.slice(0, 16) + '…';
+  if (name.length > max) return name.slice(0, max - 1) + '…';
   return name;
 }
 
@@ -2935,7 +3006,9 @@ function renderRpcSummary(d: any) {
 
 function renderPath(d: any) {
   const v = d?.metrics?.validators || {};
-  const stakeByAsn = v.stake_by_asn || {};
+  // Provider-level concentration when the snapshot has it (v3.11.1): one company can run
+  // several ASNs, and the SFDP threshold is about the hosting provider, not the network.
+  const stakeByAsn = (v.stake_by_provider && Object.keys(v.stake_by_provider).length > 0) ? v.stake_by_provider : (v.stake_by_asn || {});
   const stakeByCountry = v.stake_by_country || {};
   const stakeByCity = v.stake_by_city || {};
 
@@ -2967,7 +3040,7 @@ function renderPath(d: any) {
       explainer: topAsnPct > 25
         ? `${(topAsnPct - 25).toFixed(1)}% of network stake would need to migrate from ${topAsnName} to other providers.`
         : `Within healthy threshold. To stay safe as the network grows, keep ASN concentration below 25%.`,
-      target_label: 'SFDP threshold (May 2026): under 25%',
+      target_label: 'SFDP requirement: under 25%',
     },
     {
       name: `Top 3 countries combined`, current: top3CountryPct, target: 50,
@@ -3075,18 +3148,35 @@ function renderGeo(d: any) {
 // the provider count (mainnet: 115 names for 89 ASNs). Runs after records arrive and
 // overwrites the summary-based render. Backend item: key asn_distribution by ASN number.
 function renderGeoAsnFromRecords(d: any, records: any[]) {
-  const agg = aggregateByAsn(records).filter(e => e.asn !== 'unknown');
+  // v3.11.1: the backend groups by provider (company behind one or more ASNs). Use its
+  // provider_distribution / stake_by_provider when present; older snapshots fall back to
+  // grouping the records by ASN number.
+  const v = d?.metrics?.validators || {};
+  const pd = v.provider_distribution;
+  let agg: { asn: string; name: string; count: number; stake_pct: number }[];
+  if (pd && typeof pd === 'object' && Object.keys(pd).length > 0) {
+    const sp = v.stake_by_provider || {};
+    agg = Object.entries(pd).filter(([k]) => k !== 'OFFLINE' && k !== 'N/A').map(([name, count]) => ({ asn: name, name, count: count as number, stake_pct: Number(sp[name] || 0) }));
+    agg.sort((a, b) => b.stake_pct - a.stake_pct || b.count - a.count);
+  } else {
+    agg = aggregateByAsn(records).filter(e => e.asn !== 'unknown');
+  }
   if (agg.length === 0) return;
   const top = agg.slice(0, 10);
   const maxA = Math.max(1, ...top.map(e => e.count));
+  // Logo slot per provider: the provider's most common ASN names the R2 file (assets/dc/AS{n}.png)
+  const primaryAsn = new Map<string, string>();
+  for (const e of aggregateByProvider(records)) if (e.primary_asn) primaryAsn.set(e.provider, e.primary_asn);
   const geoAsns = document.getElementById('geo-asns');
   if (geoAsns) {
     geoAsns.innerHTML = top.map(e => {
       const cls = e.stake_pct > 25 ? 'crit' : e.stake_pct > 15 ? 'warn' : 'normal';
       const w = Math.round((e.count / maxA) * 100);
-      const label = shortenLabel(e.name);
+      const label = shortenLabel(e.name, 22);
+      const asn = e.asn !== e.name ? e.asn : (primaryAsn.get(e.name) || '');
+      const logo = `<span class="dc-logo" data-initial="${escapeHtml((e.name || '?').charAt(0).toUpperCase())}">${asn ? `<img src="https://data.sonda.network/assets/dc/${asn}.png" alt="" loading="lazy" onerror="this.remove()">` : ''}</span>`;
       return `<div class="geo-row">
-        <div class="geo-country"><span class="geo-cc" data-tip="${escapeHtml(e.name)} (${escapeHtml(e.asn)})">${escapeHtml(label)}</span></div>
+        <div class="geo-country">${logo}<span class="geo-cc" data-tip="${escapeHtml(e.name)}${asn ? ` (${escapeHtml(asn)})` : ''}">${escapeHtml(label)}</span></div>
         <div class="geo-bar-wrap"><div class="geo-bar ${cls}" style="width:${w}%"></div></div>
         <div class="geo-count">${fmt(e.count)}</div>
         <div class="geo-stake">${pct(e.stake_pct, 1)}</div>
@@ -3119,6 +3209,24 @@ function renderAcademic(d: any) {
   if (hhia != null) setPin('hhi-asn-pin', (hhia / 10000) * 100);
   if (gini != null) setPin('gini-pin', gini * 100);
 
+  // Provider dimension (v3.11.1, F-C.2). Provider (the company behind one or more ASNs)
+  // is the honest concentration measure, so it takes the ASN slot in every card when the
+  // snapshot carries it; the ASN value stays available in the tile tooltip. Older
+  // snapshots keep showing the ASN tiles.
+  const hasProvider = dec.nakamoto_provider != null || dec.hhi_provider != null;
+  document.querySelectorAll<HTMLElement>('.dim-provider').forEach(el => { el.hidden = !hasProvider; });
+  document.querySelectorAll<HTMLElement>('.dim-asn').forEach(el => { el.hidden = hasProvider; });
+  if (hasProvider) {
+    const hhip = dec.hhi_provider?.value;
+    setTextColored('hhi-provider', hhip != null ? hhip.toFixed(0) : '--', hhiRating(hhip).cls);
+    if (hhip != null) setPin('hhi-provider-pin', (hhip / 10000) * 100);
+    const shp = dec.shannon_provider?.normalized;
+    setTextColored('shannon-provider', shp != null ? shp.toFixed(2) : '--', shannonRating(shp).cls);
+    if (shp != null) setPin('shannon-provider-pin', shp * 100);
+    setTextColored('sm33-p', fmt(dec.superminority_provider_33?.value), smRating(dec.superminority_provider_33?.value, 'asn'));
+    setTextColored('sm50-p', fmt(dec.superminority_provider_50?.value), smRating(dec.superminority_provider_50?.value, 'asn'));
+  }
+
   // Shannon (3 dimensions)
   const shc = dec.shannon_country?.normalized;
   const sha = dec.shannon_asn?.normalized;
@@ -3132,7 +3240,7 @@ function renderAcademic(d: any) {
 
   // Nakamoto donuts
   const nakDims = [
-    { id: 'nak-asn', val: dec.nakamoto_asn?.value, dim: 'asn' },
+    ...(hasProvider ? [{ id: 'nak-provider', val: dec.nakamoto_provider?.value, dim: 'asn' }] : [{ id: 'nak-asn', val: dec.nakamoto_asn?.value, dim: 'asn' }]),
     { id: 'nak-country', val: dec.nakamoto_country?.value, dim: 'country' },
     { id: 'nak-city', val: dec.nakamoto_city?.value, dim: 'city' },
     { id: 'nak-validator', val: dec.nakamoto_validator?.value, dim: 'validator' },
@@ -3197,6 +3305,18 @@ function setupAcademicTooltips(dec: any) {
       const v = dec.shannon_asn?.normalized;
       const r = shannonRating(v);
       return v != null ? `<strong>Shannon (ASN): ${v.toFixed(3)}</strong><span class="tip-rating">${r.label} · scale 0–1</span>` : '<strong>No data</strong>';
+    },
+    'shannon-provider': () => {
+      const v = dec.shannon_provider?.normalized;
+      const a = dec.shannon_asn?.normalized;
+      const r = shannonRating(v);
+      return v != null ? `<strong>Shannon (provider): ${v.toFixed(3)}</strong><span class="tip-rating">${r.label} · scale 0–1${a != null ? ` · by ASN: ${a.toFixed(3)}` : ''}<br>Provider = the company the node is rented from, across all its networks</span>` : '<strong>No data</strong>';
+    },
+    'hhi-provider': () => {
+      const v = dec.hhi_provider?.value;
+      const a = dec.hhi_asn?.value;
+      const r = hhiRating(v);
+      return v != null ? `<strong>HHI by provider: ${v.toFixed(0)}</strong><span class="tip-rating">${r.label} · scale 0–10000${a != null ? ` · by ASN: ${a.toFixed(0)}` : ''}<br>Provider = the company the node is rented from, across all its networks</span>` : '<strong>No data</strong>';
     },
     'shannon-validator': () => {
       const v = dec.shannon_validator?.normalized;
@@ -3360,7 +3480,7 @@ function resetDynamicValues() {
     if (el) el.style.left = '0%';
   });
   // Reset Nakamoto donuts to neutral empty state
-  ['nak-asn-donut', 'nak-country-donut', 'nak-city-donut', 'nak-validator-donut'].forEach(id => {
+  ['nak-asn-donut', 'nak-provider-donut', 'nak-country-donut', 'nak-city-donut', 'nak-validator-donut'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.innerHTML = `<svg viewBox="0 0 60 60"><circle cx="30" cy="30" r="22" fill="none" stroke="var(--text-muted)" stroke-width="5" opacity="0.15"/></svg>`;
   });
@@ -3396,7 +3516,7 @@ async function loadAll(cluster: string, isClusterChange: boolean = false) {
   try {
     const validatorsData = await fetchValidators(cluster);
     const records = (validatorsData?.records || []).filter((r: any) => r != null);
-    try { renderPulse(summary, records, cluster); } catch (e) { console.warn('renderPulse:', e); }
+    try { renderVitals(summary, records, cluster); } catch (e) { console.warn('renderVitals:', e); }
     try { renderGeoAsnFromRecords(summary, records); } catch (e) { console.warn('renderGeoAsnFromRecords:', e); }
     try { await renderStories(summary, records, cluster); } catch (e) { console.warn('renderStories:', e); }
   } catch (e) {
