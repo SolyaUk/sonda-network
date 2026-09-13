@@ -262,7 +262,9 @@ import Footer from '../components/Footer.astro';
   .vagg-row.is-extra { display: none; }
   .vagg-card.is-expanded .vagg-row.is-extra { display: grid; }
   /* Donut view: bigger and thicker than the homepage donuts, rows to the right */
-  .vagg-donut { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 0.9rem; align-items: center; margin-top: 0.35rem; }
+  /* align-items: start keeps the donut in place when "Show all" grows the row list */
+  .vagg-donut { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 0.9rem; align-items: start; margin-top: 0.35rem; }
+  .vagg-donut .donut-svg { margin-top: 0.4rem; }
   .vagg-donut .donut-svg { width: 150px; height: 150px; }
   .vagg-donut .vagg-rows { margin-top: 0; }
   .vagg-donut .vagg-row { grid-template-columns: 18px minmax(0, 1fr) auto auto; gap: 0.4rem; }
@@ -414,8 +416,10 @@ import Footer from '../components/Footer.astro';
     border-bottom: 1px solid var(--border);
     white-space: nowrap;
     position: sticky;
-    top: 0;
+    top: var(--sticky-offset, 0px);
     z-index: 2;
+    /* border-collapse drops borders while stuck: keep the bottom line as an inset shadow */
+    box-shadow: inset 0 -1px 0 var(--border);
   }
   .vtable tbody tr {
     border-bottom: 1px solid var(--border);
@@ -447,7 +451,8 @@ import Footer from '../components/Footer.astro';
   .cell-name-row { display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap; margin-bottom: 0.15rem; }
   .cell-name { font-weight: 600; color: var(--text-primary); }
   .cell-keys { font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-muted); line-height: 1.4; }
-  .cell-key-row { display: flex; gap: 0.4rem; }
+  .cell-key-row { display: flex; gap: 0.4rem; align-items: center; }
+  .cell-key-row .copy-btn, .cell-name-row .copy-btn, .cell-geo-asn .copy-btn { margin-left: 0; }
   .cell-key-label { color: var(--text-muted); width: 18px; flex-shrink: 0; font-size: 0.68rem; }
   .cell-key-val { color: var(--text-secondary); }
 
@@ -720,11 +725,13 @@ import Footer from '../components/Footer.astro';
 import {
   bootstrapCluster, getCluster, fetchValidators, fetchSummary,
   filterValidators, sortValidators, computeTvcRanks, aggregateByProvider, providerOf,
+  providerLogoUrl, providerTagsText,
   isValidatorRecord, isInGossip, clientLabel,
   fmtStakeShort, concentrationLevel,
 } from '../lib/data.js';
 import { fmt, pct, shortenIdentity, fmtSol, clientColor, versionColor, displayClient, fmtCompact, bamRegionCode } from '../lib/formatters.js';
 import { renderDonut } from '../lib/charts.js';
+import { copyButtonHtml } from '../lib/ui.js';
 
 const NO_GOSSIP_TIP = 'Vote account has stake but the node is not visible in gossip: no IP, version or client data this cycle';
 
@@ -904,12 +911,12 @@ function renderTableRow(r, pos) {
       </td>
       <td>
         <div class="cell-name-row">${r.name
-          ? `<span class="cell-name">${r.name}</span>`
-          : `<span class="cell-name cell-name-id" data-tip="No name registered on-chain; this is the identity pubkey">${shortenIdentity(r.identity_pubkey, 6, 6)}</span>`}</div>
+          ? `<span class="cell-name">${r.name}</span>${copyButtonHtml(r.name, 'Copy name')}`
+          : `<span class="cell-name cell-name-id" data-tip="No name registered on-chain; this is the identity pubkey">${shortenIdentity(r.identity_pubkey, 6, 6)}</span>${copyButtonHtml(r.identity_pubkey, 'Copy identity')}`}</div>
         <div class="cell-keys">
-          ${r.name ? `<div class="cell-key-row"><span class="cell-key-label">id</span><span class="cell-key-val">${shortenIdentity(r.identity_pubkey, 4, 4)}</span></div>` : ''}
-          <div class="cell-key-row"><span class="cell-key-label">vt</span><span class="cell-key-val">${shortenIdentity(r.vote_account, 4, 4)}</span></div>
-          ${r.bls_pubkey ? `<div class="cell-key-row"><span class="cell-key-label">bls</span><span class="cell-key-val">${shortenIdentity(r.bls_pubkey, 4, 4)}</span></div>` : ''}
+          ${r.name ? `<div class="cell-key-row"><span class="cell-key-label">id</span><span class="cell-key-val">${shortenIdentity(r.identity_pubkey, 4, 4)}</span>${copyButtonHtml(r.identity_pubkey, 'Copy identity')}</div>` : ''}
+          <div class="cell-key-row"><span class="cell-key-label">vt</span><span class="cell-key-val">${shortenIdentity(r.vote_account, 4, 4)}</span>${copyButtonHtml(r.vote_account, 'Copy vote account')}</div>
+          ${r.bls_pubkey ? `<div class="cell-key-row"><span class="cell-key-label">bls</span><span class="cell-key-val">${shortenIdentity(r.bls_pubkey, 4, 4)}</span>${copyButtonHtml(r.bls_pubkey, 'Copy BLS pubkey')}</div>` : ''}
         </div>
       </td>
       <td>
@@ -926,7 +933,7 @@ function renderTableRow(r, pos) {
           <div class="cell-geo-text">
             ${inGossip
               ? `<div class="cell-geo-city">${geo.city || 'Unknown'}</div>
-            <div class="cell-geo-asn" data-tip="${geo.asn_name || ''}">${shortAsnName(geo.asn_name || geo.asn || '')}${geo.asn ? ` <span class="cell-geo-asn-code">${geo.asn}</span>` : ''}</div>`
+            <div class="cell-geo-asn" data-tip="${geo.asn_name || ''}">${shortAsnName(geo.asn_name || geo.asn || '')}${geo.asn ? ` <span class="cell-geo-asn-code">${geo.asn}</span>${copyButtonHtml(geo.asn, 'Copy ASN')}` : ''}</div>`
               : `<div class="cell-geo-city is-muted" data-tip="${NO_GOSSIP_TIP}">Not in gossip</div>`}
           </div>
         </div>
@@ -1057,7 +1064,10 @@ function renderNext() {
   tbody.querySelectorAll('tr').forEach(tr => {
     if (tr.dataset.wired) return;
     tr.dataset.wired = '1';
-    tr.addEventListener('click', () => { window.location.href = tr.dataset.href; });
+    tr.addEventListener('click', (e) => {
+      if (e.target instanceof Element && e.target.closest('[data-copy]')) return;
+      window.location.href = tr.dataset.href;
+    });
   });
   // Wire up mobile card head toggle
   cwrap.querySelectorAll('.vcard').forEach(card => {
@@ -1110,7 +1120,6 @@ function renderSummaryLine(records) {
 // re-aggregate on the filtered set, entries with nothing left are dimmed.
 const AGG_CARDS_CLUSTERS = ['mainnet-beta', 'testnet', 'devnet', 'alpenglow-community'];
 const AGG_ROWS_VISIBLE = 6;
-const DC_LOGO_BASE = 'https://data.sonda.network/assets/dc';
 const SEQ_PALETTE = ['#a78bfa', '#22d3ee', '#4ade80', '#fbbf24', '#f472b6', '#60a5fa', '#fb923c', '#2dd4bf', '#e879f9', '#facc15', '#38bdf8', '#a3e635'];
 const NOT_IN_GOSSIP_KEY = '__nogossip';
 const UNRESOLVED_KEY = '__unresolved';
@@ -1225,11 +1234,14 @@ const VALIDATOR_CARDS = [
         ? Object.assign({ key: NOT_IN_GOSSIP_KEY, count: e.count, delinquent: e.delinquent, stake: e.stake_lamports }, NOT_IN_GOSSIP_ROW())
         : {
             key: e.provider, label: e.provider, count: e.count, delinquent: e.delinquent, stake: e.stake_lamports,
-            // ASN details live in the tooltip only; the per-row list belongs to the datacenters page
-            tip: e.asns.length > 1
-              ? `${e.provider}: ${e.asns.length} networks\n${e.asns.map(a => `${a.asn}${nameOf(a) !== e.provider ? ` ${nameOf(a)}` : ''} · ${a.count}`).join('\n')}`
-              : (e.asns[0] ? `${e.provider} (${e.asns[0].asn}${nameOf(e.asns[0]) !== e.provider ? ` ${nameOf(e.asns[0])}` : ''})` : e.provider),
-            marker: { type: 'logo', asn: e.primary_asn, initial: (e.provider || '?').charAt(0).toUpperCase() },
+            // ASN details and provider tags (v3.12 metrics.providers) live in the tooltip only
+            tip: [
+              e.asns.length > 1
+                ? `${e.provider}: ${e.asns.length} networks\n${e.asns.map(a => `${a.asn}${nameOf(a) !== e.provider ? ` ${nameOf(a)}` : ''} · ${a.count}`).join('\n')}`
+                : (e.asns[0] ? `${e.provider} (${e.asns[0].asn}${nameOf(e.asns[0]) !== e.provider ? ` ${nameOf(e.asns[0])}` : ''})` : e.provider),
+              ...providerTagsText(ctx?.summary, e.provider),
+            ].join('\n'),
+            marker: { type: 'logo', src: providerLogoUrl(ctx?.summary, e.provider, e.primary_asn), initial: (e.provider || '?').charAt(0).toUpperCase() },
           });
       return segs.filter(x => !x.special).concat(segs.filter(x => x.special));
     },
@@ -1241,7 +1253,7 @@ function markerHtml(m) {
   if (m.type === 'dot') return `<span class="vagg-dot" style="background:${m.color}"></span>`;
   if (m.type === 'flag') return `<span class="vagg-flag"><img src="https://flagcdn.com/w40/${m.cc.toLowerCase()}.png" alt="" loading="lazy"></span>`;
   if (m.type === 'pin') return m.cc ? `<span class="vagg-pin"><img src="https://flagcdn.com/w40/${m.cc.toLowerCase()}.png" alt="" loading="lazy"></span>` : '<span class="vagg-pin"></span>';
-  if (m.type === 'logo') return `<span class="dc-logo" data-initial="${escapeAttr(m.initial)}">${m.asn ? `<img src="${DC_LOGO_BASE}/${m.asn}.png" alt="" loading="lazy" onerror="this.remove()">` : ''}</span>`;
+  if (m.type === 'logo') return `<span class="dc-logo" data-initial="${escapeAttr(m.initial)}">${m.src ? `<img src="${m.src}" alt="" loading="lazy" onerror="this.remove()">` : ''}</span>`;
   return '<span class="vagg-marker-muted"></span>';
 }
 

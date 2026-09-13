@@ -29,6 +29,7 @@ import ClusterBanner from '../components/ClusterBanner.astro';
 
       <!-- CHAIN VITALS (F-D): consensus, slot time, throughput, validators, stake inequality -->
       <section class="vitals" id="vitals">
+        <div class="vitals-alert" id="vitals-alert" hidden></div>
         <div class="vitals-grid" id="vitals-grid">
           <div class="vital sk-card"><div class="sk-line" style="width:60%"></div><div class="sk-line" style="width:40%"></div></div>
           <div class="vital sk-card"><div class="sk-line" style="width:60%"></div><div class="sk-line" style="width:40%"></div></div>
@@ -39,7 +40,7 @@ import ClusterBanner from '../components/ClusterBanner.astro';
       </section>
 
       <!-- LIVE INFRASTRUCTURE -->
-      <section class="section">
+      <section class="section" data-collapsible="live-infra">
         <div class="section-header">
           <div>
             <h2 class="section-title">Live infrastructure status</h2>
@@ -85,7 +86,7 @@ import ClusterBanner from '../components/ClusterBanner.astro';
       </section>
 
       <!-- INSIGHTS -->
-      <section class="section">
+      <section class="section" data-collapsible="insights">
         <div class="section-header">
           <div>
             <h2 class="section-title">Insights</h2>
@@ -102,7 +103,7 @@ import ClusterBanner from '../components/ClusterBanner.astro';
       </section>
 
       <!-- DECENTRALIZATION METRICS — 5 cards now -->
-      <section class="section">
+      <section class="section" data-collapsible="metrics">
         <div class="section-header">
           <div>
             <h2 class="section-title">Decentralization metrics</h2>
@@ -338,7 +339,7 @@ import ClusterBanner from '../components/ClusterBanner.astro';
       </section>
 
       <!-- PATH -->
-      <section class="section">
+      <section class="section" data-collapsible="path">
         <div class="section-header">
           <div>
             <h2 class="section-title">Path to better decentralization</h2>
@@ -354,7 +355,7 @@ import ClusterBanner from '../components/ClusterBanner.astro';
       </section>
 
       <!-- GEOGRAPHIC -->
-      <section class="section">
+      <section class="section" data-collapsible="geo">
         <div class="section-header">
           <div>
             <h2 class="section-title">Geographic distribution</h2>
@@ -636,6 +637,10 @@ import ClusterBanner from '../components/ClusterBanner.astro';
     radial-gradient(circle, color-mix(in srgb, var(--cluster-accent) 14%, transparent) 1px, transparent 1.2px) 0 0 / 14px 14px,
     linear-gradient(120deg, color-mix(in srgb, var(--cluster-accent) 10%, var(--bg-card)), color-mix(in srgb, var(--cluster-accent) 3%, var(--bg-card)));
 }
+.vitals-alert { margin: 0 0 0.75rem; padding: 0.6rem 0.9rem; border-radius: 10px; font-size: 0.8rem; color: var(--text-secondary); border: 1px solid var(--border); }
+.vitals-alert strong { color: var(--text-primary); }
+.vitals-alert.is-bad { border-color: color-mix(in srgb, var(--status-critical) 50%, transparent); background: color-mix(in srgb, var(--status-critical) 10%, var(--bg-card)); }
+.vitals-alert.is-warn { border-color: color-mix(in srgb, var(--accent-amber) 50%, transparent); background: color-mix(in srgb, var(--accent-amber) 10%, var(--bg-card)); }
 .vital { padding: 1rem 1.15rem 0.95rem; min-width: 0; border-right: 1px solid color-mix(in srgb, var(--cluster-accent) 22%, var(--border)); }
 .vital:last-child { border-right: 0; }
 .vital-head { display: flex; align-items: center; gap: 0.45rem; margin-bottom: 0.45rem; }
@@ -1076,6 +1081,7 @@ import ClusterBanner from '../components/ClusterBanner.astro';
 .academic-tile-grid-1 { grid-template-columns: 1fr; }
 .academic-tile { display: flex; flex-direction: column; gap: 0.3rem; padding: 0.55rem 0.7rem; background: var(--bg-secondary); border-radius: 6px; justify-content: space-between; position: relative; cursor: help; }
 .academic-tile-row { display: flex; align-items: baseline; justify-content: space-between; gap: 0.4rem; }
+.academic-tile[data-tip] { cursor: help; }
 .academic-tile-label { font-size: 0.62rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
 .academic-tile-num { font-size: 1.4rem; font-weight: 700; color: var(--text-primary); line-height: 1; }
 .academic-tile-num.small { font-size: 1rem; }
@@ -1097,18 +1103,7 @@ import ClusterBanner from '../components/ClusterBanner.astro';
 
 /* Floating tooltip for academic tiles (positioned by JS using viewport coords).
    Uses position:fixed so clientX/clientY map directly without scroll offset issues. */
-.academic-tip {
-  pointer-events: none; position: fixed; z-index: 1000;
-  background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 6px;
-  padding: 0.5rem 0.7rem; font-size: 0.76rem; color: var(--text-primary);
-  white-space: normal; max-width: 300px; box-shadow: 0 4px 16px rgba(0,0,0,0.4);
-  text-shadow: none; opacity: 0; transition: opacity 0.12s;
-  font-family: var(--font-body); font-weight: 400; letter-spacing: 0;
-  text-transform: none; left: 0; top: 0;
-}
-.academic-tip.show { opacity: 1; }
-.academic-tip strong { color: var(--text-primary); font-weight: 600; }
-.academic-tip .tip-rating { display: block; font-size: 0.7rem; color: var(--text-muted); margin-top: 0.2rem; }
+/* academic tile tooltips: data-tip via src/lib/tooltip.js */
 
 /* Nakamoto donuts grid */
 .nak-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; flex: 1; }
@@ -1338,7 +1333,7 @@ import ClusterBanner from '../components/ClusterBanner.astro';
 
 
 <script>
-import { fetchSummary, fetchValidators, fetchValidatorsCached, fetchMainnetSummaryCached, bootstrapCluster, aggregateByAsn, aggregateByProvider, isValidatorRecord } from '../lib/data.js';
+import { fetchSummary, fetchValidators, fetchValidatorsCached, fetchMainnetSummaryCached, bootstrapCluster, aggregateByAsn, aggregateByProvider, isValidatorRecord, providerLogoUrl, providerTagsText } from '../lib/data.js';
 import { fmt, pct, flag, fmtTimestamp, fmtCompact, hhiRating, giniRating, nakRating, smRating, shannonRating, versionColor, clientColor } from '../lib/formatters.js';
 import { renderDonut, PIE_PALETTE } from '../lib/charts.js';
 import { savePreviousFetch } from '../lib/compare.js';
@@ -1512,20 +1507,25 @@ function renderVitals(d: any, records: any[], cluster: string) {
   const totalCount = vals.length > 0 ? vals.length : (vc ? vc.total : (v.total_all ?? v.total));
 
   const consensus = detectConsensus(d);
+  // analyzer v3.12: chain.status live | degraded | halted | unknown, halted_since, stake_in_gossip_pct
+  const status = chain?.status || null;
+  const halted = status === 'halted';
   const lag = chain?.finality_lag_slots;
   const lagOk = lag != null && lag >= 0 && lag <= FINALITY_LAG_SANE;
-  const finalityTxt = lagOk
-    ? `finality ${lag} slot${lag === 1 ? '' : 's'}${chain.finality_ms != null ? ` · ${fmtMs(chain.finality_ms)}` : ''}`
-    : (chain ? 'finality: no data this cycle' : consensusShortNote(d));
-  const finalityStatus = !lagOk ? 'neutral' : (consensus === 'Alpenglow' ? (lag <= 2 ? 'ok' : 'warn') : (lag <= 32 ? 'ok' : 'warn'));
+  const finalityTxt = halted
+    ? `halted${chain.halted_since ? ` since ${new Date(chain.halted_since).toISOString().slice(11, 16)} UTC` : ''}`
+    : lagOk
+      ? `finality ${lag} slot${lag === 1 ? '' : 's'}${chain.finality_ms != null ? ` · ${fmtMs(chain.finality_ms)}` : ''}`
+      : (chain ? 'finality: no data this cycle' : consensusShortNote(d));
+  const finalityStatus = halted ? 'bad' : !lagOk ? 'neutral' : (consensus === 'Alpenglow' ? (lag <= 2 ? 'ok' : 'warn') : (lag <= 32 ? 'ok' : 'warn'));
 
   const slotMs = chain?.slot_time_ms;
-  const slotOk = slotMs != null && slotMs > 0;
+  const slotOk = !halted && slotMs != null && slotMs > 0;
   const slotStatus = !slotOk ? 'neutral' : (slotMs <= (isAlp ? 250 : 450) ? 'ok' : 'warn');
   const windowTxt = !chain ? 'this cycle' : chain.source === 'delta' ? 'avg since last cycle' : (chain.window_s ? `avg over ${chain.window_s} s` : 'avg');
 
   // tps 0 together with a missing slot time means the samples were empty, not an idle chain
-  const tpsOk = chain?.tps != null && !(chain.tps === 0 && !slotOk);
+  const tpsOk = !halted && chain?.tps != null && !(chain.tps === 0 && !slotOk);
   const tpsSub = [
     chain?.tps_non_vote != null && tpsOk ? `${fmtCompact(chain.tps_non_vote)} non-vote` : '',
     chain?.tx_per_slot != null && tpsOk ? `${fmtCompact(chain.tx_per_slot)} tx/slot` : '',
@@ -1554,15 +1554,34 @@ function renderVitals(d: any, records: any[], cluster: string) {
       main: consensus ? `<span class="${consensus === 'Alpenglow' ? 'vital-alpenglow' : ''}">${consensus === 'Alpenglow' ? '🏔 ' : ''}${escapeHtml(consensus)}</span>` : 'no data',
       textMain: true, sub: finalityTxt, status: consensus ? finalityStatus : 'neutral',
     },
-    { name: 'Slot time', main: slotOk ? `${Math.round(slotMs)}<span class="vital-unit">ms</span>` : 'no data', sub: slotOk ? windowTxt : 'this cycle', status: slotStatus },
-    { name: 'Throughput', main: tpsOk ? `${fmtCompact(chain.tps)}<span class="vital-unit">tps</span>` : 'no data', sub: tpsSub, status: tpsOk ? 'ok' : 'neutral' },
+    { name: 'Slot time', main: slotOk ? `${Math.round(slotMs)}<span class="vital-unit">ms</span>` : 'no data', sub: slotOk ? windowTxt : (halted ? 'cluster halted' : 'this cycle'), status: halted ? 'bad' : slotStatus },
+    { name: 'Throughput', tip: 'Transactions per second including vote transactions; non-vote throughput is shown underneath', main: tpsOk ? `${fmtCompact(chain.tps)}<span class="vital-unit">tps</span>` : 'no data', sub: tpsOk ? tpsSub : (halted ? 'cluster halted' : 'this cycle'), status: halted ? 'bad' : tpsOk ? 'ok' : 'neutral' },
     {
       name: 'Validators', main: `${fmt(activeCount)}<span class="vital-unit">active</span>`,
-      sub: `${delinqCount != null ? `${fmt(delinqCount)} delinquent · ` : ''}${fmt(totalCount)} total`,
-      status: delinqCount == null ? 'neutral' : (totalCount > 0 && delinqCount / totalCount >= 0.1 ? 'warn' : 'ok'),
+      sub: halted && chain.stake_in_gossip_pct != null
+        ? `${pct(chain.stake_in_gossip_pct, 0)} of stake back in gossip · ${fmt(totalCount)} total`
+        : `${delinqCount != null ? `${fmt(delinqCount)} delinquent · ` : ''}${fmt(totalCount)} total`,
+      status: halted ? 'neutral' : delinqCount == null ? 'neutral' : (totalCount > 0 && delinqCount / totalCount >= 0.1 ? 'warn' : 'ok'),
     },
     fifth,
   ];
+
+  const alertEl = document.getElementById('vitals-alert');
+  if (alertEl) {
+    if (halted) {
+      const since = chain.halted_since ? ` since ${new Date(chain.halted_since).toISOString().slice(0, 16).replace('T', ' ')} UTC` : '';
+      const back = chain.stake_in_gossip_pct != null ? ` · ${pct(chain.stake_in_gossip_pct, 0)} of active stake back in gossip` : '';
+      alertEl.innerHTML = `<strong>Cluster halted</strong>${escapeHtml(since)}: slots are not advancing as seen from our RPC. Validators are not at fault while the cluster restarts${escapeHtml(back)}.`;
+      alertEl.className = 'vitals-alert is-bad';
+      alertEl.hidden = false;
+    } else if (status === 'degraded') {
+      alertEl.innerHTML = `<strong>Cluster degraded</strong>: slots advance but delinquent stake is above a third or finality lag keeps growing.`;
+      alertEl.className = 'vitals-alert is-warn';
+      alertEl.hidden = false;
+    } else {
+      alertEl.hidden = true;
+    }
+  }
 
   const grid = document.getElementById('vitals-grid');
   if (!grid) return;
@@ -3164,19 +3183,25 @@ function renderGeoAsnFromRecords(d: any, records: any[]) {
   if (agg.length === 0) return;
   const top = agg.slice(0, 10);
   const maxA = Math.max(1, ...top.map(e => e.count));
-  // Logo slot per provider: the provider's most common ASN names the R2 file (assets/dc/AS{n}.png)
-  const primaryAsn = new Map<string, string>();
-  for (const e of aggregateByProvider(records)) if (e.primary_asn) primaryAsn.set(e.provider, e.primary_asn);
+  // Per provider: most common ASN (names the R2 logo file) and the full ASN list for the tooltip
+  const provInfo = new Map<string, { primary_asn: string | null; asns: { asn: string; name: string; count: number }[] }>();
+  for (const e of aggregateByProvider(records)) provInfo.set(e.provider, { primary_asn: e.primary_asn, asns: e.asns });
   const geoAsns = document.getElementById('geo-asns');
   if (geoAsns) {
     geoAsns.innerHTML = top.map(e => {
       const cls = e.stake_pct > 25 ? 'crit' : e.stake_pct > 15 ? 'warn' : 'normal';
       const w = Math.round((e.count / maxA) * 100);
       const label = shortenLabel(e.name, 22);
-      const asn = e.asn !== e.name ? e.asn : (primaryAsn.get(e.name) || '');
-      const logo = `<span class="dc-logo" data-initial="${escapeHtml((e.name || '?').charAt(0).toUpperCase())}">${asn ? `<img src="https://data.sonda.network/assets/dc/${asn}.png" alt="" loading="lazy" onerror="this.remove()">` : ''}</span>`;
+      const info = provInfo.get(e.name);
+      const asn = e.asn !== e.name ? e.asn : (info?.primary_asn || '');
+      const src = providerLogoUrl(d, e.name, asn);
+      const logo = `<span class="dc-logo" data-initial="${escapeHtml((e.name || '?').charAt(0).toUpperCase())}">${src ? `<img src="${src}" alt="" loading="lazy" onerror="this.remove()">` : ''}</span>`;
+      const asnLines = info && info.asns.length > 1
+        ? [`${e.name}: ${info.asns.length} networks`, ...info.asns.map(a => `${a.asn}${a.name && a.name !== e.name ? ` ${a.name}` : ''} · ${a.count}`)]
+        : [`${e.name}${asn ? ` (${asn})` : ''}`];
+      const tip = [...asnLines, ...providerTagsText(d, e.name)].join('\n');
       return `<div class="geo-row">
-        <div class="geo-country">${logo}<span class="geo-cc" data-tip="${escapeHtml(e.name)}${asn ? ` (${escapeHtml(asn)})` : ''}">${escapeHtml(label)}</span></div>
+        <div class="geo-country">${logo}<span class="geo-cc" data-tip="${escapeHtml(tip)}">${escapeHtml(label)}</span></div>
         <div class="geo-bar-wrap"><div class="geo-bar ${cls}" style="width:${w}%"></div></div>
         <div class="geo-count">${fmt(e.count)}</div>
         <div class="geo-stake">${pct(e.stake_pct, 1)}</div>
@@ -3265,92 +3290,59 @@ function renderAcademic(d: any) {
 }
 
 // Floating tooltip on HHI/Gini/Shannon tiles
-let _academicTip: HTMLElement | null = null;
-
-function ensureAcademicTip(): HTMLElement {
-  if (_academicTip) return _academicTip;
-  const tip = document.createElement('div');
-  tip.className = 'academic-tip';
-  document.body.appendChild(tip);
-  _academicTip = tip;
-  return tip;
-}
-
+// Academic tile tooltips go through the shared engine (data-tip, plain text with line
+// breaks), recomputed on every render. The old floating HTML element was the last
+// tooltip implementation outside src/lib/tooltip.js (F-35).
 function setupAcademicTooltips(dec: any) {
-  const tip = ensureAcademicTip();
-  const tiles = document.querySelectorAll('.academic-tile[data-scale-tip]');
-
   const tipDataMap: Record<string, () => string> = {
     'hhi-country': () => {
       const v = dec.hhi_country?.value;
       const r = hhiRating(v);
-      return v != null ? `<strong>HHI by country: ${v.toFixed(0)}</strong><span class="tip-rating">${r.label} · scale 0–10000</span>` : '<strong>No data</strong>';
+      return v != null ? `HHI by country: ${v.toFixed(0)}\n${r.label} · scale 0–10000` : 'No data</strong>';
     },
     'hhi-asn': () => {
       const v = dec.hhi_asn?.value;
       const r = hhiRating(v);
-      return v != null ? `<strong>HHI by ASN: ${v.toFixed(0)}</strong><span class="tip-rating">${r.label} · scale 0–10000</span>` : '<strong>No data</strong>';
+      return v != null ? `HHI by ASN: ${v.toFixed(0)}\n${r.label} · scale 0–10000` : 'No data</strong>';
     },
     'gini': () => {
       const v = dec.gini_validators?.value;
       const r = giniRating(v);
-      return v != null ? `<strong>Gini: ${v.toFixed(3)}</strong><span class="tip-rating">${r.label} · scale 0–1</span>` : '<strong>No data</strong>';
+      return v != null ? `Gini: ${v.toFixed(3)}\n${r.label} · scale 0–1` : 'No data</strong>';
     },
     'shannon-country': () => {
       const v = dec.shannon_country?.normalized;
       const r = shannonRating(v);
-      return v != null ? `<strong>Shannon (country): ${v.toFixed(3)}</strong><span class="tip-rating">${r.label} · scale 0–1</span>` : '<strong>No data</strong>';
+      return v != null ? `Shannon (country): ${v.toFixed(3)}\n${r.label} · scale 0–1` : 'No data</strong>';
     },
     'shannon-asn': () => {
       const v = dec.shannon_asn?.normalized;
       const r = shannonRating(v);
-      return v != null ? `<strong>Shannon (ASN): ${v.toFixed(3)}</strong><span class="tip-rating">${r.label} · scale 0–1</span>` : '<strong>No data</strong>';
+      return v != null ? `Shannon (ASN): ${v.toFixed(3)}\n${r.label} · scale 0–1` : 'No data</strong>';
     },
     'shannon-provider': () => {
       const v = dec.shannon_provider?.normalized;
       const a = dec.shannon_asn?.normalized;
       const r = shannonRating(v);
-      return v != null ? `<strong>Shannon (provider): ${v.toFixed(3)}</strong><span class="tip-rating">${r.label} · scale 0–1${a != null ? ` · by ASN: ${a.toFixed(3)}` : ''}<br>Provider = the company the node is rented from, across all its networks</span>` : '<strong>No data</strong>';
+      return v != null ? `Shannon (provider): ${v.toFixed(3)}\n${r.label} · scale 0–1${a != null ? ` · by ASN: ${a.toFixed(3)}` : ''}\nProvider = the company the node is rented from, across all its networks` : 'No data</strong>';
     },
     'hhi-provider': () => {
       const v = dec.hhi_provider?.value;
       const a = dec.hhi_asn?.value;
       const r = hhiRating(v);
-      return v != null ? `<strong>HHI by provider: ${v.toFixed(0)}</strong><span class="tip-rating">${r.label} · scale 0–10000${a != null ? ` · by ASN: ${a.toFixed(0)}` : ''}<br>Provider = the company the node is rented from, across all its networks</span>` : '<strong>No data</strong>';
+      return v != null ? `HHI by provider: ${v.toFixed(0)}\n${r.label} · scale 0–10000${a != null ? ` · by ASN: ${a.toFixed(0)}` : ''}\nProvider = the company the node is rented from, across all its networks` : 'No data</strong>';
     },
     'shannon-validator': () => {
       const v = dec.shannon_validator?.normalized;
       const r = shannonRating(v);
-      return v != null ? `<strong>Shannon (validator): ${v.toFixed(3)}</strong><span class="tip-rating">${r.label} · scale 0–1</span>` : '<strong>No data</strong>';
+      return v != null ? `Shannon (validator): ${v.toFixed(3)}\n${r.label} · scale 0–1` : 'No data</strong>';
     },
   };
 
-  tiles.forEach(tile => {
-    const key = (tile as HTMLElement).dataset.scaleTip || '';
-    const getContent = tipDataMap[key];
-    if (!getContent) return;
-
-    tile.addEventListener('mouseenter', () => {
-      tip.innerHTML = getContent();
-      tip.classList.add('show');
-    });
-    tile.addEventListener('mousemove', (e) => {
-      const ev = e as MouseEvent;
-      // position:fixed → clientX/clientY map directly to viewport coords
-      const tipW = tip.offsetWidth || 220;
-      const tipH = tip.offsetHeight || 60;
-      let x = ev.clientX + 14;
-      let y = ev.clientY + 14;
-      if (x + tipW > window.innerWidth - 8) x = ev.clientX - tipW - 14;
-      if (y + tipH > window.innerHeight - 8) y = ev.clientY - tipH - 14;
-      if (x < 8) x = 8;
-      if (y < 8) y = 8;
-      tip.style.left = `${x}px`;
-      tip.style.top = `${y}px`;
-    });
-    tile.addEventListener('mouseleave', () => {
-      tip.classList.remove('show');
-    });
+  document.querySelectorAll<HTMLElement>('.academic-tile[data-scale-tip]').forEach(tile => {
+    const key = tile.dataset.scaleTip || '';
+    const fn = tipDataMap[key];
+    if (fn) tile.setAttribute('data-tip', fn());
   });
 }
 

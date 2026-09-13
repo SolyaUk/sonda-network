@@ -261,3 +261,30 @@ html:not([data-theme]) {
 }
 .to-top.is-visible { opacity: 1; visibility: visible; transform: none; }
 .to-top:hover { color: var(--text-primary); border-color: var(--border-accent); }
+
+/* Copy-to-clipboard button (src/lib/ui.js); muted until the row is hovered */
+.copy-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 18px; height: 18px; margin-left: 0.3rem; padding: 0; vertical-align: middle;
+  background: none; border: 0; border-radius: 4px; color: var(--text-muted); cursor: pointer;
+  opacity: 0.45; transition: opacity 0.12s, color 0.12s;
+}
+.copy-btn:hover, tr:hover .copy-btn, .vcard:hover .copy-btn { opacity: 1; }
+.copy-btn:hover { color: var(--cluster-accent); }
+.copy-btn.is-done { color: var(--status-good); opacity: 1; }
+.sonda-toast {
+  position: fixed; left: 50%; bottom: 1.4rem; transform: translate(-50%, 8px); z-index: 1100;
+  background: var(--bg-secondary); border: 1px solid var(--border); color: var(--text-primary);
+  padding: 0.45rem 0.85rem; border-radius: 999px; font-size: 0.78rem; font-family: var(--font-mono);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.35); opacity: 0; visibility: hidden; pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s ease;
+}
+.sonda-toast.is-visible { opacity: 1; visibility: visible; transform: translate(-50%, 0); }
+
+/* Collapsible page sections (data-collapsible): click on the title toggles the body */
+.section-title.is-collapsible { cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem; }
+.section-collapse { display: inline-flex; background: none; border: 1px solid var(--border); border-radius: 999px; color: var(--text-muted); width: 24px; height: 24px; align-items: center; justify-content: center; padding: 0; cursor: pointer; transition: transform 0.2s ease, color 0.15s; }
+.section-title.is-collapsible:hover .section-collapse { color: var(--text-primary); border-color: var(--border-accent); }
+[data-collapsible].is-collapsed .section-collapse { transform: rotate(-90deg); }
+[data-collapsible].is-collapsed > :not(.section-header) { display: none; }
+[data-collapsible].is-collapsed { margin-bottom: 1.5rem; }

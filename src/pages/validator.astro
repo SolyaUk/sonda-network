@@ -36,19 +36,19 @@ import Footer from '../components/Footer.astro';
               <div class="v-key-row">
                 <span class="v-key-label">identity</span>
                 <code id="v-identity" class="v-key-val"></code>
-                <button class="v-copy" data-target="v-identity-full" title="Copy">⎘</button>
+                <button type="button" class="copy-btn v-copy-key" id="v-identity-copy" data-copy="" data-tip="Copy" aria-label="Copy"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
                 <span id="v-identity-full" style="display:none"></span>
               </div>
               <div class="v-key-row">
                 <span class="v-key-label">vote</span>
                 <code id="v-vote" class="v-key-val"></code>
-                <button class="v-copy" data-target="v-vote-full" title="Copy">⎘</button>
+                <button type="button" class="copy-btn v-copy-key" id="v-vote-copy" data-copy="" data-tip="Copy" aria-label="Copy"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
                 <span id="v-vote-full" style="display:none"></span>
               </div>
               <div class="v-key-row" id="v-bls-row" style="display:none">
                 <span class="v-key-label">BLS</span>
                 <code id="v-bls" class="v-key-val"></code>
-                <button class="v-copy" data-target="v-bls-full" title="Copy">⎘</button>
+                <button type="button" class="copy-btn v-copy-key" id="v-bls-copy" data-copy="" data-tip="Copy" aria-label="Copy"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
                 <span id="v-bls-full" style="display:none"></span>
               </div>
             </div>
@@ -211,8 +211,8 @@ import Footer from '../components/Footer.astro';
   .v-key-row { display: flex; align-items: center; gap: 0.5rem; font-family: var(--font-mono); font-size: 0.78rem; flex-wrap: wrap; }
   .v-key-label { color: var(--text-muted); font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em; min-width: 50px; }
   .v-key-val { color: var(--text-secondary); background: var(--bg-card-hover); padding: 0.15rem 0.45rem; border-radius: 4px; font-size: 0.75rem; }
-  .v-copy { background: none; border: 1px solid var(--border); color: var(--text-muted); border-radius: 4px; padding: 0 0.4rem; cursor: pointer; font-size: 0.85rem; line-height: 1.5; }
-  .v-copy:hover { color: var(--cluster-accent); border-color: var(--cluster-accent); }
+  .v-copy-key { opacity: 0.7; }
+  .v-name .copy-btn { width: 22px; height: 22px; opacity: 0.6; }
 
   .v-head-side { display: flex; flex-direction: column; gap: 0.5rem; align-items: flex-end; }
   .v-status-pill { display: inline-block; padding: 0.3rem 0.8rem; border-radius: 14px; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
@@ -436,14 +436,18 @@ function renderValidator(r, cluster) {
     </span>`;
 
   const nameEl = document.getElementById('v-name');
+  const nameCopy = `<button type="button" class="copy-btn" data-copy="${(r.name || r.identity_pubkey || '').replace(/"/g, '&quot;')}" data-tip="${r.name ? 'Copy name' : 'Copy identity'}" aria-label="Copy"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>`;
   if (r.name) {
-    nameEl.textContent = r.name;
+    nameEl.innerHTML = `${r.name.replace(/&/g, '&amp;').replace(/</g, '&lt;')}${nameCopy}`;
   } else {
     // No name registered on-chain: show the identity pubkey instead of a placeholder word.
-    nameEl.innerHTML = `<span class="v-name-id" data-tip="Identity pubkey (no name registered)"><span class="v-name-id-full">${r.identity_pubkey}</span><span class="v-name-id-short">${shortenIdentity(r.identity_pubkey, 8, 8)}</span></span>`;
+    nameEl.innerHTML = `<span class="v-name-id" data-tip="Identity pubkey (no name registered)"><span class="v-name-id-full">${r.identity_pubkey}</span><span class="v-name-id-short">${shortenIdentity(r.identity_pubkey, 8, 8)}</span></span>${nameCopy}`;
   }
   document.getElementById('v-identity').textContent = shortenIdentity(r.identity_pubkey, 6, 6);
   document.getElementById('v-identity-full').textContent = r.identity_pubkey;
+  document.getElementById('v-identity-copy')?.setAttribute('data-copy', r.identity_pubkey || '');
+  document.getElementById('v-vote-copy')?.setAttribute('data-copy', r.vote_account || '');
+  document.getElementById('v-bls-copy')?.setAttribute('data-copy', r.bls_pubkey || '');
   document.getElementById('v-vote').textContent = shortenIdentity(r.vote_account, 6, 6);
   document.getElementById('v-vote-full').textContent = r.vote_account;
   if (r.bls_pubkey) {
@@ -569,17 +573,7 @@ function renderValidator(r, cluster) {
   // via r.testnet_pubkey, AND testnet→mainnet via matching identity_pubkey across snapshots).
   populateCrossCluster(r, cluster).catch(() => {});
 
-  document.querySelectorAll('.v-copy').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const target = document.getElementById(btn.dataset.target);
-      if (target) {
-        navigator.clipboard.writeText(target.textContent || '');
-        const orig = btn.textContent;
-        btn.textContent = '✓';
-        setTimeout(() => { btn.textContent = orig; }, 1000);
-      }
-    });
-  });
+  // Copy buttons: shared handler in src/lib/ui.js (data-copy)
 }
 
 function renderGeoAlternatives(geo) {

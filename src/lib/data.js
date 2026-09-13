@@ -525,3 +525,38 @@ export function aggregateByAsn(records) {
   out.sort((a, b) => b.stake_lamports - a.stake_lamports || b.count - a.count);
   return out;
 }
+
+/**
+ * Provider metadata from metrics.providers (analyzer v3.12, dc_overrides v2):
+ * { asns: [..], tags: [..], website, incidents, logo: "assets/dc/AS20326.png" | null }.
+ * Returns null on older snapshots. Logo paths are relative to the data origin.
+ */
+export const DATA_ORIGIN = 'https://data.sonda.network';
+
+export function providerMeta(summary, name) {
+  const m = summary?.metrics?.providers;
+  if (!m || typeof m !== 'object' || !name) return null;
+  return m[name] || null;
+}
+
+export function providerLogoUrl(summary, name, fallbackAsn) {
+  const meta = providerMeta(summary, name);
+  if (meta && meta.logo) return `${DATA_ORIGIN}/${String(meta.logo).replace(/^\/+/, '')}`;
+  return fallbackAsn ? `${DATA_ORIGIN}/assets/dc/${fallbackAsn}.png` : '';
+}
+
+// Provider tags (F-E, pack 2026-09-12). No tag = a regular hosting provider, not labelled.
+export const PROVIDER_TAG_TEXT = {
+  'isp': 'Internet access provider: the validator runs on a residential or office connection, not in a datacenter.',
+  'transit': 'Backbone/carrier that owns the IP range but rents no servers; the validator\'s datacenter is unknown.',
+  'private': 'The validator operator\'s own network (own ASN).',
+  'solana-focused': 'Solana-focused hosting provider.',
+  'DZ-partner': 'DoubleZero partner.',
+  'banned': 'Listed as banned for SFDP delegation.',
+};
+
+export function providerTagsText(summary, name) {
+  const meta = providerMeta(summary, name);
+  const tags = Array.isArray(meta?.tags) ? meta.tags : [];
+  return tags.map(t => PROVIDER_TAG_TEXT[t] ? `${t}: ${PROVIDER_TAG_TEXT[t]}` : String(t));
+}

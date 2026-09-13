@@ -54,7 +54,11 @@ const {
   <script>
     // Shared tooltip engine for every page (data-tip attributes and (i) info boxes).
     import { initTooltips } from '../lib/tooltip.js';
+    import { initCopyButtons, initStickyOffset, initCollapsibleSections } from '../lib/ui.js';
     initTooltips();
+    initCopyButtons();
+    initStickyOffset();
+    initCollapsibleSections();
 
     // Back-to-top button: long lists (the full mainnet table) are a long way back up.
     const toTop = document.createElement('button');
