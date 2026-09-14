@@ -732,6 +732,7 @@ import {
 import { fmt, pct, shortenIdentity, fmtSol, clientColor, versionColor, displayClient, fmtCompact, bamRegionCode } from '../lib/formatters.js';
 import { renderDonut } from '../lib/charts.js';
 import { copyButtonHtml } from '../lib/ui.js';
+import { startAutoRefresh, signatureMap, changedIdentities, preserveScroll } from '../lib/refresh.js';
 
 const NO_GOSSIP_TIP = 'Vote account has stake but the node is not visible in gossip: no IP, version or client data this cycle';
 
@@ -740,6 +741,7 @@ let allRecords = [];
 let filtered = [];
 let renderedCount = 0;
 let latestSummary = null;
+let lastSnapshotTs = null;   // meta.timestamp of the rendered validators.json
 
 const params = new URLSearchParams(window.location.search);
 
@@ -901,7 +903,7 @@ function renderTableRow(r, pos) {
   if (!inGossip) flags += `<span class="vflag vflag-gossip" data-tip="${NO_GOSSIP_TIP}">No gossip</span>`;
 
   return `
-    <tr data-href="${voteHref}">
+    <tr data-href="${voteHref}" data-id="${r.identity_pubkey}">
       <td class="cell-icon">
         <span style="display:inline-block;width:32px;height:32px;border-radius:50%;overflow:hidden;background:hsl(${hue},${sat}%,45%);position:relative;flex-shrink:0">
           ${r.icon_url ? `<img src="${r.icon_url}" width="32" height="32" loading="lazy" referrerpolicy="no-referrer" style="width:100%;height:100%;object-fit:cover;display:block" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/>` : ''}
@@ -999,7 +1001,7 @@ function renderMobileCard(r, pos) {
   const connectionsStr = connectionsTxt.length > 0 ? connectionsTxt.join(', ') : 'none';
 
   return `
-    <div class="vcard" data-vote="${r.vote_account || r.identity_pubkey}">
+    <div class="vcard" data-vote="${r.vote_account || r.identity_pubkey}" data-id="${r.identity_pubkey}">
       <div class="vcard-head">
         <span class="vcard-icon-wrap" style="display:inline-block;width:38px;height:38px;border-radius:50%;overflow:hidden;background:hsl(${hue},${sat}%,45%);position:relative;flex-shrink:0">
           ${r.icon_url ? `<img src="${r.icon_url}" width="38" height="38" loading="lazy" referrerpolicy="no-referrer" style="width:100%;height:100%;object-fit:cover;display:block" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/>` : ''}
@@ -1032,22 +1034,23 @@ function renderMobileCard(r, pos) {
   `;
 }
 
-function applyAndRender() {
+function applyAndRender(opts = {}) {
   const sortVal = document.getElementById('sort-select').value;
   const [sortKey, sortDir] = sortVal.split('-');
   filtered = sortValidators(filterValidators(allRecords, params), sortKey, sortDir);
+  const keep = opts.keepCount ? Math.max(PAGE_SIZE, renderedCount) : PAGE_SIZE;
   renderedCount = 0;
   document.getElementById('vtable-body').innerHTML = '';
   document.getElementById('vcards-wrap').innerHTML = '';
-  renderNext();
+  renderNext(keep);
   document.getElementById('result-count').textContent =
     `${filtered.length} validator${filtered.length === 1 ? '' : 's'}`;
   renderFilterChips();
   renderAggCards(allRecords, filtered, getCluster(), latestSummary);
 }
 
-function renderNext() {
-  const end = Math.min(renderedCount + PAGE_SIZE, filtered.length);
+function renderNext(count = PAGE_SIZE) {
+  const end = Math.min(renderedCount + count, filtered.length);
   const slice = filtered.slice(renderedCount, end);
 
   const tbody = document.getElementById('vtable-body');
@@ -1529,6 +1532,7 @@ async function loadAndRender() {
   try {
     const data = await fetchValidators(cluster);
     allRecords = (data?.records || []).filter(isValidatorRecord);
+    lastSnapshotTs = data?.meta?.timestamp || null;
     computeTvcRanks(allRecords);
 
     // Compute cluster-aware visibility flags
@@ -1566,11 +1570,42 @@ async function loadAndRender() {
   }
 }
 
+// In-place refresh (F-6): fetch again, skip if the snapshot did not change, otherwise
+// re-render the same number of rows at the same scroll position and glow the rows whose
+// key fields changed (delinquent, version, client, stake, location, DZ/BAM, SFDP).
+async function refreshValidators() {
+  const cluster = getCluster();
+  const [data, summary] = await Promise.all([
+    fetchValidators(cluster),
+    fetchSummary(cluster).catch(() => null),
+  ]);
+  if (summary && window.sondaUpdateStrip) window.sondaUpdateStrip(summary);
+  const ts = data?.meta?.timestamp || null;
+  if (!data?.records || (ts && ts === lastSnapshotTs)) return;
+  if (getCluster() !== cluster) return;   // cluster switched while fetching
+  const before = signatureMap(allRecords);
+  allRecords = data.records.filter(isValidatorRecord);
+  lastSnapshotTs = ts;
+  computeTvcRanks(allRecords);
+  if (summary) latestSummary = summary;
+  const changed = changedIdentities(before, signatureMap(allRecords));
+  preserveScroll(() => {
+    renderSummaryLine(allRecords);
+    applyAndRender({ keepCount: true });
+  });
+  if (changed.size > 0) {
+    document.querySelectorAll('#vtable-body tr[data-id], #vcards-wrap .vcard[data-id]').forEach(el => {
+      if (changed.has(el.getAttribute('data-id'))) el.classList.add('is-changed');
+    });
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   initAggToggle();
   initAggBlockToggles();
   initAggFilterClicks();
   bootstrapCluster();
+  startAutoRefresh(refreshValidators, { intervalMs: 60000 });
 
   // Pre-fill search from URL
   const q = params.get('q') || '';
@@ -1596,7 +1631,7 @@ document.addEventListener('DOMContentLoaded', () => {
     applyAndRender();
   });
 
-  document.getElementById('load-more').addEventListener('click', renderNext);
+  document.getElementById('load-more').addEventListener('click', () => renderNext());
 
   ['filter-clear', 'filter-clear-top'].forEach(id => {
     const b = document.getElementById(id);

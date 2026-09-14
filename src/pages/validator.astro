@@ -308,6 +308,10 @@ import Footer from '../components/Footer.astro';
 
 <script>
 import { bootstrapCluster, getCluster, fetchValidators, fetchSummary, fmtStakeShort, isValidatorRecord, isInGossip } from '../lib/data.js';
+import { startAutoRefresh, preserveScroll, rowSignature } from '../lib/refresh.js';
+
+let lastSnapshotTs = null;
+let lastRecordSig = null;
 import { fmt, shortenIdentity, clientColor, bamRegionCode, displayClient } from '../lib/formatters.js';
 
 const params = new URLSearchParams(window.location.search);
@@ -333,9 +337,11 @@ async function loadValidator() {
 
   try {
     const data = await fetchValidators(cluster);
+    lastSnapshotTs = data?.meta?.timestamp || null;
     const records = (data?.records || []).filter(isValidatorRecord);
     allRecordsForRank = records;
     const r = records.find(x => x.vote_account === validatorId || x.identity_pubkey === validatorId);
+    if (r) lastRecordSig = rowSignature(r) + '|' + (r.epoch_credits ?? '');
     if (!r) {
       // Search across other clusters to suggest where this validator IS present
       const otherClusters = ['mainnet-beta', 'testnet', 'devnet', 'alpenglow-community'].filter(c => c !== cluster);
@@ -420,7 +426,7 @@ function clusterHas(field) {
   return false;
 }
 
-function renderValidator(r, cluster) {
+function renderValidator(r, cluster, opts = {}) {
   document.getElementById('v-loading').style.display = 'none';
   document.getElementById('v-content').style.display = 'block';
   document.title = `${r.name || shortenIdentity(r.identity_pubkey)} · SONDA`;
@@ -571,7 +577,7 @@ function renderValidator(r, cluster) {
   // Cross-cluster: search for this validator's identity/vote/testnet_pubkey across all
   // other clusters and surface every match. This works in both directions (mainnet→testnet
   // via r.testnet_pubkey, AND testnet→mainnet via matching identity_pubkey across snapshots).
-  populateCrossCluster(r, cluster).catch(() => {});
+  if (opts.cross !== false) populateCrossCluster(r, cluster).catch(() => {});
 
   // Copy buttons: shared handler in src/lib/ui.js (data-copy)
 }
@@ -633,7 +639,28 @@ async function populateCrossCluster(r, currentCluster) {
   }).join('');
 }
 
+// In-place refresh (F-6): re-render the profile when the snapshot changed; cross-cluster
+// lookups (other clusters' files) are not repeated, they do not change minute to minute.
+async function refreshValidator() {
+  const cluster = getCluster();
+  if (!validatorId) return;
+  const [data, summary] = await Promise.all([fetchValidators(cluster), fetchSummary(cluster).catch(() => null)]);
+  if (summary && window.sondaUpdateStrip) window.sondaUpdateStrip(summary);
+  const ts = data?.meta?.timestamp || null;
+  if (!data?.records || (ts && ts === lastSnapshotTs) || getCluster() !== cluster) return;
+  lastSnapshotTs = ts;
+  const records = data.records.filter(isValidatorRecord);
+  allRecordsForRank = records;
+  const r = records.find(x => x.vote_account === validatorId || x.identity_pubkey === validatorId);
+  if (!r) return;
+  const sig = rowSignature(r) + '|' + (r.epoch_credits ?? '');
+  if (sig === lastRecordSig) return;
+  lastRecordSig = sig;
+  preserveScroll(() => renderValidator(r, cluster, { cross: false }));
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+  startAutoRefresh(refreshValidator, { intervalMs: 60000 });
   bootstrapCluster();
   loadValidator();
 });

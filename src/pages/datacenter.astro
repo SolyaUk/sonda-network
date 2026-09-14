@@ -188,6 +188,9 @@ import Footer from '../components/Footer.astro';
 
 <script>
 import { bootstrapCluster, getCluster, fetchValidators, fetchSummary, aggregateDatacenters, concentrationLevel, fmtStakeShort } from '../lib/data.js';
+import { startAutoRefresh, preserveScroll } from '../lib/refresh.js';
+
+let lastSnapshotTs = null;
 import { fmt, shortenIdentity } from '../lib/formatters.js';
 
 const params = new URLSearchParams(window.location.search);
@@ -214,6 +217,7 @@ async function loadAndRender() {
 
   try {
     const data = await fetchValidators(cluster);
+    lastSnapshotTs = data?.meta?.timestamp || null;
     const records = (data?.records || []).filter(r => r && r.role === 'validator');
     const aggregated = aggregateDatacenters(records);
     const asnEntry = aggregated.by_asn.find(d => d.asn === asn);
@@ -323,7 +327,18 @@ async function loadAndRender() {
   }
 }
 
+// In-place refresh (F-6): loadAndRender is idempotent (renders by element id), so a
+// changed snapshot simply re-runs it at the same scroll position.
+async function refreshDatacenter() {
+  const cluster = getCluster();
+  const data = await fetchValidators(cluster);
+  const ts = data?.meta?.timestamp || null;
+  if (!data?.records || (ts && ts === lastSnapshotTs) || getCluster() !== cluster) return;
+  await preserveScroll(() => loadAndRender());
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+  startAutoRefresh(refreshDatacenter, { intervalMs: 60000 });
   bootstrapCluster();
   loadAndRender();
 });

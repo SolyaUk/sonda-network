@@ -439,11 +439,13 @@ import {
   bootstrapCluster, getCluster, fetchValidators, fetchSummary,
   aggregateDatacenters, concentrationLevel, fmtStakeShort,
 } from '../lib/data.js';
+import { startAutoRefresh, preserveScroll } from '../lib/refresh.js';
 import { fmt } from '../lib/formatters.js';
 
 const params = new URLSearchParams(window.location.search);
 let aggregated = null;
 let allRecords = [];
+let lastSnapshotTs = null;
 
 let currentView = params.get('view') === 'by_dc' ? 'by_dc' : 'by_asn';
 
@@ -644,6 +646,7 @@ async function loadAndRender() {
   try {
     const data = await fetchValidators(cluster);
     allRecords = data?.records || [];
+    lastSnapshotTs = data?.meta?.timestamp || null;
     aggregated = aggregateDatacenters(allRecords);
 
     // Cluster-aware: hide Hosted column entirely if no validator has DZ/BAM/SFDP
@@ -659,7 +662,21 @@ async function loadAndRender() {
   }
 }
 
+// In-place refresh (F-6): same aggregation, same view/sort/search state, same scroll.
+async function refreshDatacenters() {
+  const cluster = getCluster();
+  const [data, summary] = await Promise.all([fetchValidators(cluster), fetchSummary(cluster).catch(() => null)]);
+  if (summary && window.sondaUpdateStrip) window.sondaUpdateStrip(summary);
+  const ts = data?.meta?.timestamp || null;
+  if (!data?.records || (ts && ts === lastSnapshotTs) || getCluster() !== cluster) return;
+  allRecords = data.records;
+  lastSnapshotTs = ts;
+  aggregated = aggregateDatacenters(allRecords);
+  preserveScroll(() => { renderSummary(); applyAndRender(); });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+  startAutoRefresh(refreshDatacenters, { intervalMs: 60000 });
   bootstrapCluster();
 
   // View toggle
