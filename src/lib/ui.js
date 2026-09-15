@@ -12,9 +12,11 @@ const COPY_ICON = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" s
 const CHEVRON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>';
 
 /** HTML for a copy button. value = what gets copied, tip = tooltip text. */
-export function copyButtonHtml(value, tip = 'Copy') {
+export function copyButtonHtml(value, tip = 'Copy', label = '') {
   const v = String(value ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
-  return `<button type="button" class="copy-btn" data-copy="${v}" data-tip="${tip.replace(/"/g, '&quot;')}" aria-label="${tip.replace(/"/g, '&quot;')}">${COPY_ICON}</button>`;
+  const t = tip.replace(/"/g, '&quot;');
+  const l = label ? ` data-copy-label="${label.replace(/"/g, '&quot;')}"` : '';
+  return `<button type="button" class="copy-btn" data-copy="${v}"${l} data-tip="${t}" aria-label="${t}">${COPY_ICON}</button>`;
 }
 
 let toastEl = null;
@@ -63,8 +65,11 @@ export function initCopyButtons() {
     e.preventDefault();
     e.stopPropagation();
     const value = t.getAttribute('data-copy') || '';
+    const label = t.getAttribute('data-copy-label');
     const ok = await copyText(value);
-    showToast(ok ? `Copied ${value.length > 24 ? value.slice(0, 10) + '...' + value.slice(-6) : value}` : 'Copy failed');
+    // The toast says what was copied: a label when the value is not self-explanatory
+    // (a link to a datacenter page), otherwise the value itself, shortened.
+    showToast(ok ? `Copied ${label || (value.length > 24 ? value.slice(0, 10) + '...' + value.slice(-6) : value)}` : 'Copy failed');
     t.classList.add('is-done');
     setTimeout(() => t.classList.remove('is-done'), 900);
   }, true);

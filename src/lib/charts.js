@@ -57,3 +57,38 @@ export function renderDonut(items, opts = {}) {
     legend: legendItems.join(''),
   };
 }
+
+/**
+ * Identicon for validators without an icon (F-8): a "constellation" seeded by the identity
+ * pubkey, drawn inside a ring in the cluster colour so it reads as generated, not as a
+ * real logo. Most points sit near the rim (80/20) so the shape fills the circle.
+ */
+function hash32(str) {
+  let h = 2166136261;
+  for (const c of String(str)) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; }
+  return h;
+}
+function seededRandom(seed) {
+  let x = hash32(seed) || 1;
+  return () => { x ^= x << 13; x >>>= 0; x ^= x >>> 17; x ^= x << 5; x >>>= 0; return x / 4294967296; };
+}
+const IDENTICON_PALETTE = ['#a78bfa', '#22d3ee', '#4ade80', '#fbbf24', '#f472b6', '#60a5fa', '#fb923c', '#2dd4bf'];
+
+export function identiconSvg(seed, size = 40, extraClass = '') {
+  const rnd = seededRandom(seed || 'sonda');
+  const n = 5 + Math.floor(rnd() * 3);
+  const pts = [];
+  for (let i = 0; i < n; i++) {
+    const a = rnd() * Math.PI * 2;
+    const outer = rnd() < 0.8;
+    const d = outer ? 0.62 + rnd() * 0.3 : 0.15 + rnd() * 0.3;
+    pts.push([20 + Math.cos(a) * d * 17, 20 + Math.sin(a) * d * 17]);
+  }
+  const col = IDENTICON_PALETTE[Math.floor(rnd() * IDENTICON_PALETTE.length)];
+  const path = 'M' + pts.map(p => `${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' L');
+  const dots = pts.map(p => `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="1.9" fill="${col}"/>`).join('');
+  return `<svg class="identicon ${extraClass}" viewBox="0 0 40 40" width="${size}" height="${size}" aria-hidden="true">` +
+    `<circle cx="20" cy="20" r="18.5" fill="${col}" fill-opacity=".07"/>` +
+    `<circle cx="20" cy="20" r="18.5" fill="none" stroke="var(--cluster-accent)" stroke-opacity=".7" stroke-width="1.6"/>` +
+    `<path d="${path}" fill="none" stroke="${col}" stroke-opacity=".75" stroke-width="1.1" stroke-linejoin="round"/>${dots}</svg>`;
+}

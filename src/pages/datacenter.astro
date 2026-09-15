@@ -71,22 +71,14 @@ import Footer from '../components/Footer.astro';
       <section class="dc-card">
         <div class="dc-card-tag">VALIDATORS</div>
         <h2 class="dc-card-title" id="dc-vals-title">Validators in this datacenter</h2>
-        <div class="dc-vals-wrap">
-          <table class="dctable">
-            <thead>
-              <tr>
-                <th></th>
-                <th>Name</th>
-                <th>City</th>
-                <th>Stake</th>
-                <th>Version</th>
-                <th>Skip rate</th>
-                <th>Infrastructure</th>
-              </tr>
-            </thead>
-            <tbody id="dc-vals-body"></tbody>
-          </table>
+        <div class="dc-vals-tools">
+          <select id="dc-sort-select" hidden aria-hidden="true"><option value="rank-asc" selected>TVC rank, best first</option></select>
+          <div id="dc-sort-menu"></div>
         </div>
+        <div class="vtable-wrap" id="dc-vtable-wrap">
+          <table class="vtable" id="dc-vtable"><tbody id="dc-vals-body"></tbody></table>
+        </div>
+        <div class="vcards-wrap" id="dc-vcards"></div>
       </section>
 
       <section class="v-placeholder-section">
@@ -158,14 +150,7 @@ import Footer from '../components/Footer.astro';
 
   .dc-vals-wrap { overflow-x: visible; }
   @media (max-width: 720px) { .dc-vals-wrap { overflow-x: auto; } }
-  .dctable { width: 100%; border-collapse: collapse; font-size: 0.85rem; table-layout: auto; }
-  .dctable thead th { text-align: left; color: var(--text-muted); font-size: 0.65rem; letter-spacing: 0.05em; text-transform: uppercase; font-weight: 600; padding: 0.5rem 0.7rem; border-bottom: 1px solid var(--border); white-space: nowrap; }
-  .dctable tbody tr { border-bottom: 1px solid var(--border); cursor: pointer; }
-  .dctable tbody tr:last-child { border-bottom: none; }
-  .dctable tbody tr:hover { background: var(--bg-card-hover); }
-  .dctable td { padding: 0.55rem 0.7rem; color: var(--text-primary); }
-  .dc-vals-name { font-weight: 500; }
-  .dc-vals-keys { font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-muted); margin-top: 0.1rem; }
+  /* validators table: shared kit (vtable.css + validator-table.js) */
   .perf-skip-good { color: var(--status-good); }
   .perf-skip-warn { color: var(--status-warning); }
   .perf-skip-bad { color: var(--status-critical); }
@@ -187,10 +172,63 @@ import Footer from '../components/Footer.astro';
 </style>
 
 <script>
-import { bootstrapCluster, getCluster, fetchValidators, fetchSummary, aggregateDatacenters, concentrationLevel, fmtStakeShort } from '../lib/data.js';
+import { bootstrapCluster, getCluster, fetchValidators, fetchSummary, aggregateDatacenters, concentrationLevel, fmtStakeShort, computeTvcRanks, sortValidators } from '../lib/data.js';
+import { renderRow, renderCard, tableHeadHtml, markSortedHeader, initHeaderSort, computeStakeTiers, tableAvailability, applyAvailability } from '../lib/validator-table.js';
+import { initSortMenu } from '../lib/sort-menu.js';
 import { startAutoRefresh, preserveScroll } from '../lib/refresh.js';
 
 let lastSnapshotTs = null;
+let dcValidators = [];
+let dcStakeTiers = null;
+let dcAvail = null;
+let dcSummary = null;
+let dcSort = { key: 'rank', dir: 'asc' };
+let dcSortMenu = null;
+
+// Same rows and cards as /validators (shared renderer), sorted by the header choice.
+function renderDcTable() {
+  const cluster = getCluster();
+  const list = sortValidators(dcValidators, dcSort.key, dcSort.dir);
+  const ctx = (i) => ({ cluster, pos: i + 1, tiers: dcStakeTiers, summary: dcSummary, avail: dcAvail });
+  const tbody = document.getElementById('dc-vals-body');
+  const cards = document.getElementById('dc-vcards');
+  if (tbody) {
+    tbody.innerHTML = list.map((r, i) => renderRow(r, ctx(i))).join('');
+    tbody.querySelectorAll('tr[data-href]').forEach(tr => tr.addEventListener('click', (e) => {
+      if (e.target instanceof Element && e.target.closest('[data-copy]')) return;
+      window.location.href = tr.dataset.href;
+    }));
+  }
+  if (cards) {
+    cards.innerHTML = list.map((r, i) => renderCard(r, ctx(i))).join('');
+    cards.querySelectorAll('.vcard').forEach(card => card.addEventListener('click', (e) => {
+      if (e.target instanceof Element && e.target.closest('.vcard-go, [data-copy]')) return;
+      const go = card.querySelector('.vcard-go');
+      if (go) window.location.href = go.getAttribute('href');
+    }));
+  }
+  const table = document.getElementById('dc-vtable');
+  if (table) markSortedHeader(table, dcSort.key, dcSort.dir);
+}
+
+function initDcTableHead() {
+  const table = document.getElementById('dc-vtable');
+  if (!table || table.querySelector('thead')) return;
+  table.insertAdjacentHTML('afterbegin', tableHeadHtml());
+  // Same grouped sort menu as /validators; the hidden select is the shared state for the
+  // menu and the header clicks.
+  const select = document.getElementById('dc-sort-select');
+  const host = document.getElementById('dc-sort-menu');
+  if (select && host) {
+    dcSortMenu = initSortMenu(host, select, { avail: dcAvail || {} });
+    select.addEventListener('change', () => {
+      const [key, dir] = (select.value || 'rank-asc').split('-');
+      dcSort = { key, dir };
+      renderDcTable();
+    });
+  }
+  initHeaderSort(table, () => dcSort, (key, dir) => { if (dcSortMenu) dcSortMenu.set(key, dir); else { dcSort = { key, dir }; renderDcTable(); } });
+}
 import { fmt, shortenIdentity } from '../lib/formatters.js';
 
 const params = new URLSearchParams(window.location.search);
@@ -204,6 +242,7 @@ async function loadAndRender() {
   if (window.sondaSetClusterBanner) window.sondaSetClusterBanner(cluster);
 
   fetchSummary(cluster).then(s => {
+    dcSummary = s;
     if (!s) return;
     if (window.sondaUpdateStrip) window.sondaUpdateStrip(s);
   }).catch(() => {});
@@ -219,6 +258,12 @@ async function loadAndRender() {
     const data = await fetchValidators(cluster);
     lastSnapshotTs = data?.meta?.timestamp || null;
     const records = (data?.records || []).filter(r => r && r.role === 'validator');
+    // TVC ranks and stake tiers are cluster-wide, like on /validators, not local to the DC
+    computeTvcRanks(records);
+    dcStakeTiers = computeStakeTiers(records);
+    dcAvail = tableAvailability(records);
+    applyAvailability(document.getElementById('dc-vtable-wrap'), dcAvail);
+    if (dcSortMenu) dcSortMenu.update(dcAvail);
     const aggregated = aggregateDatacenters(records);
     const asnEntry = aggregated.by_asn.find(d => d.asn === asn);
 
@@ -286,39 +331,8 @@ async function loadAndRender() {
 
     let validatorsList = records.filter(r => r.geolocation?.asn === asn);
     if (cityFilter) validatorsList = validatorsList.filter(r => r.geolocation?.city === cityFilter);
-    validatorsList.sort((a, b) => (b.activated_stake_lamports || 0) - (a.activated_stake_lamports || 0));
-
-    document.getElementById('dc-vals-body').innerHTML = validatorsList.map(r => {
-      const initial = (r.name && r.name.trim()[0]) || (r.identity_pubkey && r.identity_pubkey[0]) || '?';
-      const seedHash = (s) => { let h=0; for (let i=0;i<s.length;i++) h=((h<<5)-h+s.charCodeAt(i))|0; return Math.abs(h); };
-      const h = seedHash(r.identity_pubkey || r.name || 'unknown');
-      const hue = h % 360, sat = 35 + ((h >> 8) % 20);
-      const skipRate = r.skip_rate;
-      const skipClass = skipRate == null ? '' : skipRate < 1 ? 'perf-skip-good' : skipRate < 3 ? 'perf-skip-warn' : 'perf-skip-bad';
-      const skipDisp = skipRate == null ? '—' : skipRate.toFixed(2) + '%';
-      const infraTags = [];
-      if (r.dz_connected) infraTags.push('<span style="color:var(--accent-violet);font-size:0.72rem">DZ</span>');
-      if (r.bam_node) infraTags.push('<span style="color:var(--accent-cyan);font-size:0.72rem">BAM</span>');
-      if (r.is_rakurai) infraTags.push('<span style="color:#f59e0b;font-size:0.72rem">RAK</span>');
-      return `
-        <tr onclick="window.location.href='/validator?id=${r.vote_account || r.identity_pubkey}&cluster=${cluster}'">
-          <td>
-            <span style="display:inline-block;width:28px;height:28px;border-radius:50%;overflow:hidden;background:hsl(${hue},${sat}%,45%);position:relative;flex-shrink:0">
-              ${r.icon_url ? `<img src="${r.icon_url}" width="28" height="28" loading="lazy" referrerpolicy="no-referrer" style="width:100%;height:100%;object-fit:cover;display:block" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/>` : ''}
-              <span style="${r.icon_url ? 'display:none;' : 'display:flex;'}width:100%;height:100%;align-items:center;justify-content:center;color:white;font-weight:600;font-size:0.8em;font-family:var(--font-display)">${initial.toUpperCase()}</span>
-            </span>
-          </td>
-          <td>
-            <div class="dc-vals-name">${r.name || '<span style="color:var(--text-muted);font-style:italic">unnamed</span>'}${r.delinquent ? ' <span style="color:var(--status-critical);font-size:0.7rem">●</span>' : ''}</div>
-            <div class="dc-vals-keys">${shortenIdentity(r.identity_pubkey, 4, 4)}</div>
-          </td>
-          <td>${r.geolocation?.city || '—'}</td>
-          <td>${fmtStakeShort(r.activated_stake_lamports)} SOL</td>
-          <td style="font-family:var(--font-mono);font-size:0.78rem">${r.version || '—'}</td>
-          <td class="${skipClass}" style="font-family:var(--font-mono)">${skipDisp}</td>
-          <td>${infraTags.join(' · ') || '<span style="color:var(--text-muted)">—</span>'}</td>
-        </tr>`;
-    }).join('');
+    dcValidators = validatorsList;
+    renderDcTable();
   } catch (e) {
     document.getElementById('dc-loading').style.display = 'none';
     document.getElementById('dc-error').style.display = 'block';
@@ -338,6 +352,7 @@ async function refreshDatacenter() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  initDcTableHead();
   startAutoRefresh(refreshDatacenter, { intervalMs: 60000 });
   bootstrapCluster();
   loadAndRender();
