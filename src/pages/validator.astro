@@ -475,7 +475,7 @@ function renderValidator(r, cluster, opts = {}) {
   document.getElementById('v-name-badges').innerHTML = badges.join('');
 
   const statusPill = r.delinquent
-    ? '<span class="v-status-pill v-status-delinquent">Delinquent</span>'
+    ? '<span class="v-status-pill v-status-delinquent" data-tip="Delinquent right now: the last vote is more than 128 slots (about a minute) behind the tip in this snapshot">Delinquent</span>'
     : '<span class="v-status-pill v-status-active">Active</span>';
   const website = r.website ? `<a class="v-website" href="${r.website}" target="_blank" rel="noopener">Website ↗</a>` : '';
   document.getElementById('v-head-side').innerHTML = statusPill + website;

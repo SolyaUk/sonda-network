@@ -897,7 +897,7 @@ function renderTableRow(r, pos) {
 
   // Flags column — only what is actually meaningful
   let flags = '';
-  if (r.delinquent) flags += '<span class="vflag vflag-delinq" data-tip="Not voting last epoch">Delinquent</span>';
+  if (r.delinquent) flags += '<span class="vflag vflag-delinq" data-tip="Delinquent right now: the last vote is more than 128 slots (about a minute) behind the tip in this snapshot. How long it has lasted will come with the incidents history">Delinquent</span>';
   if (r.is_superminority) flags += '<span class="vflag vflag-sm" data-tip="Part of the superminority: the smallest set of validators holding 33% of stake">SM</span>';
   if (r.sfdp_state === 'Approved') flags += '<span class="vflag vflag-sfdp" data-tip="Solana Foundation Delegation Program: Approved">SFDP</span>';
   if (!inGossip) flags += `<span class="vflag vflag-gossip" data-tip="${NO_GOSSIP_TIP}">No gossip</span>`;
