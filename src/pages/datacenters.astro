@@ -6,7 +6,7 @@ import ClusterBanner from '../components/ClusterBanner.astro';
 import Footer from '../components/Footer.astro';
 ---
 
-<BaseLayout title="Datacenters · SONDA">
+<BaseLayout title="Datacenters · SONDA" description="Hosting providers behind Solana validators: stake concentration, locations, DoubleZero and Jito BAM participation, SFDP delegation and performance per provider.">
   <Header activePage="datacenters" />
   <StatusStrip />
   <ClusterBanner />
@@ -14,690 +14,717 @@ import Footer from '../components/Footer.astro';
   <div class="dev-banner">
     <div class="dev-banner-inner">
       <span class="dev-badge">BETA</span>
-      SONDA is under active development. Some sections are incomplete.
+      <span class="dev-text">SONDA is under active development. Some sections are incomplete.</span>
       <a href="https://github.com/SolyaUk/sonda-network" target="_blank" rel="noopener" class="dev-link">View on GitHub</a>
     </div>
   </div>
 
   <main class="page-main">
-    <a href="/" class="back-link" id="back-link">← Back to overview</a>
+    <a href="/" class="back-link" id="back-link">&larr; Back to overview</a>
 
     <section class="page-hero">
       <h1 class="page-title">Datacenters</h1>
-      <p class="page-note">
-        Display names, websites, logos, and provider details are derived directly from ASN data for now. A curated mapping with brand identity is coming next
-      </p>
     </section>
 
-    <!-- Summary cards -->
-    <section class="vsummary">
-      <div class="vsum-card">
-        <div class="vsum-label">DATACENTERS</div>
-        <div class="vsum-val mono" id="dc-sum-total">—</div>
-        <div class="vsum-sub" id="dc-sum-asn">— ASNs</div>
+    <!-- one-line summary of the cluster's hosting picture -->
+    <div class="vsummary-line" id="dcs-summary">Loading providers…</div>
+
+    <!-- filter cards, same kit as the validators Breakdown -->
+    <section class="vagg" id="dcs-agg" hidden>
+      <div class="vagg-head">
+        <button class="vagg-toggle" id="dcs-toggle" type="button" aria-expanded="true" aria-controls="dcs-grid">
+          <span class="vagg-title">Breakdown</span>
+          <span class="vagg-hint">click an entry to filter the providers, click again to remove; filters combine</span>
+        </button>
+        <button class="filter-clear vagg-clear" id="dcs-clear-top" type="button" style="display:none">Clear all filters &times;</button>
+        <button class="vagg-toggle-pill" id="dcs-toggle-pill" type="button" aria-expanded="true" aria-controls="dcs-grid"><span class="vagg-toggle-txt">Hide</span><svg class="vagg-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></button>
       </div>
-      <div class="vsum-card">
-        <div class="vsum-label">TOP CONCENTRATION</div>
-        <div class="vsum-val mono" id="dc-sum-top-pct">—</div>
-        <div class="vsum-sub" id="dc-sum-top-name">—</div>
-      </div>
-      <div class="vsum-card">
-        <div class="vsum-label">DOUBLEZERO</div>
-        <div class="vsum-val mono" id="dc-sum-dz">—</div>
-        <div class="vsum-sub">DC with DZ-connected</div>
-      </div>
-      <div class="vsum-card">
-        <div class="vsum-label">RISK FLAGS</div>
-        <div class="vsum-val mono" id="dc-sum-risk">—</div>
-        <div class="vsum-sub">DC with ≥ 15% stake</div>
+      <div id="dcs-grid" class="vagg-body">
+        <div class="vagg-grid vagg-grid-3" id="dcs-cards"></div>
       </div>
     </section>
 
-    <!-- View toggle -->
-    <section class="view-toggle-bar">
-      <div class="view-toggle" role="group" aria-label="Group view">
-        <button class="vt-btn active" data-view="by_asn">By network provider (ASN)</button>
-        <button class="vt-btn" data-view="by_dc">By datacenter (ASN + city)</button>
-      </div>
-      <div class="dc-search-wrap">
-        <input type="search" class="dc-search" id="dc-search" placeholder="Search ASN, ASN name, or city…" />
-      </div>
+    <section class="filters-bar">
+      <input type="search" id="dcs-search" class="filter-search" placeholder="Search provider, ASN or city…" autocomplete="off" />
+      <div class="active-filters" id="dcs-active-filters"></div>
+      <button class="filter-clear" id="dcs-clear" type="button" style="display:none">Clear all filters &times;</button>
     </section>
 
-    <div class="result-line">
-      <span id="dc-result-count">Loading…</span>
+    <section class="results-bar">
+      <div class="result-count" id="dcs-count">—</div>
       <div class="sort-controls">
-        <label class="sort-label" for="dc-sort-select">Sort by:</label>
-        <select id="dc-sort-select" class="sort-select">
-          <option value="stake-desc">Stake (high to low)</option>
-          <option value="stake-asc">Stake (low to high)</option>
-          <option value="validators-desc">Validators (most)</option>
-          <option value="skip-asc">Skip rate (best)</option>
-          <option value="name-asc">ASN name (A–Z)</option>
-        </select>
+        <select id="dcs-sort-select" hidden aria-hidden="true"><option value="stake-desc" selected>Stake, high to low</option></select>
+        <div id="dcs-sort-menu"></div>
       </div>
+    </section>
+
+    <div class="vtable-wrap" id="dcs-table-wrap">
+      <table class="vtable ptable" id="dcs-table"><tbody id="dcs-body"></tbody></table>
     </div>
+    <div class="vcards-wrap" id="dcs-cards-wrap"></div>
 
-    <!-- Datacenters table -->
-    <div class="dctable-wrap">
-      <table class="dctable">
-        <thead>
-          <tr>
-            <th class="dc-col-name">Datacenter</th>
-            <th class="dc-col-loc" id="dc-col-loc-header">Location</th>
-            <th class="dc-col-vals">Validators</th>
-            <th class="dc-col-stake">Stake</th>
-            <th class="dc-col-perf">Performance</th>
-            <th class="dc-col-infra">Hosted</th>
-            <th class="dc-col-risk">Risk</th>
-          </tr>
-        </thead>
-        <tbody id="dctable-body"></tbody>
-      </table>
-    </div>
-
-    <!-- Mobile cards (collapsed by default) -->
-    <div class="dccards-wrap" id="dccards-wrap"></div>
-
-    <p class="page-footnote">
-      Non-validator nodes (RPCs, Jito relayers, DZ devices), DC display names with logos and websites,
-      and a per-DC validator-count timeline are coming next, derived from the backend timeseries.
-    </p>
+    <p class="page-footnote">Provider = the company validators rent from, counted across all of its networks (ASNs). Stake share is measured against the whole cluster; SFDP asks validators to avoid providers above 25%.</p>
   </main>
   <Footer />
 </BaseLayout>
 
 <style is:global>
-  .page-main {
-    max-width: 1380px;
-    margin: 0 auto;
-    padding: 1rem 1.5rem 4rem;
-  }
-  .back-link {
-    color: var(--text-muted);
-    font-size: 0.85rem;
-    text-decoration: none;
-    display: inline-block;
-    margin-bottom: 0.8rem;
-  }
-  .back-link:hover { color: var(--cluster-accent); }
+  /* BETA banner (same as the other pages) */
   .dev-banner { background: rgba(59,130,246,0.08); border-bottom: 1px solid rgba(59,130,246,0.2); font-size: 0.78rem; color: var(--text-secondary); }
   .dev-banner-inner { max-width: 1280px; margin: 0 auto; padding: 0.5rem 1.5rem; display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
   .dev-badge { font-family: var(--font-mono); font-size: 0.65rem; font-weight: 600; background: var(--accent-blue); color: #fff; padding: 0.15rem 0.45rem; border-radius: 4px; letter-spacing: 0.08em; flex-shrink: 0; }
   .dev-link { color: var(--accent-blue); text-decoration: none; margin-left: auto; }
-  .page-hero { margin-bottom: 1.5rem; }
-  .page-title {
-    font-family: var(--font-display);
-    font-size: clamp(1.6rem, 3vw, 2rem);
-    font-weight: 700;
-    color: var(--text-primary);
-    margin: 0.5rem 0 0.4rem;
-  }
-  .page-sub {
-    color: var(--text-secondary);
-    font-size: 0.95rem;
-    max-width: 760px;
-    line-height: 1.5;
-    margin: 0;
-  }
-  .page-note {
-    color: var(--text-muted);
-    font-size: 0.78rem;
-    font-style: italic;
-    margin: 0.75rem 0 0;
-    max-width: 760px;
-  }
-  .vsummary {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 0.85rem;
-    margin: 1.5rem 0 1.2rem;
-  }
-  .vsum-card {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 0.85rem 1.05rem 0.95rem;
-  }
-  .vsum-label {
-    font-size: 0.6rem; letter-spacing: 0.1em;
-    color: var(--text-muted); text-transform: uppercase;
-    margin-bottom: 0.4rem;
-  }
-  .vsum-val {
-    font-family: var(--font-display);
-    font-size: 1.5rem; font-weight: 700;
-    color: var(--text-primary); line-height: 1;
-  }
-  .vsum-sub { font-size: 0.72rem; color: var(--text-muted); margin-top: 0.25rem; }
-  @media (max-width: 768px) { .vsummary { grid-template-columns: repeat(2, 1fr); gap: 0.6rem; } }
-
-  .view-toggle-bar {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    margin-bottom: 0.85rem;
-    flex-wrap: wrap;
-  }
-  .view-toggle {
-    display: inline-flex;
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 3px;
-  }
-  .vt-btn {
-    background: none;
-    border: none;
-    padding: 0.45rem 0.85rem;
-    color: var(--text-secondary);
-    font-size: 0.82rem;
-    cursor: pointer;
-    border-radius: 6px;
-    font-family: inherit;
-    transition: background 0.15s ease;
-  }
-  .vt-btn:hover { color: var(--text-primary); }
-  .vt-btn.active {
-    background: var(--cluster-accent);
-    color: white;
-  }
-  .dc-search-wrap { flex: 1; min-width: 200px; }
-  .dc-search {
-    width: 100%;
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 0.55rem 0.85rem;
-    color: var(--text-primary);
-    font-size: 0.9rem;
-    font-family: inherit;
-  }
-  .dc-search:focus { outline: none; border-color: var(--cluster-accent); }
-
-  .result-line {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    color: var(--text-muted);
-    font-size: 0.8rem;
-    margin-bottom: 0.8rem;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
+  .page-main { max-width: 1400px; margin: 0 auto; padding: 1.5rem 2rem 4rem; }
+  .back-link { display: inline-block; color: var(--text-muted); font-size: 0.85rem; text-decoration: none; margin-bottom: 1.2rem; }
+  .back-link:hover { color: var(--cluster-accent); }
+  .page-hero { margin-bottom: 1.2rem; }
+  .page-title { font-family: var(--font-display); font-size: 2rem; font-weight: 700; margin: 0; }
+  .vsummary-line { font-size: 0.86rem; color: var(--text-secondary); margin: 0 0 1.4rem; line-height: 1.7; }
+  .vsummary-line b { color: var(--text-primary); font-family: var(--font-mono); font-weight: 600; }
+  .vsummary-line .sep { color: var(--text-muted); margin: 0 0.45rem; }
+  .vsummary-line .warn { color: var(--status-critical); }
+  .filters-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; margin-bottom: 0.8rem; }
+  .filter-search { flex: 1 1 320px; min-width: 200px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 0.55rem 0.8rem; color: var(--text-primary); font-size: 0.9rem; font-family: inherit; }
+  .filter-search:focus { outline: none; border-color: var(--border-accent); }
+  .active-filters { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+  .filter-chip { display: inline-flex; align-items: center; gap: 0.35rem; background: color-mix(in srgb, var(--cluster-accent) 12%, transparent); border: 1px solid color-mix(in srgb, var(--cluster-accent) 45%, transparent); color: var(--text-primary); border-radius: 999px; padding: 0.25rem 0.6rem; font-size: 0.76rem; }
+  .filter-chip .chip-x { cursor: pointer; color: var(--text-muted); font-size: 0.9rem; line-height: 1; }
+  .filter-chip .chip-x:hover { color: var(--text-primary); }
+  .filter-clear { background: color-mix(in srgb, var(--cluster-accent) 12%, transparent); border: 1px solid color-mix(in srgb, var(--cluster-accent) 55%, transparent); color: var(--text-primary); border-radius: 999px; padding: 0.4rem 0.85rem; font-size: 0.78rem; font-weight: 600; cursor: pointer; font-family: inherit; }
+  .filter-clear:hover { background: color-mix(in srgb, var(--cluster-accent) 22%, transparent); }
+  .results-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem; gap: 1rem; }
+  .result-count { font-size: 0.85rem; color: var(--text-muted); }
   .sort-controls { display: flex; align-items: center; gap: 0.5rem; }
-  .sort-label { font-size: 0.78rem; }
-  .sort-select {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    color: var(--text-primary);
-    border-radius: 6px;
-    padding: 0.3rem 0.5rem;
-    font-size: 0.78rem;
-    font-family: inherit;
+  .page-footnote { margin-top: 1.4rem; font-size: 0.78rem; color: var(--text-muted); line-height: 1.5; }
+  /* cards flow four per row from 1200px; an incomplete last row stretches to fill it, so
+     seven cards never leave a hole (4 + 3), six go 3 + 3, eight 4 + 4 */
+  #dcs-cards.vagg-grid-3 { display: flex; flex-wrap: wrap; gap: 0.9rem; }
+  #dcs-cards.vagg-grid-3 > .vagg-card { flex: 1 1 calc(33.333% - 0.9rem); min-width: 260px; }
+  /* 7 cards: three on top (the two donuts need room), four below; 8: four and four */
+  @media (min-width: 1200px) {
+    #dcs-cards.vagg-grid-3.has-8 > .vagg-card { flex-basis: calc(25% - 0.9rem); }
+    #dcs-cards.vagg-grid-3.has-7 > .vagg-card:nth-child(-n+3) { flex-basis: calc(33.333% - 0.9rem); }
+    #dcs-cards.vagg-grid-3.has-7 > .vagg-card:nth-child(n+4) { flex-basis: calc(25% - 0.9rem); }
   }
+  @media (max-width: 700px) { #dcs-cards.vagg-grid-3 > .vagg-card { flex-basis: 100%; min-width: 0; } }
+  @media (max-width: 1000px) { #dcs-cards.vagg-grid-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 640px) { #dcs-cards.vagg-grid-3 { grid-template-columns: 1fr; } }
+  /* validator faces in the Validators column */
+  .p-faces { display: flex; align-items: center; gap: 2px; margin-top: 0.35rem; }
+  .p-face { display: inline-flex; border-radius: 50%; line-height: 0; }
+  .p-face .vlogo-wrap { border-color: var(--bg-card); }
+  .p-face:hover { outline: 2px solid var(--cluster-accent); outline-offset: 1px; }
+  .p-faces .p-more { margin-left: 0.2rem; }
 
-  .dctable-wrap {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    overflow-x: auto;
-  }
-  .dctable {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.88rem;
-  }
-  .dctable thead th {
-    text-align: left;
-    background: var(--bg-card-hover);
-    color: var(--text-muted);
-    font-size: 0.68rem;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    font-weight: 600;
-    padding: 0.7rem 0.9rem;
-    border-bottom: 1px solid var(--border);
-    white-space: nowrap;
-  }
-  .dctable tbody tr {
-    border-bottom: 1px solid var(--border);
-    cursor: pointer;
-    transition: background 0.12s ease;
-  }
-  .dctable tbody tr:hover { background: var(--bg-card-hover); }
-  .dctable td {
-    padding: 0.7rem 0.9rem;
-    vertical-align: top;
-    color: var(--text-primary);
-  }
-  .dc-col-name { min-width: 200px; max-width: 280px; }
-  .dc-col-loc { min-width: 150px; max-width: 220px; }
-  .dc-col-vals { width: 110px; }
-  .dc-col-stake { min-width: 130px; max-width: 170px; }
-  .dc-col-perf { min-width: 180px; max-width: 220px; }
-  .dc-col-infra { min-width: 130px; max-width: 200px; }
-  /* Cluster-aware Hosted column hide when no DC has DZ/BAM/SFDP (devnet, alpenglow) */
-  .dctable-wrap.hide-hosted .dc-col-infra,
-  .dctable-wrap.hide-hosted td.dc-col-infra-cell { display: none; }
-  .dc-col-risk { width: 80px; text-align: center; }
-
-  .dc-name-cell {
-    font-weight: 600;
-    color: var(--text-primary);
-    font-size: 0.9rem;
-  }
-  .dc-name-asn {
-    font-family: var(--font-mono);
-    font-size: 0.72rem;
-    color: var(--text-muted);
-    margin-top: 0.15rem;
-  }
-  .dc-loc-row { display: flex; align-items: center; gap: 0.45rem; }
-  .dc-loc-city {
-    font-size: 0.88rem;
-    color: var(--text-primary);
-  }
-  .dc-loc-cities-multi {
-    font-size: 0.75rem;
-    color: var(--text-muted);
-  }
-
-  .dc-stake-main {
-    font-family: var(--font-mono);
-    font-weight: 600;
-    color: var(--text-primary);
-  }
-  .dc-stake-pct {
-    font-size: 0.72rem;
-    color: var(--text-muted);
-    margin-top: 0.15rem;
-    font-family: var(--font-mono);
-  }
-
-  .dc-perf-row {
-    display: grid;
-    grid-template-columns: auto auto;
-    gap: 0.05rem 0.65rem;
-    font-size: 0.75rem;
-    font-family: var(--font-mono);
-  }
-  .dc-perf-label {
-    color: var(--text-muted);
-    font-size: 0.65rem;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-  }
-
-  .dc-infra-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.3rem;
-  }
-  .dc-infra-tag {
-    display: inline-block;
-    font-size: 0.7rem;
-    padding: 0.1rem 0.4rem;
-    border-radius: 4px;
-    border: 1px solid var(--border);
-    background: var(--bg-card-hover);
-    color: var(--text-secondary);
-  }
-  .dc-infra-tag-dz { color: var(--accent-violet); border-color: rgba(167, 139, 250, 0.4); }
-  .dc-infra-tag-bam { color: var(--accent-cyan); border-color: rgba(6, 182, 212, 0.4); }
-  .dc-infra-tag-sfdp { color: var(--accent-blue); border-color: rgba(59, 130, 246, 0.4); }
-
-  .dc-risk-pill {
-    display: inline-block;
-    font-size: 0.65rem;
-    padding: 0.15rem 0.5rem;
-    border-radius: 12px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-  }
-  .dc-risk-bad { background: rgba(239, 68, 68, 0.15); color: var(--status-critical); border: 1px solid rgba(239, 68, 68, 0.4); }
-  .dc-risk-warn { background: rgba(249, 115, 22, 0.15); color: var(--status-warning); border: 1px solid rgba(249, 115, 22, 0.4); }
-  .dc-risk-caution { background: rgba(251, 191, 36, 0.12); color: #d97706; border: 1px solid rgba(251, 191, 36, 0.35); }
-  .dc-risk-good { color: var(--status-good); }
-
-  .page-footnote {
-    color: var(--text-muted);
-    font-size: 0.78rem;
-    text-align: center;
-    margin-top: 2rem;
-    font-style: italic;
-    max-width: 760px;
-    margin-left: auto;
-    margin-right: auto;
-    line-height: 1.5;
-  }
-
-  /* Mobile cards */
-  .dccards-wrap { display: none; }
-  .dccard {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    margin-bottom: 0.65rem;
-    overflow: hidden;
-  }
-  .dccard-head {
-    display: flex;
-    align-items: center;
-    padding: 0.75rem 0.9rem;
-    gap: 0.65rem;
-    cursor: pointer;
-  }
-  .dccard-main { flex: 1; min-width: 0; }
-  .dccard-name { font-weight: 600; color: var(--text-primary); font-size: 0.92rem; }
-  .dccard-loc { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.15rem; }
-  .dccard-side { display: flex; flex-direction: column; align-items: flex-end; gap: 0.15rem; }
-  .dccard-stake { font-family: var(--font-mono); font-weight: 600; font-size: 0.88rem; color: var(--text-primary); }
-  .dccard-pct { font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-muted); }
-  .dccard-go {
-    flex-shrink: 0;
-    background: var(--cluster-accent);
-    color: white;
-    border-radius: 6px;
-    padding: 0.4rem 0.55rem;
-    font-size: 0.78rem;
-    text-decoration: none;
-    line-height: 1;
-  }
-  .dccard-body {
-    display: none;
-    padding: 0.65rem 0.9rem 0.85rem;
-    border-top: 1px solid var(--border);
-    background: var(--bg-secondary);
-    font-size: 0.82rem;
-  }
-  .dccard.open .dccard-body { display: block; }
-  .dccard-body-row {
-    display: grid;
-    grid-template-columns: 110px 1fr;
-    gap: 0.4rem;
-    margin-bottom: 0.4rem;
-  }
-  .dccard-body-label {
-    color: var(--text-muted);
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-  }
-
-  @media (max-width: 900px) {
-    .dctable-wrap { display: none; }
-    .dccards-wrap { display: block; }
-    .page-main { padding: 0.85rem 1rem 3rem; }
-    .view-toggle-bar { gap: 0.5rem; }
-  }
+  /* providers table: own column set on top of the shared vtable kit */
+  .ptable col.c-pos { width: 52px; }
+  .ptable col.p-provider { width: 22%; }
+  .ptable col.p-networks { width: 11%; }
+  .ptable col.p-validators { width: 11%; }
+  .ptable col.p-stake { width: 12%; }
+  .ptable col.p-locations { width: 12%; }
+  .ptable col.p-infra { width: 19%; }
+  .ptable col.p-perf { width: 13%; }
+  .ptable th { white-space: normal; }
+  .p-provider-cell { display: flex; align-items: center; gap: 0.7rem; min-width: 0; }
+  .p-logo { width: 40px; height: 40px; }
+  .p-logo::before { font-size: 0.9rem; }
+  .p-main { min-width: 0; display: flex; flex-direction: column; gap: 0.25rem; }
+  .p-name-row { display: flex; align-items: center; gap: 0.4rem; min-width: 0; }
+  .p-name { font-family: var(--font-display); font-size: 1.05rem; font-weight: 600; color: var(--text-primary); text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .p-name:hover { color: var(--cluster-accent); }
+  .p-tags { display: flex; flex-wrap: wrap; gap: 0.25rem; }
+  .p-networks { font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-primary); }
+  .p-networks-sub { font-family: var(--font-mono); font-size: 0.66rem; color: var(--text-muted); }
+  .p-asn-chips { display: flex; flex-direction: column; gap: 0.2rem; margin-top: 0.3rem; }
+  .p-asn-chip { display: inline-flex; align-items: center; gap: 0.35rem; font-family: var(--font-mono); font-size: 0.66rem; color: var(--text-secondary); border: 1px solid var(--border); border-radius: 6px; padding: 0.12rem 0.4rem; background: var(--bg-primary); width: fit-content; max-width: 100%; text-decoration: none; transition: border-color 0.12s, color 0.12s; }
+  .p-asn-chip b { color: var(--text-primary); font-weight: 600; }
+  .p-asn-chip .n { color: var(--text-muted); }
+  .p-asn-chip:hover { border-color: color-mix(in srgb, var(--cluster-accent) 60%, transparent); color: var(--text-primary); }
+  .p-expand { background: none; border: 1px solid var(--border); border-radius: 6px; color: var(--text-secondary); font-family: var(--font-mono); font-size: 0.66rem; padding: 0.15rem 0.45rem; cursor: pointer; margin-top: 0.3rem; }
+  .p-expand:hover { border-color: var(--border-accent); color: var(--text-primary); }
+  .p-sub-chips { display: flex; flex-wrap: wrap; gap: 0.3rem; padding-left: calc(40px + 0.7rem); }
+  .p-sub-chips .p-asn-chip { font-size: 0.7rem; padding: 0.25rem 0.55rem; }
+  .p-count { font-family: var(--font-mono); font-size: 0.92rem; font-weight: 600; color: var(--text-primary); display: inline-flex; align-items: baseline; }
+  .p-count .vagg-delinq { font-size: 0.7rem; }
+  .p-share { height: 5px; background: color-mix(in srgb, var(--text-muted) 25%, transparent); border-radius: 3px; margin-top: 0.35rem; overflow: hidden; max-width: 120px; }
+  .p-share i { display: block; height: 100%; background: var(--cluster-accent); border-radius: 3px; }
+  .p-stake-pct { font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-secondary); margin-top: 0.15rem; }
+  .p-stake-pct.is-critical { color: var(--status-critical); font-weight: 600; }
+  .p-stake-pct.is-warning { color: var(--accent-amber); font-weight: 600; }
+  .p-stake-cell .stake-meter { margin-bottom: 0.3rem; }
+  /* all country flags, up to two rows, each a link to the provider filtered by country */
+  .p-flags-row { display: flex; align-items: center; gap: 3px; flex-wrap: wrap; max-width: 118px; }
+  .p-flag-link { display: inline-flex; border-radius: 50%; line-height: 0; }
+  .p-flag-link:hover { outline: 2px solid var(--cluster-accent); outline-offset: 1px; }
+  .p-more { font-family: var(--font-mono); font-size: 0.64rem; color: var(--text-muted); margin-left: 0.35rem; }
+  .p-cities { font-size: 0.76rem; color: var(--text-secondary); margin-top: 0.3rem; }
+  .p-sub td { background: color-mix(in srgb, var(--bg-primary) 60%, var(--bg-card)); padding: 0.4rem 0.75rem 0.7rem; }
+  .p-sub-inner { display: flex; flex-wrap: wrap; gap: 0.35rem 1.2rem; font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-secondary); padding-left: calc(40px + 0.7rem); }
+  .p-sub-inner .asn { color: var(--text-primary); }
+  .p-sub-inner .muted { color: var(--text-muted); }
+  .p-sub-inner a { color: var(--cluster-accent); text-decoration: none; }
+  .vbadge-level-critical { color: var(--status-critical); border-color: rgba(239,68,68,0.45); background: rgba(239,68,68,0.1); }
+  .vbadge-level-warning { color: var(--accent-amber); border-color: rgba(251,191,36,0.45); background: rgba(251,191,36,0.08); }
+  /* tags are provider classes, not warnings: neutral, except banned; so transit no longer
+     reads like the amber Elevated badge */
+  .vbadge-tag { color: var(--text-secondary); border-color: var(--border); background: var(--bg-primary); }
+  .vbadge-tag-banned { color: var(--status-critical); border-color: rgba(239,68,68,0.45); }
+  .vbadge-tag-isp, .vbadge-tag-transit { border-style: dashed; }
+  .p-sfdp { margin-top: 0.35rem; }
+  .vtable-wrap.hide-infra col.p-infra, .vtable-wrap.hide-infra .p-infra { display: none; }
+  .vtable-wrap.hide-infra col.p-provider { width: 26%; }
+  .vtable-wrap.hide-infra col.p-locations { width: 20%; }
+  .vtable-wrap.hide-infra col.p-perf { width: 20%; }
+  .p-infra .vbadges-group + .vbadges-group { margin-top: 0.3rem; }
+  @media (max-width: 1200px) { .ptable col.p-perf, .ptable .p-perf { display: none; } .ptable col.p-provider { width: 26%; } .ptable col.p-infra { width: 19%; } .ptable col.p-locations { width: 17%; } }
+  /* provider cards (mobile) */
+  .pcard { border: 1px solid var(--border); border-radius: 12px; background: var(--bg-card); padding: 0.75rem 0.85rem; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0.45rem 0.8rem; align-items: start; }
+  .pcard .p-logo { width: 48px; height: 48px; }
+  .pcard-main { min-width: 0; display: flex; flex-direction: column; gap: 0.3rem; }
+  .pcard-line { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem 0.6rem; font-size: 0.8rem; color: var(--text-secondary); }
+  @media (max-width: 900px) { .page-main { padding: 0.85rem 1rem 3rem; } }
 </style>
 
 <script>
-import {
-  bootstrapCluster, getCluster, fetchValidators, fetchSummary,
-  aggregateDatacenters, concentrationLevel, fmtStakeShort,
-} from '../lib/data.js';
+import { bootstrapCluster, getCluster, fetchValidators, fetchSummary, fetchInfrastructure, computeTvcRanks, isValidatorRecord } from '../lib/data.js';
+import { aggregateProviders, sortProviders, filterProviders, networkInfraFromRecords, applyNetworkInfra } from '../lib/providers.js';
+import { fmt, pct } from '../lib/formatters.js';
+import { copyButtonHtml } from '../lib/ui.js';
+import { renderDonut } from '../lib/charts.js';
+import { circleFlagSvg, pinFlagSvg, fmtStakeSol, slugOf, logoHtml as vLogoHtml, validatorHref } from '../lib/validator-table.js';
+import { initSortMenu, PROVIDER_SORT_GROUPS } from '../lib/sort-menu.js';
 import { startAutoRefresh, preserveScroll } from '../lib/refresh.js';
-import { fmt } from '../lib/formatters.js';
 
 const params = new URLSearchParams(window.location.search);
-let aggregated = null;
 let allRecords = [];
+let providers = [];
+let latestSummary = null;
 let lastSnapshotTs = null;
+let sortMenu = null;
+const expandedProviders = new Set();
+let availability = { connections: false, sfdp: false, skip: false, ibrl: false, slot: false, vlat: false, votes: false, net: false };
 
-let currentView = params.get('view') === 'by_dc' ? 'by_dc' : 'by_asn';
-
+function esc(v) { return String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 function setUrlParam(key, value) {
   const url = new URL(window.location.href);
-  if (value == null || value === '') url.searchParams.delete(key);
-  else url.searchParams.set(key, value);
+  if (value == null || value === '') url.searchParams.delete(key); else url.searchParams.set(key, value);
   window.history.replaceState(null, '', url.toString());
+}
+const LIST_FILTERS = ['country', 'tag', 'city'];
+const FILTER_LABELS = { country: 'Country', tag: 'Tag', level: 'Concentration', infra: 'Infrastructure', size: 'Size', net: 'Network', city: 'City', perf: 'Performance' };
+function listParam(key) { return (params.get(key) || '').split(',').map(v => v.trim()).filter(Boolean); }
+function isActive(key, val) { return LIST_FILTERS.includes(key) ? listParam(key).includes(val) : params.get(key) === val; }
+function toggleFilter(key, val) {
+  if (LIST_FILTERS.includes(key)) {
+    const cur = listParam(key);
+    const next = cur.includes(val) ? cur.filter(v => v !== val) : cur.concat(val);
+    if (next.length) params.set(key, next.join(',')); else params.delete(key);
+    setUrlParam(key, next.join(','));
+  } else if (params.get(key) === val) { params.delete(key); setUrlParam(key, null); }
+  else { params.set(key, val); setUrlParam(key, val); }
+  applyAndRender();
+}
+function removeFilter(key, val) {
+  if (LIST_FILTERS.includes(key)) {
+    const next = listParam(key).filter(v => v !== val);
+    if (next.length) params.set(key, next.join(',')); else params.delete(key);
+    setUrlParam(key, next.join(','));
+  } else { params.delete(key); setUrlParam(key, null); }
+  applyAndRender();
+}
+function clearFilters() {
+  Object.keys(FILTER_LABELS).forEach(k => { params.delete(k); setUrlParam(k, null); });
+  applyAndRender();
+}
+function chipText(key, val) {
+  if (key === 'level') return val === 'critical' ? 'Critical concentration' : val === 'warning' ? 'Elevated concentration' : 'Healthy concentration';
+  if (key === 'infra') return { dz: 'DoubleZero connected', mc: 'Multicast publishers', bam: 'Jito BAM connected', sfdp: 'Hosts SFDP validators', none: 'No DZ or BAM', net: 'Hosts network infrastructure' }[val] || val;
+  if (key === 'net') return { bam_nodes: 'Hosts BAM nodes', jito: 'Hosts Jito endpoints', block_engines: 'Hosts block engines', shred_receivers: 'Hosts shred receivers', harmonic: 'Hosts Harmonic', dz_devices: 'Hosts DZ devices', solana: 'Hosts official RPC' }[val] || val;
+  if (key === 'size') return { '1': 'Single validator', '2-5': '2 to 5 validators', '6-20': '6 to 20 validators', '21+': '21+ validators' }[val] || val;
+  if (key === 'city') return `City: ${val.split('|')[0]}`;
+  if (key === 'perf') return { '1': 'Best performers', '2': 'Good performers', '3': 'Average performers', '4': 'Weakest performers' }[val] || val;
+  return `${FILTER_LABELS[key] || key}: ${val}`;
+}
+function renderChips() {
+  const chips = [];
+  for (const key of Object.keys(FILTER_LABELS)) {
+    if (LIST_FILTERS.includes(key)) listParam(key).forEach(v => chips.push({ key, v }));
+    else if (params.get(key)) chips.push({ key, v: params.get(key) });
+  }
+  document.getElementById('dcs-active-filters').innerHTML = chips.map(c => `<span class="filter-chip">${esc(chipText(c.key, c.v))}<span class="chip-x" data-key="${c.key}" data-value="${esc(c.v)}">&times;</span></span>`).join('');
+  ['dcs-clear', 'dcs-clear-top'].forEach(id => { const b = document.getElementById(id); if (b) b.style.display = chips.length ? 'inline-block' : 'none'; });
+  document.querySelectorAll('#dcs-active-filters .chip-x').forEach(x => x.addEventListener('click', () => removeFilter(x.dataset.key, x.dataset.value)));
+}
+
+// ----- badges shared by rows and cards -----
+const TAG_TIP = {
+  isp: 'Internet access provider: validators here run on residential or office connections, not in a datacenter',
+  transit: 'Backbone carrier that owns the IP range but rents no servers; the datacenter is unknown',
+  private: 'The validator operator\'s own network (own ASN)',
+  'solana-focused': 'Solana-focused hosting provider',
+  'DZ-partner': 'DoubleZero partner',
+  banned: 'Listed as banned for SFDP delegation',
+};
+function tagBadges(e) {
+  return e.tags.map(t => `<span class="vbadge vbadge-tag vbadge-tag-${esc(t).replace(/[^a-z-]/gi, '')}" data-tip="${esc(TAG_TIP[t] || t)}">${esc(t)}</span>`).join('');
+}
+function levelBadge(e) {
+  if (e.level === 'critical') return `<span class="vbadge vbadge-level-critical" data-tip="More than 25% of cluster stake: above the SFDP threshold">Critical</span>`;
+  if (e.level === 'warning') return `<span class="vbadge vbadge-level-warning" data-tip="15 to 25% of cluster stake: approaching the SFDP threshold">Elevated</span>`;
+  return '';
+}
+// Validator infrastructure (what the hosted validators connect to) is tinted; network
+// infrastructure (Jito, Harmonic, BAM nodes, DZ devices, official RPC hosted AT this
+// provider) is outlined. Two lines when both exist.
+function infraBadges(e, opts = {}) {
+  // validator infrastructure: DZ, multicast publishers, BAM (SFDP is a status, it lives in
+  // the Validators column); network infrastructure below, dashed
+  const val = [];
+  if (e.dz) val.push(`<span class="vbadge vbadge-dz" data-tip="${e.dz} validators connected to DoubleZero">DZ ${fmt(e.dz)}</span>`);
+  if (e.multicast) val.push(`<span class="vbadge vbadge-mc" data-tip="${e.multicast} validators publish shreds via DoubleZero multicast">MC ${fmt(e.multicast)}</span>`);
+  if (e.bam) val.push(`<span class="vbadge vbadge-bam" data-tip="${e.bam} validators connected to Jito BAM">BAM ${fmt(e.bam)}</span>`);
+  const net = netBadges(e);
+  if (opts.flat) return val.join('') + net;
+  const parts = [];
+  if (val.length) parts.push(`<div class="vbadges-group">${val.join('')}</div>`);
+  if (net) parts.push(`<div class="vbadges-group">${net}</div>`);
+  return parts.join('');
+}
+function sfdpBadge(e) {
+  return e.sfdp ? `<span class="vbadge vbadge-sfdp" data-tip="${e.sfdp} validators approved in the Solana Foundation Delegation Program">SFDP ${fmt(e.sfdp)}</span>` : '';
+}
+// Network infrastructure by service. With infrastructure.json loaded the Jito family is
+// split (BAM nodes, block engines, shred receivers, NTP); with summary data only, Jito is
+// one number.
+const NET_LABELS = [
+  ['bam_nodes', 'BAM node', 'BAM nodes', 'Jito BAM nodes run at this provider'],
+  ['block_engines', 'block engine', 'block engines', 'Jito block engines hosted here'],
+  ['shred_receivers', 'shred receiver', 'shred receivers', 'Jito shred receivers hosted here'],
+  ['ntp', 'NTP', 'NTP', 'Jito NTP servers hosted here'],
+  ['harmonic', 'Harmonic', 'Harmonic', 'Harmonic endpoints (auction, TPU relayer, shred receiver, bundles) hosted here'],
+  ['dz_devices', 'DZ device', 'DZ devices', 'DoubleZero devices on this provider\'s networks'],
+  ['solana', 'RPC', 'RPC', 'Official Solana RPC / entrypoints hosted here'],
+];
+function netBadges(e) {
+  const n = e.net || {};
+  const out = [];
+  const split = (n.block_engines || 0) + (n.shred_receivers || 0) + (n.ntp || 0) > 0;
+  for (const [key, one, many, tip] of NET_LABELS) {
+    const v = n[key] || 0;
+    if (!v) continue;
+    out.push(`<span class="vbadge vbadge-net" data-tip="${esc(tip)}"><b>${fmt(v)}</b> ${v === 1 ? one : many}</span>`);
+  }
+  // summary-only fallback: Jito endpoints as one badge when the split is unknown
+  const jitoRest = (n.jito || 0) - (n.block_engines || 0) - (n.shred_receivers || 0) - (n.ntp || 0) - (split ? 0 : (n.bam_nodes || 0) * 0);
+  if (!split && (n.jito || 0) > 0) out.push(`<span class="vbadge vbadge-net" data-tip="Jito endpoints (block engines, shred receivers, relays) hosted here"><b>${fmt(n.jito)}</b> Jito</span>`);
+  return out.join('');
+}
+function facesHtml(e) {
+  const top = e.top || [];
+  if (!top.length) return '';
+  const shown = top.slice(0, 4);
+  const rest = e.count - shown.length;
+  const label = (v) => v.name || `${v.identity.slice(0, 6)}...${v.identity.slice(-6)}`;
+  return `<div class="p-faces">${shown.map(v => `<a class="p-face" href="${esc(validatorHref({ vote_account: v.vote, identity_pubkey: v.identity }, getCluster(), `provider:${e.slug}`))}" data-tip="${esc(label(v))}\n${fmtStakeSol(v.stake)} SOL">${vLogoHtml({ identity_pubkey: v.identity, icon_url: v.icon_url, name: v.name }, 18)}</a>`).join('')}${rest > 0 ? `<span class="p-more">+${fmt(rest)}</span>` : ''}</div>`;
+}
+function perfBadgesP(e, opts = {}) {
+  const out = [];
+  if (e.rank_median != null) out.push(`<span class="vperf vperf-rank" data-tip="Median TVC rank of this provider's validators\nbest validator here: #${e.rank_best}"><b>#${fmt(Math.round(e.rank_median))}</b><i>median TVC</i></span>`);
+  if (availability.skip && e.skip_avg != null) out.push(`<span class="vperf" data-tip="Average skip rate across the provider's validators"><b>${e.skip_avg.toFixed(2)}%</b><i>skip</i></span>`);
+  if (!opts.short) {
+    if (availability.ibrl && e.ibrl_median != null) out.push(`<span class="vperf" data-tip="Median IBRL score of the validators here"><b>${e.ibrl_median.toFixed(0)}</b><i>ibrl</i></span>`);
+    if (availability.slot && e.slot_median != null) out.push(`<span class="vperf" data-tip="Median slot time of the validators here"><b>${e.slot_median.toFixed(0)}</b><i>ms</i></span>`);
+    if (availability.votes && e.votes_mean != null) out.push(`<span class="vperf" data-tip="Average vote credits of the validators here vs the best validator, last full epoch${availability.vlat && e.vlat_mean != null ? `\nAverage vote latency ${e.vlat_mean.toFixed(2)} slots` : ''}"><b>${(e.votes_mean * 100).toFixed(2)}%</b><i>votes</i></span>`);
+    else if (availability.vlat && e.vlat_mean != null) out.push(`<span class="vperf" data-tip="Average vote latency of the validators here, slots"><b>${e.vlat_mean.toFixed(2)}</b><i>vlat</i></span>`);
+  }
+  return out.join('');
+}
+function asnChip(a, e, cls = '') {
+  return `<a class="p-asn-chip ${cls}" href="${esc(providerHref(e))}&asn=${esc(a.asn)}" data-tip="${esc(`${a.asn}${a.name && a.name !== e.provider ? ` (${a.name})` : ''}\n${a.count} validators, ${fmtStakeSol(a.stake_lamports)} SOL`)}"><b>${esc(a.asn)}</b><span class="n">${fmt(a.count)}</span></a>`;
+}
+function stakeMeterP(e) {
+  const labels = { 1: 'Low stake', 2: 'Mid stake', 3: 'High stake', 4: 'Top stake' };
+  const t = e.stake_tier || 1;
+  return `<span class="stake-meter t${t}" data-tip="${labels[t]} among providers">${[1, 2, 3, 4].map(k => `<i class="${k <= t ? 'on' : ''}"></i>`).join('')}</span>`;
+}
+function logoHtml(e, cls = 'p-logo') {
+  return `<span class="dc-logo ${cls}" data-initial="${esc(e.provider.charAt(0).toUpperCase())}">${e.logo ? `<img src="${esc(e.logo)}" alt="" loading="lazy" onerror="this.remove()">` : ''}</span>`;
+}
+function providerHref(e) { return `/datacenter?provider=${e.slug || slugOf(e.provider)}&cluster=${getCluster()}`; }
+// Every country flag (two rows at most for the largest providers); a click opens the
+// provider filtered by that country.
+function flagsRow(e, max = 12) {
+  const shown = e.countries.slice(0, max);
+  return `<div class="p-flags-row">${shown.map(c => `<a class="p-flag-link" href="${esc(providerHref(e))}&country=${esc(c.cc)}">${circleFlagSvg(c.cc.toLowerCase(), { tip: `${c.country}: ${c.count} validators here` })}</a>`).join('')}${e.countries.length > max ? `<span class="p-more">+${e.countries.length - max}</span>` : ''}</div>`;
+}
+
+function renderRowP(e, pos, maxCount) {
+  const link = `${location.origin}${providerHref(e)}`;
+  const exp = expandedProviders.has(e.provider);
+  return `<tr data-href="${esc(providerHref(e))}" data-provider="${esc(e.provider)}">
+    <td class="c-pos"><div class="vpos" data-tip="#${pos} in this list with the current sort and filters">#${pos}</div></td>
+    <td class="p-provider"><div class="p-provider-cell">${logoHtml(e)}<div class="p-main">
+      <div class="p-name-row"><a class="p-name" href="${esc(providerHref(e))}" data-tip-ellipsis>${esc(e.provider)}</a>${copyButtonHtml(link, 'Copy link to this provider on SONDA', 'provider link')}</div>
+      <div class="p-tags">${levelBadge(e)}${tagBadges(e)}</div>
+    </div></div></td>
+    <td class="p-networks-cell"><div class="p-networks">${fmt(e.asns.length)} <span class="p-networks-sub">ASN${e.asns.length === 1 ? '' : 's'}</span></div>${e.asns.length <= 2
+      ? `<div class="p-asn-chips">${e.asns.map(a => asnChip(a, e)).join('')}</div>`
+      : `<button type="button" class="p-expand" data-expand="${esc(e.provider)}" aria-expanded="${exp}">${exp ? 'hide' : 'show'} list</button>`}</td>
+    <td><span class="p-count">${fmt(e.count)}${e.delinquent ? `<span class="vagg-delinq" data-tip="${e.delinquent} of ${e.count} delinquent">${e.delinquent}</span>` : ''}</span><div class="p-share" data-tip="Share of validators among providers in this list"><i style="width:${Math.max(2, (e.count / maxCount) * 100)}%"></i></div>${facesHtml(e)}${e.sfdp ? `<div class="vbadges p-sfdp">${sfdpBadge(e)}</div>` : ''}</td>
+    <td class="p-stake-cell">${stakeMeterP(e)}<div class="vstake">${fmtStakeSol(e.stake_lamports)} <small>SOL</small></div><div class="p-stake-pct is-${e.level}" data-tip="${e.level === 'critical' ? 'Above the 25% SFDP threshold' : e.level === 'warning' ? 'Between 15% and 25% of cluster stake' : 'Share of all cluster stake hosted here'}">${pct(e.stake_pct, 1)} of cluster</div></td>
+    <td>${flagsRow(e)}<div class="p-cities">${fmt(e.cities.length)} cit${e.cities.length === 1 ? 'y' : 'ies'} · ${fmt(e.countries.length)} countr${e.countries.length === 1 ? 'y' : 'ies'}</div></td>
+    <td class="p-infra">${infraBadges(e) || '<span class="vdash">—</span>'}</td>
+    <td class="p-perf"><div class="vbadges">${perfBadgesP(e)}</div></td>
+  </tr>${exp ? `<tr class="p-sub"><td colspan="8"><div class="p-sub-chips">${e.asns.map(a => asnChip(a, e)).join('')}</div></td></tr>` : ''}`;
+}
+
+function renderCardP(e, pos) {
+  return `<div class="pcard" data-href="${esc(providerHref(e))}">
+    <div class="vcard-logo">${logoHtml(e)}<div class="vpos">#${pos}</div></div>
+    <div class="pcard-main">
+      <div class="p-name-row"><a class="p-name" href="${esc(providerHref(e))}">${esc(e.provider)}</a></div>
+      <div class="pcard-line"><span class="p-count">${fmt(e.count)}${e.delinquent ? `<span class="vagg-delinq">${e.delinquent}</span>` : ''}</span><span>validators</span><span class="vcard-sep"></span><span class="vstake">${fmtStakeSol(e.stake_lamports)} <small>SOL</small></span><span>${pct(e.stake_pct, 1)}</span></div>
+      <div class="pcard-line">${flagsRow(e, 6)}<span>${fmt(e.cities.length)} cities · ${fmt(e.asns.length)} ASN${e.asns.length === 1 ? '' : 's'}</span></div>
+      <div class="vbadges">${levelBadge(e)}${tagBadges(e)}${infraBadges(e, { flat: true })}${sfdpBadge(e)}${perfBadgesP(e, { short: true })}</div>
+    </div>
+  </div>`;
+}
+
+// ----- filter cards -----
+function renderCards(all, filtered) {
+  const grid = document.getElementById('dcs-cards');
+  // Faceted counting: a card's numbers ignore its own filter key, so selecting one row
+  // never zeroes its siblings and the rows never reshuffle.
+  const facet = (key) => { const p = new URLSearchParams(params.toString()); p.delete(key); return filterProviders(all, p); };
+  const fCountry = facet('country'), fLevel = facet('level'), fInfra = facet('infra'), fTag = facet('tag'), fSize = facet('size'), fCity = facet('city'), fPerf = facet('perf');
+  const totalStake = fCountry.reduce((s, e) => s + e.stake_lamports, 0);
+  // Countries: stake hosted per country across the filtered providers
+  const byCc = new Map();
+  for (const e of fCountry) for (const c of e.countries) {
+    const x = byCc.get(c.cc) || { cc: c.cc, country: c.country, count: 0, stake: 0, providers: 0 };
+    x.count += c.count; x.stake += c.stake_lamports; x.providers++; byCc.set(c.cc, x);
+  }
+  const allCc = new Map();
+  for (const e of all) for (const c of e.countries) { if (!allCc.has(c.cc)) allCc.set(c.cc, { cc: c.cc, country: c.country }); }
+  // universe order (all providers), so the list is stable whatever is selected
+  const uCc = new Map();
+  for (const e of all) for (const c of e.countries) { const x = uCc.get(c.cc) || 0; uCc.set(c.cc, x + c.stake_lamports); }
+  const rows = [...allCc.values()].map(x => Object.assign(x, byCc.get(x.cc) || { count: 0, stake: 0, providers: 0 })).sort((a, b) => (uCc.get(b.cc) || 0) - (uCc.get(a.cc) || 0));
+  const top = rows.filter(x => x.count > 0).slice(0, 6);
+  const rest = rows.filter(x => x.count > 0).slice(6);
+  const items = top.map((x, i) => ({ label: x.country, value: x.stake, color: SEQ[i % SEQ.length], title: `${x.country}: ${x.providers} providers, ${x.count} validators` }));
+  const restStake = rest.reduce((s, x) => s + x.stake, 0);
+  if (restStake > 0) items.push({ label: 'Other', value: restStake, color: '#4b4f63', title: `Other (${rest.length})` });
+  const colorOf = new Map(top.map((x, i) => [x.cc, SEQ[i % SEQ.length]]));
+  const countryRows = rows.map((x, i) => `<div class="vagg-row ${isActive('country', x.cc) ? 'is-selected' : x.count === 0 ? 'is-dim' : ''}${i >= 6 ? ' is-extra' : ''}" data-fkey="country" data-fval="${x.cc}">
+      ${circleFlagSvg(x.cc.toLowerCase(), { tip: x.country })}<span class="vagg-name"><span data-tip-ellipsis>${esc(x.country)}</span><span class="legend-leader"></span></span>
+      <span class="vagg-count">${fmt(x.providers)}<span class="p-more">prov</span></span>
+      <span class="vagg-stake"${colorOf.has(x.cc) ? ` style="color:${colorOf.get(x.cc)}"` : ''}>${totalStake ? ((x.stake / totalStake) * 100).toFixed(1) : '0.0'}%</span>
+    </div>`).join('');
+  const countriesCard = `<div class="story vagg-card vagg-view-donut${expandedCards.has('countries') ? ' is-expanded' : ''}" data-card="countries">
+    <div class="story-header"><span class="story-tag cluster-tag">Countries</span><span class="vagg-meta">${rows.length} entries</span></div>
+    <div class="story-title">Hosted stake by country</div>
+    <div class="vagg-donut"><div class="donut-svg">${items.length ? renderDonut(items, { size: 150, ringR: 70, innerR: 44 }).svg : '<div class="vagg-empty">no match</div>'}</div><div class="vagg-rows">${countryRows}</div></div>
+    <div class="vagg-foot">${rows.length > 6 ? `<button class="vagg-more" type="button" data-more="${rows.length}">${expandedCards.has('countries') ? 'Show less' : `Show all ${rows.length}`}</button>` : ''}</div>
+  </div>`;
+
+  // Cities: hosted stake by city across the filtered providers (same shape as Countries)
+  const byCity = new Map();
+  for (const e of fCity) for (const c of e.cities) {
+    const k = `${c.city}|${c.cc || '??'}`;
+    const x = byCity.get(k) || { key: k, city: c.city, cc: c.cc, count: 0, stake: 0, providers: 0 };
+    x.count += c.count; x.stake += c.stake_lamports; x.providers++; byCity.set(k, x);
+  }
+  const uCity = new Map();
+  for (const e of all) for (const c of e.cities) { const k = `${c.city}|${c.cc || '??'}`; uCity.set(k, (uCity.get(k) || 0) + c.stake_lamports); }
+  const cityRowsAll = [...uCity.keys()].map(k => byCity.get(k) || { key: k, city: k.split('|')[0], cc: k.split('|')[1], count: 0, stake: 0, providers: 0 }).sort((a, b) => (uCity.get(b.key) || 0) - (uCity.get(a.key) || 0));
+  const cityStake = fCity.reduce((s, e) => s + e.stake_lamports, 0);
+  const cityTop = cityRowsAll.filter(x => x.count > 0).slice(0, 6);
+  const cityRest = cityRowsAll.filter(x => x.count > 0).slice(6);
+  const cityItems = cityTop.map((x, i) => ({ label: x.city, value: x.stake, color: SEQ[i % SEQ.length], title: `${x.city}: ${x.providers} providers, ${x.count} validators` }));
+  const cityRestStake = cityRest.reduce((s, x) => s + x.stake, 0);
+  if (cityRestStake > 0) cityItems.push({ label: 'Other', value: cityRestStake, color: '#4b4f63', title: `Other (${cityRest.length})` });
+  const cityColorOf = new Map(cityTop.map((x, i) => [x.key, SEQ[i % SEQ.length]]));
+  const cityRowsHtml = cityRowsAll.map((x, i) => `<div class="vagg-row ${isActive('city', x.key) ? 'is-selected' : x.count === 0 ? 'is-dim' : ''}${i >= 6 ? ' is-extra' : ''}" data-fkey="city" data-fval="${esc(x.key)}">
+      ${x.cc && x.cc !== '??' ? pinFlagSvg(x.cc.toLowerCase(), { extraClass: 'is-marker', tip: `${x.city}, ${x.cc}` }) : '<span class="vpin-none">?</span>'}<span class="vagg-name"><span data-tip-ellipsis>${esc(x.city)}</span><span class="legend-leader"></span></span>
+      <span class="vagg-count">${fmt(x.providers)}<span class="p-more">prov</span></span>
+      <span class="vagg-stake"${cityColorOf.has(x.key) ? ` style="color:${cityColorOf.get(x.key)}"` : ''}>${cityStake ? ((x.stake / cityStake) * 100).toFixed(1) : '0.0'}%</span>
+    </div>`).join('');
+  const citiesCard = `<div class="story vagg-card vagg-view-donut${expandedCards.has('cities') ? ' is-expanded' : ''}" data-card="cities">
+    <div class="story-header"><span class="story-tag cluster-tag">Cities</span><span class="vagg-meta">${cityRowsAll.length} entries</span></div>
+    <div class="story-title">Hosted stake by city</div>
+    <div class="vagg-donut"><div class="donut-svg">${cityItems.length ? renderDonut(cityItems, { size: 150, ringR: 70, innerR: 44 }).svg : '<div class="vagg-empty">no match</div>'}</div><div class="vagg-rows">${cityRowsHtml}</div></div>
+    <div class="vagg-foot">${cityRowsAll.length > 6 ? `<button class="vagg-more" type="button" data-more="${cityRowsAll.length}">${expandedCards.has('cities') ? 'Show less' : `Show all ${cityRowsAll.length}`}</button>` : ''}</div>
+  </div>`;
+
+  // Concentration + infrastructure as status-style bar rows (provider counts in the filtered set)
+  const cntIn = (set, fn) => set.filter(fn).length;
+  const cnt = (fn) => filtered.filter(fn).length;
+  const cntAll = (fn) => all.filter(fn).length;
+  const barRows = (rowsDef) => {
+    const max = Math.max(1, ...rowsDef.map(r => r.cur));
+    return rowsDef.map(r => `<div class="bar-row ${isActive(r.key, r.val) ? 'is-selected' : r.cur === 0 ? 'is-dim' : ''}" data-fkey="${r.key}" data-fval="${r.val}" data-tip="${esc(r.tip)}">
+      <div class="bar-row-label">${r.label}</div><div class="bar-row-track"><div class="bar-row-fill ${r.fill}" style="width:${r.cur > 0 ? Math.max(3, (r.cur / max) * 100) : 0}%"></div></div><div class="bar-row-num ${r.fill === 'crit' ? 'crit' : r.fill === 'cluster' ? 'cluster' : ''}">${fmt(r.cur)}</div>
+    </div>`).join('');
+  };
+  const concRows = [
+    { key: 'level', val: 'critical', label: 'Critical (> 25%)', fill: 'crit', cur: cntIn(fLevel, e => e.level === 'critical'), tip: 'Providers holding more than a quarter of cluster stake' },
+    { key: 'level', val: 'warning', label: 'Elevated (15 to 25%)', fill: 'warn', cur: cntIn(fLevel, e => e.level === 'warning'), tip: 'Providers between 15% and 25% of cluster stake' },
+    { key: 'level', val: 'ok', label: 'Healthy (< 15%)', fill: 'neutral', cur: cntIn(fLevel, e => e.level === 'ok'), tip: 'Providers below 15% of cluster stake' },
+  ];
+  const sizeRows = [
+    { key: 'size', val: '21+', label: '21+ validators', fill: 'cluster', cur: cntIn(fSize, e => e.count >= 21), tip: 'Large providers: 21 or more validators' },
+    { key: 'size', val: '6-20', label: '6 to 20 validators', fill: 'cluster', cur: cntIn(fSize, e => e.count >= 6 && e.count <= 20), tip: 'Mid-size providers' },
+    { key: 'size', val: '2-5', label: '2 to 5 validators', fill: 'neutral', cur: cntIn(fSize, e => e.count >= 2 && e.count <= 5), tip: 'Small providers' },
+    { key: 'size', val: '1', label: 'Single validator', fill: 'neutral', cur: cntIn(fSize, e => e.count === 1), tip: 'One validator only: medians here are one node\'s numbers' },
+  ];
+  // Performance: providers by quarter of median TVC rank (1 = best quarter)
+  const perfRows = [
+    { key: 'perf', val: '1', label: 'Best performers', fill: 'cluster', cur: cntIn(fPerf, e => e.perf_quarter === 1), tip: 'Providers with the best median TVC rank' },
+    { key: 'perf', val: '2', label: 'Good', fill: 'cluster', cur: cntIn(fPerf, e => e.perf_quarter === 2), tip: 'Median TVC rank above the middle of all providers' },
+    { key: 'perf', val: '3', label: 'Average', fill: 'neutral', cur: cntIn(fPerf, e => e.perf_quarter === 3), tip: 'Median TVC rank below the middle of all providers' },
+    { key: 'perf', val: '4', label: 'Weakest', fill: 'neutral', cur: cntIn(fPerf, e => e.perf_quarter === 4), tip: 'Providers with the worst median TVC rank' },
+  ];
+  const bestProv = [...fPerf].filter(e => e.rank_median != null && e.count >= 2).sort((a, b) => a.rank_median - b.rank_median)[0];
+  const perfCard = `<div class="story vagg-card vagg-view-status" data-card="perf">
+    <div class="story-header"><span class="story-tag cluster-tag">Performance</span></div>
+    <div class="story-title">Median TVC rank by provider</div>
+    <div class="vagg-status-head"><span class="story-big mono">${bestProv ? `#${fmt(Math.round(bestProv.rank_median))}` : '—'}</span><span class="story-sub">${bestProv ? `best median, ${esc(bestProv.provider)} (${fmt(bestProv.count)} validators)` : 'no ranked providers in view'}</span></div>
+    <div class="bar-rows-wrap with-divider">${barRows(perfRows)}</div>
+  </div>`;
+  const sizeCard = `<div class="story vagg-card vagg-view-status" data-card="size">
+    <div class="story-header"><span class="story-tag cluster-tag">Size</span></div>
+    <div class="story-title">Validators per provider</div>
+    <div class="vagg-status-head"><span class="story-big mono">${fmt(cntIn(fSize, e => e.count >= 6))}</span><span class="story-sub">providers with 6+ validators</span></div>
+    <div class="bar-rows-wrap with-divider">${barRows(sizeRows)}</div>
+  </div>`;
+  const concCard = `<div class="story vagg-card vagg-view-status" data-card="concentration">
+    <div class="story-header"><span class="story-tag cluster-tag">Concentration</span></div>
+    <div class="story-title">Stake concentration</div>
+    <div class="vagg-status-head"><span class="story-big mono">${fmt(filtered.length)}</span><span class="story-sub">providers in view</span></div>
+    <div class="bar-rows-wrap with-divider">${barRows(concRows)}</div>
+  </div>`;
+  // three separate cards: what the hosted validators use (Infrastructure), what the provider
+  // hosts for the network (Network), and provider tags (Tags); each only when the cluster has data
+  const infraRows = [];
+  const sfdpRow = availability.sfdp ? { key: 'infra', val: 'sfdp', label: 'Hosts SFDP', fill: 'cluster', cur: cntIn(fInfra, e => e.sfdp > 0), tip: 'Providers hosting SFDP-approved validators' } : null;
+  if (availability.connections) {
+    infraRows.push({ key: 'infra', val: 'dz', label: 'DoubleZero', fill: 'cluster', cur: cntIn(fInfra, e => e.dz > 0), tip: 'Providers with at least one validator on DoubleZero' });
+    infraRows.push({ key: 'infra', val: 'mc', label: 'Multicast', fill: 'cluster', cur: cntIn(fInfra, e => e.multicast > 0), tip: 'Providers with validators publishing DoubleZero multicast' });
+    infraRows.push({ key: 'infra', val: 'bam', label: 'Jito BAM', fill: 'cluster', cur: cntIn(fInfra, e => e.bam > 0), tip: 'Providers with at least one validator on Jito BAM' });
+    if (sfdpRow) infraRows.push(sfdpRow);
+    infraRows.push({ key: 'infra', val: 'none', label: 'No DZ or BAM', fill: 'neutral', cur: cntIn(fInfra, e => e.dz === 0 && e.bam === 0), tip: 'Providers whose validators use neither DoubleZero nor Jito BAM' });
+  }
+  const fNet = facet('net');
+  const netRows = [];
+  if (availability.net) {
+    const split = all.some(e => (e.net?.block_engines || 0) + (e.net?.shred_receivers || 0) > 0);
+    const defs = split
+      ? [['bam_nodes', 'BAM nodes'], ['block_engines', 'Block engines'], ['shred_receivers', 'Shred receivers'], ['harmonic', 'Harmonic'], ['dz_devices', 'DZ devices'], ['solana', 'Official RPC']]
+      : [['bam_nodes', 'BAM nodes'], ['jito', 'Jito endpoints'], ['harmonic', 'Harmonic'], ['dz_devices', 'DZ devices'], ['solana', 'Official RPC']];
+    for (const [k, label] of defs) {
+      const cur = cntIn(fNet, e => (e.net?.[k] || 0) > 0);
+      if (all.some(e => (e.net?.[k] || 0) > 0)) netRows.push({ key: 'net', val: k, label, fill: 'cluster', cur, tip: `Providers hosting ${label.toLowerCase()}` });
+    }
+  }
+  const tagSet = [...new Set(all.flatMap(e => e.tags))];
+  const tagRows = tagSet.map(t => ({ key: 'tag', val: t, label: t, fill: t === 'banned' ? 'crit' : 'neutral', cur: cntIn(fTag, e => e.tags.includes(t)), tip: TAG_TIP[t] || t }));
+  // clusters without DZ/BAM keep the SFDP filter in the Tags card ("Tags and status")
+  if (!availability.connections && sfdpRow) tagRows.unshift(sfdpRow);
+  const statusCard = (id, tag, title, head, rows) => rows.length ? `<div class="story vagg-card vagg-view-status" data-card="${id}">
+    <div class="story-header"><span class="story-tag cluster-tag">${tag}</span></div>
+    <div class="story-title">${title}</div>
+    <div class="vagg-status-head">${head}</div>
+    <div class="bar-rows-wrap with-divider${rows.length > 8 ? ' is-two-col' : ''}">${barRows(rows)}</div>
+  </div>` : '';
+  const infraHead = availability.connections
+    ? `<span class="story-big mono">${fmt(cnt(e => e.dz > 0 || e.bam > 0))}</span><span class="story-sub">providers on DZ or BAM</span>`
+    : `<span class="story-big mono">${fmt(cnt(e => e.sfdp > 0))}</span><span class="story-sub">providers hosting SFDP validators</span>`;
+  const infraCard = statusCard('infra', 'Infrastructure', 'What the validators here use', infraHead, infraRows);
+  const netCard = statusCard('net', 'Network', 'Network infrastructure hosted', `<span class="story-big mono">${fmt(cnt(e => e.net_total > 0))}</span><span class="story-sub">providers hosting network nodes</span>`, netRows);
+  const tagsCard = statusCard('tags', 'Tags', availability.connections ? 'Provider tags' : 'Tags and status', `<span class="story-big mono">${fmt(cnt(e => e.tags.length > 0))}</span><span class="story-sub">providers with tags</span>`, tagRows);
+  grid.innerHTML = countriesCard + citiesCard + concCard + sizeCard + perfCard + infraCard + netCard + tagsCard;
+  grid.classList.toggle('has-8', grid.children.length >= 8);
+  grid.classList.toggle('has-7', grid.children.length === 7);
+  grid.querySelectorAll('.vagg-more').forEach(btn => btn.addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    const card = btn.closest('.vagg-card'); const id = card.dataset.card;
+    if (expandedCards.has(id)) expandedCards.delete(id); else expandedCards.add(id);
+    card.classList.toggle('is-expanded', expandedCards.has(id));
+    btn.textContent = expandedCards.has(id) ? 'Show less' : `Show all ${btn.dataset.more}`;
+  }));
+}
+const SEQ = ['#a78bfa', '#22d3ee', '#4ade80', '#fbbf24', '#f472b6', '#60a5fa', '#fb923c', '#2dd4bf'];
+const expandedCards = new Set();
+
+function renderSummary(all) {
+  const totalStake = all.reduce((s, e) => s + e.stake_lamports, 0);
+  const asns = new Set(all.flatMap(e => e.asns.map(a => a.asn))).size;
+  const countries = new Set(all.flatMap(e => e.countries.map(c => c.cc))).size;
+  const cities = new Set(all.flatMap(e => e.cities.map(c => `${c.city}|${c.cc}`))).size;
+  const top = all[0];
+  // Nakamoto by provider: fewest providers whose stake reaches a third of the cluster
+  let acc = 0, nak = 0;
+  const clusterStake = allRecords.reduce((s, r) => s + (r.activated_stake_lamports || 0), 0);
+  for (const e of all) { acc += e.stake_lamports; nak++; if (acc > clusterStake / 3) break; }
+  const parts = [`<b>${fmt(all.length)}</b> providers`, `<b>${fmt(asns)}</b> networks`, `<b>${fmt(countries)}</b> countries`, `<b>${fmt(cities)}</b> cities`];
+  if (top) parts.push(`top share <b class="${top.level === 'critical' ? 'warn' : ''}">${pct(top.stake_pct, 1)}</b> (${esc(top.provider)})`);
+  parts.push(`<b>${fmt(nak)}</b> providers hold a third of stake`);
+  document.getElementById('dcs-summary').innerHTML = parts.join('<span class="sep">·</span>');
 }
 
 function applyAndRender() {
-  if (!aggregated) return;
-  const data = currentView === 'by_asn' ? aggregated.by_asn : aggregated.by_dc;
-  let filtered = [...data];
+  const [key, dir] = (document.getElementById('dcs-sort-select').value || 'stake-desc').split('-');
+  const filtered = sortProviders(filterProviders(providers, params), key, dir);
+  const maxCount = Math.max(1, ...filtered.map(e => e.count));
+  document.getElementById('dcs-body').innerHTML = filtered.map((e, i) => renderRowP(e, i + 1, maxCount)).join('');
+  document.getElementById('dcs-cards-wrap').innerHTML = filtered.map((e, i) => renderCardP(e, i + 1)).join('');
+  document.getElementById('dcs-count').textContent = `${filtered.length} provider${filtered.length === 1 ? '' : 's'}`;
+  document.querySelectorAll('#dcs-body tr[data-href]').forEach(tr => tr.addEventListener('click', (e) => {
+    if (e.target instanceof Element && e.target.closest('[data-copy], .p-expand, a, .p-face')) return;
+    window.location.href = tr.dataset.href;
+  }));
+  document.querySelectorAll('#dcs-cards-wrap .pcard').forEach(card => card.addEventListener('click', (e) => {
+    if (e.target instanceof Element && e.target.closest('[data-copy], a')) return;
+    window.location.href = card.dataset.href;
+  }));
+  document.querySelectorAll('#dcs-body .p-expand').forEach(btn => btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const p = btn.dataset.expand;
+    if (expandedProviders.has(p)) expandedProviders.delete(p); else expandedProviders.add(p);
+    applyAndRender();
+  }));
+  renderChips();
+  renderCards(providers, filtered);
+  document.getElementById('dcs-agg').hidden = providers.length === 0;
+  const table = document.getElementById('dcs-table');
+  table.querySelectorAll('th.th-sort').forEach(th => {
+    const active = th.dataset.sort === key;
+    th.classList.toggle('is-active', active);
+    const arrow = th.querySelector('.th-arrow');
+    if (arrow) arrow.textContent = active ? (dir === 'asc' ? '\u2191' : '\u2193') : '\u2195';
+  });
+}
 
-  // Search
-  const q = (document.getElementById('dc-search').value || '').trim().toLowerCase();
-  if (q) {
-    filtered = filtered.filter(d =>
-      (d.asn || '').toLowerCase().includes(q) ||
-      (d.asn_name || '').toLowerCase().includes(q) ||
-      (d.city || '').toLowerCase().includes(q) ||
-      (d.cities || []).some(c => c.toLowerCase().includes(q))
-    );
+const HEAD = [
+  { cls: 'c-pos', label: '' },
+  { cls: 'p-provider', label: 'Provider', sort: 'name', dir: 'asc' },
+  { cls: 'p-networks', label: 'Networks', sort: 'asns', dir: 'desc' },
+  { cls: 'p-validators', label: 'Validators', sort: 'validators', dir: 'desc' },
+  { cls: 'p-stake', label: 'Stake', sort: 'stake', dir: 'desc' },
+  { cls: 'p-locations', label: 'Locations', sort: 'cities', dir: 'desc' },
+  { cls: 'p-infra', label: 'Infrastructure', sort: 'net', dir: 'desc' },
+  { cls: 'p-perf', label: 'Performance', sort: 'rank', dir: 'asc' },
+];
+function initHead() {
+  const table = document.getElementById('dcs-table');
+  table.insertAdjacentHTML('afterbegin', `<colgroup>${HEAD.map(c => `<col class="${c.cls}">`).join('')}</colgroup><thead><tr>${HEAD.map(c => c.sort
+    ? `<th class="${c.cls} th-sort" data-sort="${c.sort}" data-dir="${c.dir}">${c.label}<span class="th-arrow" aria-hidden="true"></span>${c.hint ? `<span class="th-hint">${c.hint}</span>` : ''}</th>`
+    : `<th class="${c.cls}">${c.label}</th>`).join('')}</tr></thead>`);
+  table.addEventListener('click', (e) => {
+    const th = e.target instanceof Element ? e.target.closest('th.th-sort') : null;
+    if (!th) return;
+    const [ck, cd] = document.getElementById('dcs-sort-select').value.split('-');
+    const dir = ck === th.dataset.sort ? (cd === 'asc' ? 'desc' : 'asc') : th.dataset.dir;
+    sortMenu.set(th.dataset.sort, dir);
+  });
+}
+
+function initSort() {
+  const select = document.getElementById('dcs-sort-select');
+  const fromUrl = params.get('sort');
+  if (fromUrl && /^[a-z]+-(asc|desc)$/.test(fromUrl)) {
+    const opt = document.createElement('option'); opt.value = fromUrl; opt.textContent = fromUrl; select.appendChild(opt); select.value = fromUrl;
   }
-
-  // Sort
-  const sortVal = document.getElementById('dc-sort-select').value;
-  const [sortKey, sortDir] = sortVal.split('-');
-  const m = sortDir === 'asc' ? 1 : -1;
-  const accessor = {
-    stake: d => d.stake_lamports || 0,
-    validators: d => d.validators_total || 0,
-    skip: d => d.weighted_skip_rate ?? 999,
-    name: d => (d.asn_name || '').toLowerCase(),
-  }[sortKey] || (d => d.stake_lamports || 0);
-  filtered.sort((a, b) => {
-    const va = accessor(a), vb = accessor(b);
-    if (va < vb) return -1 * m;
-    if (va > vb) return 1 * m;
-    return 0;
-  });
-
-  document.getElementById('dc-result-count').textContent =
-    `${filtered.length} ${currentView === 'by_asn' ? 'network provider' + (filtered.length === 1 ? '' : 's') : 'datacenter' + (filtered.length === 1 ? '' : 's')}`;
-
-  renderTable(filtered);
-  renderMobileCards(filtered);
+  sortMenu = initSortMenu(document.getElementById('dcs-sort-menu'), select, { groups: PROVIDER_SORT_GROUPS, defaultValue: 'stake-desc', avail: availability });
+  select.addEventListener('change', () => { setUrlParam('sort', select.value); applyAndRender(); });
 }
 
-function renderTable(rows) {
-  const cluster = getCluster();
-  const tbody = document.getElementById('dctable-body');
-  const html = rows.map(d => {
-    const isByAsn = currentView === 'by_asn';
-    const href = isByAsn
-      ? `/datacenter?asn=${d.asn}&cluster=${cluster}`
-      : `/datacenter?asn=${d.asn}&cluster=${cluster}&city=${encodeURIComponent(d.city)}`;
-    const stake = fmtStakeShort(d.stake_lamports);
-    const pct = d.stake_pct != null ? d.stake_pct.toFixed(2) + '%' : '—';
-    const skip = d.weighted_skip_rate != null ? d.weighted_skip_rate.toFixed(2) + '%' : '—';
-    const ibrl = d.weighted_ibrl != null ? d.weighted_ibrl.toFixed(0) : '—';
-    const credits = d.weighted_credits != null ? fmt(Math.round(d.weighted_credits)) : '—';
-    const risk = concentrationLevel(d.stake_pct);
-    const riskLabel = risk === 'bad' ? 'CRITICAL' : risk === 'warn' ? 'HIGH' : risk === 'caution' ? 'WATCH' : '—';
-    const riskClass = `dc-risk-${risk}`;
-    const infraTags = [];
-    if (d.dz_connected > 0) infraTags.push(`<span class="dc-infra-tag dc-infra-tag-dz">DZ ${d.dz_connected}</span>`);
-    if (d.bam_count > 0) infraTags.push(`<span class="dc-infra-tag dc-infra-tag-bam">BAM ${d.bam_count}</span>`);
-    if (d.sfdp_approved > 0) infraTags.push(`<span class="dc-infra-tag dc-infra-tag-sfdp">SFDP ${d.sfdp_approved}</span>`);
-
-    let nameCell, locCell;
-    if (isByAsn) {
-      const citiesCount = d.cities?.length || 0;
-      nameCell = `
-        <div class="dc-name-cell">${d.asn_name || d.asn}</div>
-        <div class="dc-name-asn">${d.asn}</div>`;
-      locCell = `<div class="dc-loc-city">${citiesCount} ${citiesCount === 1 ? 'city' : 'cities'}</div>
-                 <div class="dc-loc-cities-multi">${(d.cities || []).slice(0, 3).join(', ')}${citiesCount > 3 ? ', …' : ''}</div>`;
-    } else {
-      nameCell = `
-        <div class="dc-name-cell">${d.asn_name || d.asn} · ${d.city}</div>
-        <div class="dc-name-asn">${d.asn} · ${d.country}</div>`;
-      locCell = `<div class="dc-loc-city" style="font-size:0.78rem;color:var(--text-muted)">${d.country}</div>`;
-    }
-
-    return `
-      <tr data-href="${href}">
-        <td>${nameCell}</td>
-        <td>${locCell}</td>
-        <td>
-          <div class="dc-stake-main">${fmt(d.validators_total)}</div>
-          <div class="dc-stake-pct">${d.validators_active} active · ${d.validators_delinquent} delinq</div>
-        </td>
-        <td>
-          <div class="dc-stake-main">${stake} SOL</div>
-          <div class="dc-stake-pct">${pct} of network</div>
-        </td>
-        <td>
-          <div class="dc-perf-row">
-            <span class="dc-perf-label" data-tip="Stake-weighted skip rate across hosted validators">skip</span><span>${skip}</span>
-            <span class="dc-perf-label" data-tip="Stake-weighted average vote credits">credits</span><span>${credits}</span>
-            ${d.weighted_ibrl != null ? `<span class="dc-perf-label" data-tip="Stake-weighted IBRL score (block production quality)">ibrl</span><span>${ibrl}</span>` : ''}
-          </div>
-        </td>
-        <td class="dc-col-infra-cell">
-          <div class="dc-infra-row" data-tip="Validators hosted in this datacenter with the given capability (DZ device, Jito BAM, SFDP-approved)">${infraTags.join('') || '<span style="color:var(--text-muted);font-size:0.72rem">—</span>'}</div>
-        </td>
-        <td data-tip="Concentration risk by share of total cluster stake">${risk === 'good' ? '<span class="dc-risk-good">OK</span>' : `<span class="dc-risk-pill ${riskClass}">${riskLabel}</span>`}</td>
-      </tr>
-    `;
-  }).join('');
-  tbody.innerHTML = html;
-
-  // Wire clicks
-  tbody.querySelectorAll('tr').forEach(tr => {
-    tr.addEventListener('click', () => { window.location.href = tr.dataset.href; });
+function initToggles() {
+  const section = document.getElementById('dcs-agg');
+  const btns = [document.getElementById('dcs-toggle'), document.getElementById('dcs-toggle-pill')];
+  const txt = section.querySelector('.vagg-toggle-txt');
+  const apply = (open) => { section.classList.toggle('is-collapsed', !open); btns.forEach(b => b.setAttribute('aria-expanded', String(open))); txt.textContent = open ? 'Hide' : 'Show'; };
+  const stored = localStorage.getItem('sonda-dccards-open');
+  apply(window.innerWidth <= 900 ? false : (stored != null ? stored === '1' : true));
+  btns.forEach(b => b.addEventListener('click', () => { const open = section.classList.contains('is-collapsed'); apply(open); localStorage.setItem('sonda-dccards-open', open ? '1' : '0'); }));
+  section.addEventListener('click', (e) => {
+    const t = e.target instanceof Element ? e.target.closest('[data-fkey]') : null;
+    if (!t) return;
+    toggleFilter(t.dataset.fkey, t.dataset.fval);
   });
+  ['dcs-clear', 'dcs-clear-top'].forEach(id => document.getElementById(id).addEventListener('click', clearFilters));
 }
 
-function renderMobileCards(rows) {
-  const cluster = getCluster();
-  const wrap = document.getElementById('dccards-wrap');
-  const html = rows.map(d => {
-    const isByAsn = currentView === 'by_asn';
-    const href = isByAsn
-      ? `/datacenter?asn=${d.asn}&cluster=${cluster}`
-      : `/datacenter?asn=${d.asn}&cluster=${cluster}&city=${encodeURIComponent(d.city)}`;
-    const stake = fmtStakeShort(d.stake_lamports);
-    const pct = d.stake_pct != null ? d.stake_pct.toFixed(2) + '%' : '—';
-    const skip = d.weighted_skip_rate != null ? d.weighted_skip_rate.toFixed(2) + '%' : '—';
-    const credits = d.weighted_credits != null ? fmt(Math.round(d.weighted_credits)) : '—';
-    const risk = concentrationLevel(d.stake_pct);
-    const riskLabel = risk === 'bad' ? 'CRITICAL' : risk === 'warn' ? 'HIGH' : risk === 'caution' ? 'WATCH' : '';
-    const locDisplay = isByAsn
-      ? `${d.cities?.length || 0} cities · ${(d.cities || []).slice(0, 2).join(', ')}${d.cities?.length > 2 ? '…' : ''}`
-      : `${d.city}, ${d.country}`;
-
-    return `
-      <div class="dccard">
-        <div class="dccard-head">
-          <div class="dccard-main">
-            <div class="dccard-name">${d.asn_name || d.asn}</div>
-            <div class="dccard-loc">${locDisplay}</div>
-          </div>
-          <div class="dccard-side">
-            <div class="dccard-stake">${stake} SOL</div>
-            <div class="dccard-pct">${pct}${riskLabel ? ' · ' + riskLabel : ''}</div>
-          </div>
-          <a class="dccard-go" href="${href}" onclick="event.stopPropagation()" title="Open DC page">›</a>
-        </div>
-        <div class="dccard-body">
-          <div class="dccard-body-row"><span class="dccard-body-label">ASN</span><span style="font-family:var(--font-mono);font-size:0.78rem">${d.asn}</span></div>
-          <div class="dccard-body-row"><span class="dccard-body-label">Validators</span><span>${d.validators_total} (${d.validators_active} active · ${d.validators_delinquent} delinq)</span></div>
-          <div class="dccard-body-row"><span class="dccard-body-label">Performance</span><span>skip ${skip} · credits ${credits}</span></div>
-          <div class="dccard-body-row"><span class="dccard-body-label">DZ / BAM / SFDP</span><span>${d.dz_connected} / ${d.bam_count} / ${d.sfdp_approved}</span></div>
-        </div>
-      </div>
-    `;
-  }).join('');
-  wrap.innerHTML = html;
-  wrap.querySelectorAll('.dccard').forEach(card => {
-    card.querySelector('.dccard-head').addEventListener('click', e => {
-      if (e.target.closest('.dccard-go')) return;
-      card.classList.toggle('open');
-    });
-  });
-}
-
-function renderSummary() {
-  if (!aggregated) return;
-  const byDc = aggregated.by_dc;
-  const byAsn = aggregated.by_asn;
-  document.getElementById('dc-sum-total').textContent = fmt(byDc.length);
-  document.getElementById('dc-sum-asn').textContent = `${byAsn.length} ASNs`;
-  const top = byDc[0];
-  if (top) {
-    document.getElementById('dc-sum-top-pct').textContent = top.stake_pct.toFixed(2) + '%';
-    document.getElementById('dc-sum-top-name').textContent = `${top.asn_name || top.asn} · ${top.city}`;
+let infraRecords = null;   // infrastructure.json records, when the file is available
+function ingest(data, summary) {
+  allRecords = (data?.records || []).filter(isValidatorRecord);
+  computeTvcRanks(allRecords);
+  latestSummary = summary;
+  providers = aggregateProviders(allRecords, summary);
+  if (infraRecords) {
+    const asnToProvider = new Map();
+    for (const e of providers) for (const a of e.asns) asnToProvider.set(a.asn, e.provider);
+    applyNetworkInfra(providers, networkInfraFromRecords(infraRecords, asnToProvider).byProvider);
   }
-  const dzDcs = byDc.filter(d => d.dz_connected > 0).length;
-  document.getElementById('dc-sum-dz').textContent = fmt(dzDcs);
-  const riskDcs = byDc.filter(d => d.stake_pct >= 15).length;
-  document.getElementById('dc-sum-risk').textContent = fmt(riskDcs);
+  availability = {
+    connections: allRecords.some(r => r.dz_connected || r.bam_node),
+    sfdp: allRecords.some(r => r.sfdp_state),
+    skip: allRecords.some(r => r.skip_rate != null),
+    ibrl: allRecords.some(r => r.ibrl?.ibrl_score != null),
+    slot: allRecords.some(r => r.slot_duration_median != null),
+    vlat: allRecords.some(r => r.mean_vote_latency != null || r.median_vote_latency != null),
+    votes: allRecords.some(r => r.vote_credits_ratio_prev != null),
+    net: providers.some(e => e.net_total > 0),
+  };
+  if (sortMenu) sortMenu.update(availability);
+  // the Infrastructure column stays whenever there is anything to show: validator
+  // connections or network nodes hosted (SFDP lives in the Validators column)
+  document.getElementById('dcs-table-wrap').classList.toggle('hide-infra', !availability.connections && !availability.net);
 }
 
 async function loadAndRender() {
-  document.getElementById('dc-result-count').textContent = 'Loading…';
   const cluster = getCluster();
-
+  document.getElementById('back-link').href = `/?cluster=${cluster}`;
   if (window.sondaSetClusterBanner) window.sondaSetClusterBanner(cluster);
-
-  fetchSummary(cluster).then(s => {
-    if (!s) return;
-    if (window.sondaUpdateStrip) window.sondaUpdateStrip(s);
-  }).catch(() => {});
-
+  document.getElementById('dcs-summary').textContent = 'Loading providers…';
+  document.getElementById('dcs-agg').hidden = true;
   try {
-    const data = await fetchValidators(cluster);
-    allRecords = data?.records || [];
+    const [data, summary, infra] = await Promise.all([fetchValidators(cluster), fetchSummary(cluster).catch(() => null), fetchInfrastructure(cluster).catch(() => null)]);
+    if (summary && window.sondaUpdateStrip) window.sondaUpdateStrip(summary);
     lastSnapshotTs = data?.meta?.timestamp || null;
-    aggregated = aggregateDatacenters(allRecords);
-
-    // Cluster-aware: hide Hosted column entirely if no validator has DZ/BAM/SFDP
-    const hasHosted = allRecords.some(r => r.dz_connected || r.bam_node || r.sfdp_state === 'Approved');
-    const wrap = document.querySelector('.dctable-wrap');
-    if (wrap) wrap.classList.toggle('hide-hosted', !hasHosted);
-
-    renderSummary();
+    infraRecords = Array.isArray(infra?.records) ? infra.records : null;
+    ingest(data, summary);
+    renderSummary(providers);
     applyAndRender();
   } catch (e) {
-    document.getElementById('dc-result-count').textContent = 'Failed to load.';
-    console.error('fetchValidators failed:', e);
+    console.error('datacenters:', e);
+    document.getElementById('dcs-summary').textContent = 'Could not load providers.';
   }
 }
 
-// In-place refresh (F-6): same aggregation, same view/sort/search state, same scroll.
-async function refreshDatacenters() {
+async function refreshProviders() {
   const cluster = getCluster();
   const [data, summary] = await Promise.all([fetchValidators(cluster), fetchSummary(cluster).catch(() => null)]);
   if (summary && window.sondaUpdateStrip) window.sondaUpdateStrip(summary);
   const ts = data?.meta?.timestamp || null;
   if (!data?.records || (ts && ts === lastSnapshotTs) || getCluster() !== cluster) return;
-  allRecords = data.records;
   lastSnapshotTs = ts;
-  aggregated = aggregateDatacenters(allRecords);
-  preserveScroll(() => { renderSummary(); applyAndRender(); });
+  ingest(data, summary || latestSummary);
+  preserveScroll(() => { renderSummary(providers); applyAndRender(); });
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  startAutoRefresh(refreshDatacenters, { intervalMs: 60000 });
+  initHead();
+  initSort();
+  initToggles();
+  const search = document.getElementById('dcs-search');
+  search.value = params.get('q') || '';
+  search.addEventListener('input', () => { const v = search.value.trim(); if (v) params.set('q', v); else params.delete('q'); setUrlParam('q', v || null); applyAndRender(); });
   bootstrapCluster();
-
-  // View toggle
-  document.querySelectorAll('.vt-btn').forEach(btn => {
-    if (btn.dataset.view === currentView) btn.classList.add('active');
-    else btn.classList.remove('active');
-    btn.addEventListener('click', () => {
-      currentView = btn.dataset.view;
-      document.querySelectorAll('.vt-btn').forEach(b => b.classList.toggle('active', b.dataset.view === currentView));
-      setUrlParam('view', currentView === 'by_dc' ? null : currentView);
-      applyAndRender();
-    });
-  });
-
-  // Search
-  document.getElementById('dc-search').addEventListener('input', applyAndRender);
-
-  // Sort
-  document.getElementById('dc-sort-select').addEventListener('change', applyAndRender);
-
   loadAndRender();
-  window.addEventListener('sonda:cluster-change', loadAndRender);
+  window.addEventListener('sonda:cluster-change', () => { loadAndRender(); });
+  startAutoRefresh(refreshProviders, { intervalMs: 60000 });
 });
 </script>

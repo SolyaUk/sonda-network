@@ -23,6 +23,7 @@ export const SORT_GROUPS = [
     { key: 'credits', label: 'Credits', dir: 'desc', labels: { desc: 'high to low', asc: 'low to high' } },
     { key: 'skip', label: 'Skip rate', dir: 'asc', labels: { asc: 'low to high', desc: 'high to low' }, needs: 'skip' },
     { key: 'slot', label: 'Slot time', dir: 'asc', labels: { asc: 'fast to slow', desc: 'slow to fast' }, needs: 'slot' },
+    { key: 'votes', label: 'Vote performance', dir: 'desc', labels: { desc: 'best first', asc: 'worst first' }, needs: 'votes' },
     { key: 'vlat', label: 'Vote latency', dir: 'asc', labels: { asc: 'low to high', desc: 'high to low' }, needs: 'vlat' },
     { key: 'ibrl', label: 'IBRL', dir: 'desc', labels: { desc: 'high to low', asc: 'low to high' }, needs: 'ibrl' },
   ] },
@@ -45,10 +46,41 @@ export const SORT_GROUPS = [
   ] },
 ];
 
-function findItem(key) {
-  for (const g of SORT_GROUPS) for (const it of g.items) if (it.key === key) return { group: g, item: it };
+function findItem(key, groups = SORT_GROUPS) {
+  for (const g of groups) for (const it of g.items) if (it.key === key) return { group: g, item: it };
   return null;
 }
+
+/** Sort groups for the providers (datacenters) list. */
+export const PROVIDER_SORT_GROUPS = [
+  { id: 'stake', label: 'Stake', items: [
+    { key: 'stake', label: 'Stake', dir: 'desc', labels: { desc: 'high to low', asc: 'low to high' } },
+  ] },
+  { id: 'validator', label: 'Validators', items: [
+    { key: 'validators', label: 'Validators', dir: 'desc', labels: { desc: 'most first', asc: 'fewest first' } },
+    { key: 'delinquent', label: 'Delinquent', dir: 'desc', labels: { desc: 'most first', asc: 'fewest first' } },
+  ] },
+  { id: 'location', label: 'Provider', items: [
+    { key: 'name', label: 'Name', dir: 'asc', labels: { asc: 'A to Z', desc: 'Z to A' } },
+    { key: 'asns', label: 'Networks (ASNs)', dir: 'desc', labels: { desc: 'most first', asc: 'fewest first' } },
+    { key: 'countries', label: 'Countries', dir: 'desc', labels: { desc: 'most first', asc: 'fewest first' } },
+    { key: 'cities', label: 'Cities', dir: 'desc', labels: { desc: 'most first', asc: 'fewest first' } },
+  ] },
+  { id: 'status', label: 'Infrastructure', items: [
+    { key: 'dz', label: 'DoubleZero', dir: 'desc', labels: { desc: 'most connected first', asc: 'fewest first' }, needs: 'connections' },
+    { key: 'bam', label: 'Jito BAM', dir: 'desc', labels: { desc: 'most connected first', asc: 'fewest first' }, needs: 'connections' },
+    { key: 'sfdp', label: 'SFDP approved', dir: 'desc', labels: { desc: 'most first', asc: 'fewest first' }, needs: 'sfdp' },
+    { key: 'net', label: 'Network infrastructure', dir: 'desc', labels: { desc: 'most hosted first', asc: 'fewest first' }, needs: 'net' },
+  ] },
+  { id: 'performance', label: 'Performance', items: [
+    { key: 'rank', label: 'Median TVC rank', dir: 'asc', labels: { asc: 'best first', desc: 'worst first' } },
+    { key: 'skip', label: 'Average skip', dir: 'asc', labels: { asc: 'low to high', desc: 'high to low' }, needs: 'skip' },
+    { key: 'ibrl', label: 'Median IBRL', dir: 'desc', labels: { desc: 'high to low', asc: 'low to high' }, needs: 'ibrl' },
+    { key: 'slot', label: 'Median slot time', dir: 'asc', labels: { asc: 'fast to slow', desc: 'slow to fast' }, needs: 'slot' },
+    { key: 'votes', label: 'Vote performance', dir: 'desc', labels: { desc: 'best first', asc: 'worst first' }, needs: 'votes' },
+    { key: 'vlat', label: 'Vote latency', dir: 'asc', labels: { asc: 'low to high', desc: 'high to low' }, needs: 'vlat' },
+  ] },
+];
 
 /** Which optional metrics exist anywhere in the cluster. */
 export function sortAvailability(records) {
@@ -56,15 +88,16 @@ export function sortAvailability(records) {
   return {
     skip: rs.some(r => r.skip_rate != null),
     slot: rs.some(r => r.slot_duration_median != null),
-    vlat: rs.some(r => r.median_vote_latency != null),
+    vlat: rs.some(r => r.mean_vote_latency != null || r.median_vote_latency != null),
+    votes: rs.some(r => r.vote_credits_ratio_prev != null),
     ibrl: rs.some(r => r.ibrl?.ibrl_score != null),
     sfdp: rs.some(r => r.sfdp_state),
     connections: rs.some(r => r.dz_connected || r.bam_node || r.dz_multicast_publisher || r.rakurai),
   };
 }
 
-export function sortLabel(key, dir) {
-  const f = findItem(key);
+export function sortLabel(key, dir, groups = SORT_GROUPS) {
+  const f = findItem(key, groups);
   if (!f) return `${key} (${dir})`;
   return `${f.item.label}, ${f.item.labels[dir] || dir}`;
 }
@@ -72,20 +105,22 @@ export function sortLabel(key, dir) {
 /**
  * Mount the menu into `host`. `select` is the hidden native select that holds the state.
  */
-export function initSortMenu(host, select, { avail = {} } = {}) {
+export function initSortMenu(host, select, { avail = {}, groups = SORT_GROUPS, defaultValue = 'rank-asc' } = {}) {
   let availability = avail;
   host.classList.add('sort-menu');
   host.innerHTML = `
     <button type="button" class="sort-trigger" aria-haspopup="listbox" aria-expanded="false">
       <span class="sort-trigger-k">Sort</span><span class="sort-trigger-v"></span><span class="sort-caret" aria-hidden="true">&#9662;</span>
     </button>
+    <button type="button" class="sort-dir" data-tip="Flip sort direction" aria-label="Flip sort direction"></button>
     <div class="sort-panel" role="listbox" hidden></div>`;
   const trigger = host.querySelector('.sort-trigger');
+  const dirBtn = host.querySelector('.sort-dir');
   const valueEl = host.querySelector('.sort-trigger-v');
   const panel = host.querySelector('.sort-panel');
 
   const current = () => {
-    const [key, dir] = (select.value || 'rank-asc').split('-');
+    const [key, dir] = (select.value || defaultValue).split('-');
     return { key, dir };
   };
   const ensureOption = (value) => {
@@ -105,8 +140,9 @@ export function initSortMenu(host, select, { avail = {} } = {}) {
 
   function render() {
     const cur = current();
-    valueEl.textContent = sortLabel(cur.key, cur.dir);
-    panel.innerHTML = SORT_GROUPS.map(g => {
+    valueEl.textContent = sortLabel(cur.key, cur.dir, groups);
+    dirBtn.innerHTML = cur.dir === 'asc' ? '&#8593;' : '&#8595;';
+    panel.innerHTML = groups.map(g => {
       const items = g.items.filter(it => !it.needs || availability[it.needs]);
       if (items.length === 0) return '';
       return `<div class="sort-group"><div class="sort-group-h"><span class="sort-ico">${ICONS[g.id] || ''}</span>${g.label}</div>${items.map(it => {
@@ -135,6 +171,7 @@ export function initSortMenu(host, select, { avail = {} } = {}) {
   const open = () => { panel.hidden = false; trigger.setAttribute('aria-expanded', 'true'); host.classList.add('is-open'); clamp(); };
   const close = () => { panel.hidden = true; trigger.setAttribute('aria-expanded', 'false'); host.classList.remove('is-open'); };
   trigger.addEventListener('click', () => (panel.hidden ? open() : close()));
+  dirBtn.addEventListener('click', () => { const cur = current(); setSort(cur.key, cur.dir === 'asc' ? 'desc' : 'asc'); });
   panel.addEventListener('click', (e) => {
     const btn = e.target instanceof Element ? e.target.closest('.sort-item') : null;
     if (!btn) return;
@@ -145,7 +182,14 @@ export function initSortMenu(host, select, { avail = {} } = {}) {
     setSort(key, dir);
     close();
   });
-  document.addEventListener('click', (e) => { if (!host.contains(e.target)) close(); });
+  // Any click/tap outside the trigger and the panel closes it (the backdrop pseudo-element
+  // belongs to the host, so "outside" is measured against the two real elements).
+  document.addEventListener('click', (e) => {
+    const t = e.target instanceof Node ? e.target : null;
+    if (panel.hidden || !t) return;
+    if (trigger.contains(t) || panel.contains(t)) return;
+    close();
+  });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
   select.addEventListener('change', render);
 
@@ -155,8 +199,9 @@ export function initSortMenu(host, select, { avail = {} } = {}) {
       availability = nextAvail || {};
       // fall back if the current key is no longer available on this cluster
       const cur = current();
-      const f = findItem(cur.key);
-      if (f && f.item.needs && !availability[f.item.needs]) setSort('rank', 'asc'); else render();
+      const f = findItem(cur.key, groups);
+      const [dk, dd] = defaultValue.split('-');
+      if (f && f.item.needs && !availability[f.item.needs]) setSort(dk, dd); else render();
     },
     set: setSort,
     current,

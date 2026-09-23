@@ -19,13 +19,18 @@
         <a href="https://github.com/SolyaUk/sonda-network" target="_blank" rel="noopener" class="footer-link">GitHub</a>
       </div>
     </div>
-    <div class="footer-sources">
-      <span class="footer-sources-label">Data sources:</span>
-      <span>Solana RPC</span><span class="sep">·</span><span>Jito Kobe</span><span class="sep">·</span>
-      <span>SFDP</span><span class="sep">·</span><span>StakeWiz</span><span class="sep">·</span>
-      <span>DB-IP</span><span class="sep">·</span><span>IPInfo</span><span class="sep">·</span>
-      <span>GeoJS</span><span class="sep">·</span><span>DoubleZero</span><span class="sep">·</span>
-      <span>Jito BAM</span><span class="sep">·</span><span>RIPE Stat</span>
+      <div class="footer-sources" id="data-sources">
+      <div class="footer-sources-head"><span class="footer-sources-label">Data sources</span><span class="footer-sources-hint">hover an item to see what it provides</span></div><div class="src-groups">
+      <span class="src-group"><span class="src-group-l">SONDA's own measurements</span>
+        <span data-tip="Snapshots of four clusters every 60 s (mainnet, alpenglow) or 5 min (testnet, devnet), continuously since 2026-04-25, from gossip and validator sets">network snapshots</span><span data-tip="Every node's location cross-checked across four sources with confidence and discrepancy flags (DB-IP primary)">geolocation cross-check</span><span data-tip="Reachability checks of Jito, Harmonic and Solana entrypoints from our own server">endpoint checks</span><span data-tip="Cluster status (live / degraded / halted) derived from all RPC nodes in our chain">cluster status</span><span data-tip="Hand-verified registry of 145 providers with tags, websites, status pages and logos">provider registry</span><span data-tip="Own time series since April 2026: IP and node changes, endpoint status, per-epoch snapshots">history</span>
+      </span>
+      <span class="src-group"><span class="src-group-l">Solana network</span>
+        <span data-tip="JSON-RPC and CLI: gossip nodes, vote accounts and credits, epoch info, feature gates, validator-info. RPC chain: Helius, public RPC, Solya's own nodes">on-chain and RPC</span>
+      </span>
+      <span class="src-group"><span class="src-group-l">External</span>
+        <span data-tip="Primary geolocation">DB-IP</span><span data-tip="Geolocation cross-check">IPInfo</span><span data-tip="Geolocation cross-check">GeoJS</span><span data-tip="Geolocation cross-check">ip-api</span><span data-tip="Kobe API: validator history, MEV data, steward events; BAM explorer: BAM nodes, connected validators, IBRL scores">Jito</span><span data-tip="Malbec API (devices, users, links), network health, multicast groups">DoubleZero</span><span data-tip="Rakurai validator list">Rakurai</span><span data-tip="api.solana.org: historical datacenter locations for the location history">SFDP</span><span data-tip="Epoch dates for history pages; rank and score components">StakeWiz</span><span data-tip="Vote latency, slot duration, MEV commission, SFDP status, name and icon fallback">Trillium</span><span data-tip="ASN holder names and network types for the provider registry (manual verification), bgp.tools for ASN research">RIPE Stat, PeeringDB</span><span data-tip="Client id registry (client_ids.rs) and feature gate catalog">Anza agave</span>
+      </span>
+      </div>
     </div>
     <div class="footer-bottom">
       <span>Data updates every ~60 seconds. Last snapshot: <span class="mono" id="footer-ts">--</span></span>

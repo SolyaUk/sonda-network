@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "./cards.css";
 @import "./vtable.css";
+@import "./filter-cards.css";
 
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
@@ -177,6 +178,19 @@ html:not([data-theme]) {
 .footer-link:hover { color: var(--cluster-accent); }
 .footer-sources { display: flex; flex-wrap: wrap; gap: 0.3rem; align-items: center; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.75rem; }
 .footer-sources-label { color: var(--text-secondary); font-weight: 500; margin-right: 0.2rem; }
+/* Data sources: its own panel above the footer bottom line; three aligned columns
+   (SONDA's own measurements, Solana network, external), items as pills with tooltips */
+.footer-sources { display: block; margin: 0.4rem 0 1rem; padding: 0.9rem 1rem 1rem; border: 1px solid var(--border); border-radius: 12px; background: color-mix(in srgb, var(--bg-card) 70%, transparent); }
+.footer-sources-head { display: flex; align-items: baseline; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 0.7rem; }
+.footer-sources-label { font-family: var(--font-display); font-size: 0.82rem; font-weight: 600; color: var(--text-primary); margin: 0; }
+.footer-sources-hint { font-size: 0.72rem; color: var(--text-muted); }
+.src-groups { display: grid; grid-template-columns: 1.3fr 0.8fr 1.9fr; gap: 0.9rem 1.4rem; align-items: start; }
+.src-group { display: flex; flex-wrap: wrap; gap: 0.3rem; align-content: flex-start; min-width: 0; }
+.src-group-l { flex-basis: 100%; font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 0.1rem; }
+.src-group > span:not(.src-group-l) { display: inline-flex; align-items: center; font-size: 0.72rem; color: var(--text-secondary); border: 1px solid var(--border); border-radius: 999px; padding: 0.15rem 0.55rem; background: var(--bg-primary); cursor: help; white-space: nowrap; }
+.src-group > span:not(.src-group-l):hover { border-color: color-mix(in srgb, var(--cluster-accent) 55%, transparent); color: var(--text-primary); }
+@media (max-width: 1000px) { .src-groups { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 640px) { .src-groups { grid-template-columns: 1fr; } }
 .footer-bottom { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; font-size: 0.75rem; color: var(--text-muted); }
 .footer-attribution { font-style: italic; }
 .site-footer .container { max-width: 1280px; margin: 0 auto; padding: 0 1.5rem; }

@@ -234,7 +234,7 @@ import Footer from '../components/Footer.astro';
   .v-card-title { font-family: var(--font-display); font-size: 1.05rem; font-weight: 600; color: var(--text-primary); margin: 0 0 0.9rem; }
 
   .v-loc-row { display: flex; align-items: center; gap: 0.85rem; margin-bottom: 0.85rem; flex-wrap: wrap; }
-  .v-loc-flag { width: 36px; height: 36px; border-radius: 50%; overflow: hidden; background: var(--bg-card-hover); border: 1px solid var(--border); flex-shrink: 0; }
+  .v-loc-flag { width: 36px; height: 44px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
   .v-loc-text { flex: 1; min-width: 0; }
   .v-loc-city { font-size: 1.2rem; font-weight: 600; color: var(--text-primary); }
   .v-loc-country { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.15rem; }
@@ -309,6 +309,7 @@ import Footer from '../components/Footer.astro';
 <script>
 import { bootstrapCluster, getCluster, fetchValidators, fetchSummary, fmtStakeShort, isValidatorRecord, isInGossip } from '../lib/data.js';
 import { startAutoRefresh, preserveScroll, rowSignature } from '../lib/refresh.js';
+import { pinFlagSvg, circleFlagSvg } from '../lib/validator-table.js';
 
 let lastSnapshotTs = null;
 let lastRecordSig = null;
@@ -321,7 +322,16 @@ let allRecordsForRank = [];
 
 async function loadValidator() {
   const cluster = getCluster();
-  document.getElementById('back-link').href = `/validators?cluster=${cluster}`;
+  // Context-aware back link: rows on a provider page link here with from=provider:<slug>
+  const back = document.getElementById('back-link');
+  const from = params.get('from') || '';
+  if (from.startsWith('provider:')) {
+    back.href = `/datacenter?provider=${encodeURIComponent(from.slice(9))}&cluster=${cluster}`;
+    back.textContent = '\u2190 Back to the provider';
+    back.dataset.fromProvider = from.slice(9);
+  } else {
+    back.href = `/validators?cluster=${cluster}`;
+  }
 
   if (window.sondaSetClusterBanner) window.sondaSetClusterBanner(cluster);
 
@@ -427,6 +437,8 @@ function clusterHas(field) {
 }
 
 function renderValidator(r, cluster, opts = {}) {
+  const back = document.getElementById('back-link');
+  if (back?.dataset.fromProvider && r.geolocation?.provider) back.textContent = `\u2190 Back to ${r.geolocation.provider}`;
   document.getElementById('v-loading').style.display = 'none';
   document.getElementById('v-content').style.display = 'block';
   document.title = `${r.name || shortenIdentity(r.identity_pubkey)} · SONDA`;
@@ -501,10 +513,10 @@ function renderValidator(r, cluster, opts = {}) {
   const geo = r.geolocation || {};
   const inGossip = isInGossip(r);
   const cc = (geo.country_code || '??').toLowerCase();
-  const flagSrc = cc !== '??' ? `https://flagcdn.com/w80/${cc}.png` : '';
+  const flagOk = cc !== '??' && cc.length === 2 && inGossip;
   document.getElementById('v-loc-row').innerHTML = `
     <span class="v-loc-flag">
-      ${flagSrc ? `<img src="${flagSrc}" width="36" height="36" style="width:100%;height:100%;object-fit:cover;display:block"/>` : '<span style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:var(--text-muted)">?</span>'}
+      ${flagOk ? pinFlagSvg(cc, { extraClass: 'is-big', tip: geo.country || cc.toUpperCase() }) : '<span style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:var(--text-muted)">?</span>'}
     </span>
     <div class="v-loc-text">
       <div class="v-loc-city">${inGossip ? (geo.city || 'Unknown city') : 'Not in gossip'}</div>
@@ -522,7 +534,7 @@ function renderValidator(r, cluster, opts = {}) {
   document.getElementById('v-loc-meta').innerHTML = `
     <div class="v-loc-meta-item"><span class="v-loc-meta-label">IP Address</span><span class="v-loc-meta-val" style="font-family:var(--font-mono)">${r.ip_address || '—'}</span></div>
     <div class="v-loc-meta-item"><span class="v-loc-meta-label">Network Provider</span><span class="v-loc-meta-val">${geo.asn_name || '—'}</span></div>
-    <div class="v-loc-meta-item"><span class="v-loc-meta-label">ASN</span><span class="v-loc-meta-val" style="font-family:var(--font-mono)">${geo.asn ? `<a href="/datacenter?asn=${geo.asn}&cluster=${getCluster()}" style="color:var(--cluster-accent);text-decoration:none">${geo.asn}</a>` : '—'}</span></div>
+    <div class="v-loc-meta-item"><span class="v-loc-meta-label">ASN</span><span class="v-loc-meta-val" style="font-family:var(--font-mono)">${geo.asn ? `<a href="/datacenter?provider=${encodeURIComponent(geo.provider || geo.asn_name || geo.asn)}&cluster=${getCluster()}" style="color:var(--cluster-accent);text-decoration:none" data-tip="Open this provider on SONDA">${geo.asn}</a>` : '—'}</span></div>
     <div class="v-loc-meta-item"><span class="v-loc-meta-label">Coordinates</span><span class="v-loc-meta-val" style="font-family:var(--font-mono);font-size:0.78rem">${(geo.latitude != null && geo.longitude != null) ? geo.latitude.toFixed(2) + ', ' + geo.longitude.toFixed(2) : '—'}</span></div>
     ${confidenceHtml}
     ${geo.primary_source ? `<div class="v-loc-meta-item"><span class="v-loc-meta-label">Primary Source</span><span class="v-loc-meta-val">${geo.primary_source}</span></div>` : ''}`;
@@ -592,9 +604,8 @@ function renderGeoAlternatives(geo) {
   }
   const cards = Object.entries(alts).map(([source, info]) => {
     const cc = (info?.country || '??').toLowerCase();
-    const flagSrc = cc !== '??' && cc.length === 2 ? `https://flagcdn.com/w40/${cc}.png` : '';
-    const flag = flagSrc
-      ? `<span class="v-loc-alt-flag"><img src="${flagSrc}" width="24" height="18" loading="lazy"/></span>`
+    const flag = cc !== '??' && cc.length === 2
+      ? `<span class="v-loc-alt-flag">${circleFlagSvg(cc, { size: 22 })}</span>`
       : `<span class="v-loc-alt-flag"><span style="color:var(--text-muted);font-size:0.7em">?</span></span>`;
     const city = info?.city || '—';
     const country = info?.country || '';

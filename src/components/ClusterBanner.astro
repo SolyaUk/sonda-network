@@ -128,13 +128,13 @@ if (banner) {
 
   if (cluster === 'testnet') {
     titleEl.textContent = 'TESTNET CLUSTER';
-    textEl.textContent = 'New client releases get stress-tested here. SFDP-approved validators run a testnet node alongside their mainnet one.';
+    textEl.textContent = 'New clients and protocol changes go here first, restarts included. SFDP validators run a node here too.';
   } else if (cluster === 'devnet') {
     titleEl.textContent = 'DEVNET CLUSTER';
-    textEl.textContent = 'A sandbox for application developers. Smaller validator set, network resets are possible, no real economic value at stake.';
+    textEl.textContent = 'The developers\' playground: follows testnet on protocol changes, stays stable for apps, no real value at stake.';
   } else if (cluster === 'alpenglow-community') {
     titleEl.textContent = 'ALPENGLOW COMMUNITY CLUSTER';
-    textEl.textContent = 'Experimental network testing the new Alpenglow consensus algorithm. Regenesis events and short epochs are expected during the pre-rollout phase.';
+    textEl.textContent = 'Experimental cluster running the Alpenglow consensus. Regenesis and short epochs are expected before rollout.';
   }
 
   // Sync shrunk state with current scroll position right after showing

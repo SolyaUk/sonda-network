@@ -502,10 +502,10 @@ import ClusterBanner from '../components/ClusterBanner.astro';
                     <span class="phase-date mono">May 2026 →</span>
                   </div>
                   <div class="phase-block-bar">
-                    <div class="phase-block-bar-fill" style="width:8%; background: var(--accent-blue);"></div>
+                    <div class="phase-block-bar-fill" style="width:70%; background: var(--accent-blue);"></div>
                   </div>
                   <div class="phase-block-desc">
-                    <strong>Per-page deep dives.</strong> Validators table, per-validator profiles with location history since 2021, endpoints monitor, datacenter analysis for hosting choice, RPC nodes table, methodology page.
+                    <strong>Per-page deep dives.</strong> Done: validators table with filters, sorting and live refresh; validator profiles; datacenters by provider with locations, infrastructure and performance; cluster status and chain vitals. In progress: validator age and stake pool ranks, include/exclude filters. Next: validator profile redesign, endpoints monitor, methodology page.
                   </div>
                 </div>
 
@@ -519,7 +519,7 @@ import ClusterBanner from '../components/ClusterBanner.astro';
                   </div>
                   <div class="phase-block-bar"><div class="phase-block-bar-fill" style="width:0%;"></div></div>
                   <div class="phase-block-desc">
-                    <strong>Historical analytics.</strong> Per-epoch snapshot pipeline, decentralization trends over time, network events archive.
+                    <strong>Historical analytics.</strong> Location history since 2021, per-epoch performance charts for validators and datacenters, decentralization trends over time, network events archive.
                   </div>
                 </div>
 
@@ -533,7 +533,7 @@ import ClusterBanner from '../components/ClusterBanner.astro';
                   </div>
                   <div class="phase-block-bar"><div class="phase-block-bar-fill" style="width:0%;"></div></div>
                   <div class="phase-block-desc">
-                    <strong>Open data.</strong> Public API access, JSON exports, attribution program for downstream tools.
+                    <strong>Open data and discoverability.</strong> Public API access, JSON exports, attribution program for downstream tools, provider and location pages built for search engines and AI assistants.
                   </div>
                 </div>
 
@@ -578,13 +578,18 @@ import ClusterBanner from '../components/ClusterBanner.astro';
           <a href="https://github.com/SolyaUk/sonda-network" target="_blank" rel="noopener" class="footer-link">GitHub</a>
         </div>
       </div>
-      <div class="footer-sources">
-        <span class="footer-sources-label">Data sources:</span>
-        <span>Solana RPC</span><span class="sep">·</span><span>Jito Kobe</span><span class="sep">·</span>
-        <span>SFDP</span><span class="sep">·</span><span>StakeWiz</span><span class="sep">·</span>
-        <span>DB-IP</span><span class="sep">·</span><span>IPInfo</span><span class="sep">·</span>
-        <span>GeoJS</span><span class="sep">·</span><span>DoubleZero</span><span class="sep">·</span>
-        <span>Jito BAM</span><span class="sep">·</span><span>RIPE Stat</span>
+      <div class="footer-sources" id="data-sources">
+        <div class="footer-sources-head"><span class="footer-sources-label">Data sources</span><span class="footer-sources-hint">hover an item to see what it provides</span></div><div class="src-groups">
+        <span class="src-group"><span class="src-group-l">SONDA's own measurements</span>
+          <span data-tip="Snapshots of four clusters every 60 s (mainnet, alpenglow) or 5 min (testnet, devnet), continuously since 2026-04-25, from gossip and validator sets">network snapshots</span><span data-tip="Every node's location cross-checked across four sources with confidence and discrepancy flags (DB-IP primary)">geolocation cross-check</span><span data-tip="Reachability checks of Jito, Harmonic and Solana entrypoints from our own server">endpoint checks</span><span data-tip="Cluster status (live / degraded / halted) derived from all RPC nodes in our chain">cluster status</span><span data-tip="Hand-verified registry of 145 providers with tags, websites, status pages and logos">provider registry</span><span data-tip="Own time series since April 2026: IP and node changes, endpoint status, per-epoch snapshots">history</span>
+        </span>
+        <span class="src-group"><span class="src-group-l">Solana network</span>
+          <span data-tip="JSON-RPC and CLI: gossip nodes, vote accounts and credits, epoch info, feature gates, validator-info. RPC chain: Helius, public RPC, Solya's own nodes">on-chain and RPC</span>
+        </span>
+        <span class="src-group"><span class="src-group-l">External</span>
+          <span data-tip="Primary geolocation">DB-IP</span><span data-tip="Geolocation cross-check">IPInfo</span><span data-tip="Geolocation cross-check">GeoJS</span><span data-tip="Geolocation cross-check">ip-api</span><span data-tip="Kobe API: validator history, MEV data, steward events; BAM explorer: BAM nodes, connected validators, IBRL scores">Jito</span><span data-tip="Malbec API (devices, users, links), network health, multicast groups">DoubleZero</span><span data-tip="Rakurai validator list">Rakurai</span><span data-tip="api.solana.org: historical datacenter locations for the location history">SFDP</span><span data-tip="Epoch dates for history pages; rank and score components">StakeWiz</span><span data-tip="Vote latency, slot duration, MEV commission, SFDP status, name and icon fallback">Trillium</span><span data-tip="ASN holder names and network types for the provider registry (manual verification), bgp.tools for ASN research">RIPE Stat, PeeringDB</span><span data-tip="Client id registry (client_ids.rs) and feature gate catalog">Anza agave</span>
+        </span>
+        </div>
       </div>
       <div class="footer-bottom">
         <span>Data updates every ~60 seconds. Last snapshot: <span class="mono" id="footer-ts">--</span></span>
@@ -808,7 +813,10 @@ import ClusterBanner from '../components/ClusterBanner.astro';
 
 /* Infra status grid */
 .infra-status-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; margin-bottom: 0.75rem; }
-@media (max-width: 768px) { .infra-status-grid { grid-template-columns: repeat(2, 1fr); } }
+.infra-status-grid.is-5 { grid-template-columns: repeat(5, 1fr); }
+.infra-status-grid.is-3 { grid-template-columns: repeat(3, 1fr); }
+@media (max-width: 1100px) { .infra-status-grid.is-5 { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 768px) { .infra-status-grid, .infra-status-grid.is-5, .infra-status-grid.is-3 { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 480px) { .infra-status-grid { grid-template-columns: 1fr; } }
 .infra-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 1rem; display: flex; flex-direction: column; gap: 0.4rem; transition: border-color 0.15s; }
 .infra-card.healthy { border-color: rgba(34,197,94,0.25); }
@@ -1321,8 +1329,7 @@ import ClusterBanner from '../components/ClusterBanner.astro';
 .footer-links { display: flex; gap: 1.25rem; }
 .footer-link { font-size: 0.82rem; color: var(--text-secondary); text-decoration: none; }
 .footer-link:hover { color: var(--cluster-accent); }
-.footer-sources { display: flex; flex-wrap: wrap; gap: 0.3rem; align-items: center; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.75rem; }
-.footer-sources-label { color: var(--text-secondary); font-weight: 500; margin-right: 0.2rem; }
+/* .footer-sources: shared rules in global.css (data sources panel) */
 .sep { opacity: 0.4; }
 .footer-bottom { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; font-size: 0.75rem; color: var(--text-muted); }
 
@@ -1984,8 +1991,8 @@ function renderTestnetDevnetStories(records: any[], d: any, cluster: 'testnet' |
 
   const whatIsTitle = cluster === 'testnet' ? 'What is testnet?' : 'What is devnet?';
   const whatIsText = cluster === 'testnet'
-    ? 'Solana testnet is where new client releases get stress-tested before reaching mainnet. SFDP-approved validators are required to run a testnet node alongside their mainnet one. Stake here has no real economic value.'
-    : 'Solana devnet is a sandbox for application developers. It runs the same protocol as mainnet but with simulated activity and no real value. Network resets and chain forks are possible. Validators here support the developer ecosystem.';
+    ? 'Solana testnet is where validator clients and protocol changes are tested first: new releases and feature gates land here before mainnet, and the cluster is restarted on purpose with each release. SFDP-approved validators are required to run a testnet node alongside their mainnet one. Stake here has no real economic value.'
+    : 'Solana devnet is the playground for application developers: a public test validator at network scale. It follows testnet on protocol changes rather than leading them, keeps a steadier cadence so apps can keep up, and its tokens have no value. Validators here support the developer ecosystem.';
 
   // 4th card content depends on cluster
   let fourthCard: string;
@@ -2422,157 +2429,105 @@ function renderInfra(d: any) {
   const grid = document.getElementById('infra-grid');
   if (!grid) return;
 
-  const cards: any[] = [];
+  // Live infrastructure cards are a per-cluster set (Viktor, 2026-09-23). A builder returns
+  // null when the cluster has no such data, and the card is simply not drawn (11.36): no
+  // "not deployed on this cluster" placeholders.
+  const v = d?.metrics?.validators;
+  const ch = d?.metrics?.cluster_health;
+  const rc = d?.record_counts || {};
 
-  if (cluster === 'alpenglow-community') {
-    // Alpenglow top-row replaces BAM/Jito/Harmonic (never deployed here) with
-    // alpenglow-specific operational + upgrade-pipeline indicators.
-    // All values come from network_summary alone — no validators.json dependency,
-    // so renderInfra can run before records load without "—" placeholders.
-
-    // Card 1 — Solana RPC (named endpoints, with footnote describing composition)
-    if (ep.solana && ep.solana.total != null) {
-      const e = ep.solana;
-      const entrypoints = d?.record_counts?.['solana-entrypoint'] ?? 0;
-      const namedRpcs   = d?.record_counts?.['solana-rpc'] ?? 0;
-      // Compact footnote: "2 entrypoints + 2 named RPCs · 1 down" — explains what
-      // these 4 endpoints are without overloading "official endpoints" terminology.
-      const composition = (entrypoints > 0 || namedRpcs > 0)
-        ? `${fmt(entrypoints)} entrypoints + ${fmt(namedRpcs)} named RPCs`
-        : '';
-      const downPart = e.unreachable > 0 ? `${fmt(e.unreachable)} down` : 'all operational';
-      const subParts = [composition, downPart].filter(Boolean);
-      cards.push({
-        name: 'Solana RPC',
-        main: `${fmt(e.reachable)} / ${fmt(e.total)}`,
-        sub: subParts.join(' · '),
-        status: e.unreachable > 0 ? (e.unreachable >= e.total / 2 ? 'bad' : 'warn') : 'ok',
-        cls: e.unreachable > 0 ? 'degraded' : 'healthy',
-      });
-    } else {
-      cards.push({ name: 'Solana RPC', main: '—', sub: 'no data', status: 'neutral', cls: 'absent' });
-    }
-
-    // Card 2 — Active validators (voting health)
-    const v = d?.metrics?.validators;
-    const ch = d?.metrics?.cluster_health;
+  const cardRpc = () => {
+    if (!(ep.solana && ep.solana.total != null)) return null;
+    const e = ep.solana;
+    const entrypoints = rc['solana-entrypoint'] ?? 0;
+    const namedRpcs = rc['solana-rpc'] ?? 0;
+    const parts = [];
+    if (entrypoints > 0) parts.push(`${fmt(entrypoints)} entrypoint${entrypoints === 1 ? '' : 's'}`);
+    if (namedRpcs > 0) parts.push(`${fmt(namedRpcs)} named RPC${namedRpcs === 1 ? '' : 's'}`);
+    const composition = parts.join(' + ');
+    const downPart = e.unreachable > 0 ? `${fmt(e.unreachable)} down` : 'all operational';
+    return { name: 'Solana RPC', main: `${fmt(e.reachable)} / ${fmt(e.total)}`, sub: [composition, downPart].filter(Boolean).join(' · '),
+      status: e.unreachable > 0 ? (e.unreachable >= e.total / 2 ? 'bad' : 'warn') : 'ok', cls: e.unreachable > 0 ? 'degraded' : 'healthy' };
+  };
+  const cardActive = () => {
+    if (!(v && v.total != null)) return null;
     const vc = votingCounts(d);
-    if (v && v.total != null) {
-      const totalAll = vc ? vc.total : (v.total_all ?? v.total);
-      const votingCount = vc ? vc.current : v.total;
-      const delinqCount = vc ? vc.delinquent : Math.max(0, totalAll - (v.total ?? 0));
-      const delinqStake = ch?.delinquent_stake_percent;
-      // Status thresholds tuned for experimental clusters: alpenglow regularly sees
-      // higher delinquency than mainnet because of regenesis events and node restarts.
-      let st = 'ok' as 'ok' | 'warn' | 'bad';
-      if (delinqStake != null) {
-        if (delinqStake >= 15) st = 'bad';
-        else if (delinqStake >= 5) st = 'warn';
-      }
-      const cls = st === 'bad' ? 'down' : (st === 'warn' ? 'degraded' : 'healthy');
-      cards.push({
-        name: 'Active validators',
-        main: fmt(votingCount),
-        sub: `${fmt(delinqCount)} delinquent · ${fmt(totalAll)} total`,
-        status: st, cls,
-      });
-    } else {
-      cards.push({ name: 'Active validators', main: '—', sub: 'no data', status: 'neutral', cls: 'absent' });
-    }
-
-    // Card 3 — Pending features (protocol upgrade pipeline)
+    const totalAll = vc ? vc.total : (v.total_all ?? v.total);
+    const votingCount = vc ? vc.current : v.total;
+    const delinqCount = vc ? vc.delinquent : Math.max(0, totalAll - (v.total ?? 0));
+    const delinqStake = ch?.delinquent_stake_percent;
+    let st = 'ok' as 'ok' | 'warn' | 'bad';
+    if (delinqStake != null) { if (delinqStake >= 15) st = 'bad'; else if (delinqStake >= 5) st = 'warn'; }
+    return { name: 'Active validators', main: fmt(votingCount), sub: `${fmt(delinqCount)} delinquent · ${fmt(totalAll)} total`, status: st, cls: st === 'bad' ? 'down' : (st === 'warn' ? 'degraded' : 'healthy') };
+  };
+  const cardFeatures = () => {
     const features = d?.features;
-    if (features && features.total_count != null) {
-      const pending = features.pending_count ?? features.inactive_count ?? 0;
-      const pendingList: any[] = (features.pending && features.pending.length > 0)
-        ? features.pending
-        : (Array.isArray(features.inactive) ? features.inactive : []);
-      // Extract top SIMD identifier for sub-line context. If the first pending has no
-      // description we just say "in queue", letting the headline number do the work.
-      let topSimdLabel = '';
-      if (pendingList.length > 0) {
-        const d0 = (pendingList[0]?.description || '').toString();
-        const simd = d0.match(/SIMD-\d+/);
-        topSimdLabel = simd ? `${simd[0]} next` : 'in queue';
-      }
-      const subText = pending === 0 ? 'protocol fully activated' : (topSimdLabel || `${fmt(pending)} in queue`);
-      cards.push({
-        name: 'Pending features',
-        main: fmt(pending),
-        sub: subText,
-        // 0 pending = good (cluster fully caught up); >0 = informational, not bad
-        status: pending === 0 ? 'ok' : 'neutral',
-        cls: 'healthy',
-      });
-    } else {
-      cards.push({ name: 'Pending features', main: '—', sub: d?.features == null ? 'no feature data this cycle' : 'no data', status: 'neutral', cls: 'absent' });
+    if (!(features && features.total_count != null)) return null;
+    const pending = features.pending_count ?? features.inactive_count ?? 0;
+    const pendingList: any[] = (features.pending && features.pending.length > 0) ? features.pending : (Array.isArray(features.inactive) ? features.inactive : []);
+    let topSimdLabel = '';
+    if (pendingList.length > 0) {
+      const d0 = (pendingList[0]?.description || '').toString();
+      const simd = d0.match(/SIMD-\d+/);
+      topSimdLabel = simd ? `${simd[0]} next` : 'in queue';
     }
-
-    // Card 4 — Dominant software version + share. "3 versions" was non-obvious;
-    // showing the actual leading version with adoption share is immediately readable.
+    // tooltip lists every pending gate, one per line: SIMD + description, or the pubkey when unnamed
+    const lines = pendingList.map((f: any) => {
+      const desc = (f?.description || '').toString();
+      return desc ? desc : `${(f?.id || '').toString().slice(0, 8)}... (no description yet)`;
+    });
+    return { name: 'Pending features', main: fmt(pending), sub: pending === 0 ? 'protocol fully activated' : (topSimdLabel || `${fmt(pending)} in queue`), status: pending === 0 ? 'ok' : 'neutral', cls: 'healthy', tip: lines.length ? `Pending feature gates:\n${lines.join('\n')}` : '' };
+  };
+  const cardDominant = () => {
     const sbv = d?.metrics?.cluster_health?.stake_by_version || {};
-    const versionRows = Object.entries(sbv).map(([ver, info]: [string, any]) => ({
-      version: ver,
-      current: info?.currentValidators || 0,
-    })).filter(r => r.current > 0 && r.version !== 'unknown').sort((a, b) => b.current - a.current);
+    const versionRows = Object.entries(sbv).map(([ver, info]: [string, any]) => ({ version: ver, current: info?.currentValidators || 0 })).filter(r => r.current > 0 && r.version !== 'unknown').sort((a, b) => b.current - a.current);
     const totalKnownVer = versionRows.reduce((s, r) => s + r.current, 0);
-    if (versionRows.length > 0 && totalKnownVer > 0) {
-      const dominantRow = versionRows[0];
-      const dominantShare = (dominantRow.current / totalKnownVer) * 100;
-      // Status: good if dominant version covers ≥90% (fleet aligned),
-      // warn 50-90% (rollout in progress), bad <50% (fragmented).
-      const st = dominantShare >= 90 ? 'ok' : (dominantShare >= 50 ? 'warn' : 'bad');
-      const cls = st === 'ok' ? 'healthy' : (st === 'warn' ? 'degraded' : 'down');
-      cards.push({
-        name: 'Dominant version',
-        main: dominantRow.version,
-        sub: `${fmt(dominantRow.current)} / ${fmt(totalKnownVer)} validators`,
-        status: st, cls,
-      });
-    } else {
-      cards.push({ name: 'Dominant version', main: '—', sub: 'no data', status: 'neutral', cls: 'absent' });
-    }
-  } else {
-    // Default top-row: BAM / Jito Endpoints / Solana RPC / Harmonic (mainnet/testnet/devnet)
+    if (!(versionRows.length > 0 && totalKnownVer > 0)) return null;
+    const dominantRow = versionRows[0];
+    const dominantShare = (dominantRow.current / totalKnownVer) * 100;
+    const st = dominantShare >= 90 ? 'ok' : (dominantShare >= 50 ? 'warn' : 'bad');
+    return { name: 'Dominant version', main: dominantRow.version, sub: `${fmt(dominantRow.current)} / ${fmt(totalKnownVer)} validators`, status: st, cls: st === 'ok' ? 'healthy' : (st === 'warn' ? 'degraded' : 'down') };
+  };
+  const cardBam = () => {
+    // mainnet: the BAM API (nodes, connected validators, stake); other clusters: the relays
+    // we can see and port-check ourselves (v3.12, port 50055), counted from record_counts
     if (bam && bam.node_count != null) {
-      cards.push({ name: 'Jito BAM', main: `${fmt(bam.node_count)} nodes`,
-        sub: `${fmt(bam.total_connected_validators ?? 0)} validators · ${pct(bam.stake_percentage, 1)} stake`,
-        status: 'ok', cls: 'healthy' });
-    } else {
-      cards.push({ name: 'Jito BAM', main: '—', sub: 'not deployed on this cluster', status: 'neutral', cls: 'absent' });
+      return { name: 'Jito BAM', main: `${fmt(bam.node_count)} nodes`, sub: `${fmt(bam.total_connected_validators ?? 0)} validators · ${pct(bam.stake_percentage, 1)} stake`, status: 'ok', cls: 'healthy' };
     }
-
-    if (ep.jito && ep.jito.total != null) {
-      const e = ep.jito;
-      const status = e.unreachable > 0 ? (e.unreachable >= 3 ? 'bad' : 'warn') : 'ok';
-      const cls = e.unreachable > 0 ? (e.unreachable >= 3 ? 'down' : 'degraded') : 'healthy';
-      cards.push({ name: 'Jito Endpoints', main: `${fmt(e.reachable)} / ${fmt(e.total)}`,
-        sub: `${fmt(e.unreachable ?? 0)} down · ${fmt(e.unverifiable ?? 0)} unverified`, status, cls });
-    } else {
-      cards.push({ name: 'Jito Endpoints', main: '—', sub: 'no data', status: 'neutral', cls: 'absent' });
+    // v3.13: per-service reachability of the relays we port-check ourselves
+    const bs = ep.jito?.by_service?.bam;
+    if (bs && bs.total > 0) {
+      const down = bs.unreachable || 0;
+      return { name: 'Jito BAM', main: `${fmt(bs.reachable)} / ${fmt(bs.total)}`, sub: `${fmt(bs.total)} relays port-checked${down ? ` · ${fmt(down)} down` : ''}`, status: down ? 'warn' : 'ok', cls: down ? 'degraded' : 'healthy' };
     }
+    const n = rc['jito-bam'] ?? 0;
+    if (n > 0) return { name: 'Jito BAM', main: `${fmt(n)} nodes`, sub: 'relays found and port-checked', status: 'ok', cls: 'healthy' };
+    return null;
+  };
+  const cardJito = () => {
+    if (!(ep.jito && ep.jito.total != null)) return null;
+    const e = ep.jito;
+    const status = e.unreachable > 0 ? (e.unreachable >= 3 ? 'bad' : 'warn') : 'ok';
+    return { name: 'Jito Endpoints', main: `${fmt(e.reachable)} / ${fmt(e.total)}`, sub: `${fmt(e.unreachable ?? 0)} down · ${fmt(e.unverifiable ?? 0)} unverified`, status, cls: e.unreachable > 0 ? (e.unreachable >= 3 ? 'down' : 'degraded') : 'healthy' };
+  };
+  const cardHarmonic = () => {
+    if (!(ep.harmonic && ep.harmonic.total != null)) return null;
+    const e = ep.harmonic;
+    return { name: 'Harmonic', main: `${fmt(e.reachable)} / ${fmt(e.total)}`, sub: `${fmt(e.unverifiable ?? 0)} unverified`, status: e.unreachable > 0 ? 'warn' : 'ok', cls: 'healthy' };
+  };
 
-    if (ep.solana && ep.solana.total != null) {
-      const e = ep.solana;
-      cards.push({ name: 'Solana RPC', main: `${fmt(e.reachable)} / ${fmt(e.total)}`,
-        sub: e.unreachable === 0 ? 'all operational' : `${fmt(e.unreachable)} down`,
-        status: e.unreachable > 0 ? 'bad' : 'ok', cls: e.unreachable > 0 ? 'down' : 'healthy' });
-    } else {
-      cards.push({ name: 'Solana RPC', main: '—', sub: 'no data', status: 'neutral', cls: 'absent' });
-    }
-
-    if (ep.harmonic && ep.harmonic.total != null) {
-      const e = ep.harmonic;
-      cards.push({ name: 'Harmonic', main: `${fmt(e.reachable)} / ${fmt(e.total)}`,
-        sub: `${fmt(e.unverifiable ?? 0)} unverified`, status: e.unreachable > 0 ? 'warn' : 'ok', cls: 'healthy' });
-    } else {
-      cards.push({ name: 'Harmonic', main: '—', sub: 'not deployed on this cluster', status: 'neutral', cls: 'absent' });
-    }
-  }
-
+  const SETS: Record<string, Array<() => any>> = {
+    'mainnet-beta': [cardBam, cardJito, cardRpc, cardHarmonic, cardFeatures],
+    'testnet': [cardBam, cardJito, cardRpc, cardHarmonic, cardFeatures],
+    'devnet': [cardRpc, cardJito, cardDominant, cardFeatures],
+    'alpenglow-community': [cardRpc, cardBam, cardActive, cardDominant, cardFeatures],
+  };
+  const cards: any[] = (SETS[cluster] || SETS['mainnet-beta']).map(fn => fn()).filter(Boolean);
+  grid.classList.toggle('is-5', cards.length === 5);
+  grid.classList.toggle('is-3', cards.length === 3);
 
   grid.innerHTML = cards.map(c => `
-    <div class="infra-card ${c.cls}">
+    <div class="infra-card ${c.cls}"${c.tip ? ` data-tip="${escapeHtml(c.tip)}"` : ''}>
       <div class="infra-card-head"><span class="infra-card-name">${escapeHtml(c.name)}</span><span class="infra-card-status-dot ${c.status}"></span></div>
       <div class="infra-card-main">${c.main}</div>
       <div class="infra-card-sub">${escapeHtml(c.sub)}</div>

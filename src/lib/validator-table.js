@@ -67,11 +67,18 @@ function versionStatusTip(r) {
   return '';
 }
 
-export function validatorHref(r, cluster) {
-  return `/validator?id=${r.vote_account || r.identity_pubkey}&cluster=${cluster}`;
+export function validatorHref(r, cluster, from = null) {
+  return `/validator?id=${r.vote_account || r.identity_pubkey}&cluster=${cluster}${from ? `&from=${encodeURIComponent(from)}` : ''}`;
+}
+export function slugOf(name) {
+  return String(name || '').toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'unknown';
 }
 export function datacenterHref(asn, cluster, absolute = false) {
   return `${absolute ? SITE_ORIGIN : ''}/datacenter?asn=${asn}&cluster=${cluster}`;
+}
+/** Provider page (the datacenter page is keyed by provider since round 6 part 2). */
+export function providerHref(name, cluster, absolute = false, city = null) {
+  return `${absolute ? SITE_ORIGIN : ''}/datacenter?provider=${slugOf(name)}${city ? `&city=${encodeURIComponent(city)}` : ''}&cluster=${cluster}`;
 }
 
 // ---------- pieces ----------
@@ -133,6 +140,35 @@ function commissionBadges(r) {
   return out.join('');
 }
 
+// Flags inside a pin or a circle: the flag is sliced into a SQUARE the size of the head, so
+// centred emblems (JP, BR, HK) stay centred and the side crop is 12.5% per side (all three
+// stripes of FR / IE / IT visible). The pin tail is filled by a second, lower copy of the
+// same flag drawn underneath the head, so the whole shape is covered (Viktor, 2026-09-24).
+let flagClipSeq = 0;
+export function pinFlagSvg(cc, opts = {}) {
+  const id = `pin${++flagClipSeq}`;
+  const cls = `vpin${opts.unsure ? ' vpin-unsure' : ''}${opts.extraClass ? ` ${opts.extraClass}` : ''}`;
+  const tip = opts.tip ? ` data-tip="${esc(opts.tip)}"` : '';
+  return `<svg class="${cls}"${tip} viewBox="0 0 20 24" width="18" height="22" aria-hidden="true">
+    <clipPath id="${id}"><path d="M10 23.2 C5.2 17.4 1.5 13.4 1.5 9.5 a8.5 8.5 0 1 1 17 0 c0 3.9-3.7 7.9-8.5 13.7z"/></clipPath>
+    <path d="M10 23.2 C5.2 17.4 1.5 13.4 1.5 9.5 a8.5 8.5 0 1 1 17 0 c0 3.9-3.7 7.9-8.5 13.7z" class="vpin-bg"/>
+    <image href="https://flagcdn.com/w80/${cc}.png" x="1.5" y="6.2" width="17" height="17" preserveAspectRatio="xMidYMid slice" clip-path="url(#${id})"/>
+    <image href="https://flagcdn.com/w80/${cc}.png" x="1.5" y="1" width="17" height="17" preserveAspectRatio="xMidYMid slice" clip-path="url(#${id})"/>
+    <path d="M10 23.2 C5.2 17.4 1.5 13.4 1.5 9.5 a8.5 8.5 0 1 1 17 0 c0 3.9-3.7 7.9-8.5 13.7z" class="vpin-ring"/>
+  </svg>`;
+}
+export function circleFlagSvg(cc, opts = {}) {
+  const id = `cfl${++flagClipSeq}`;
+  const size = opts.size || 18;
+  const tip = opts.tip ? ` data-tip="${esc(opts.tip)}"` : '';
+  return `<svg class="vflag-circle${opts.extraClass ? ` ${opts.extraClass}` : ''}"${tip} viewBox="0 0 20 20" width="${size}" height="${size}" aria-hidden="true">
+    <clipPath id="${id}"><circle cx="10" cy="10" r="9.5"/></clipPath>
+    <circle cx="10" cy="10" r="9.5" class="vpin-bg"/>
+    <image href="https://flagcdn.com/w80/${cc}.png" x="0.5" y="0.5" width="19" height="19" preserveAspectRatio="xMidYMid slice" clip-path="url(#${id})"/>
+    <circle cx="10" cy="10" r="9.5" class="vpin-ring"/>
+  </svg>`;
+}
+
 function pinHtml(r) {
   const g = r.geolocation || {};
   const cc = (g.country_code || '').toLowerCase();
@@ -141,7 +177,7 @@ function pinHtml(r) {
   const tip = medium
     ? `Location confidence: ${g.confidence}\nSources disagree: ${g.discrepancy_details || 'see the validator page'}`
     : `${g.city || ''}${g.city && g.country ? ', ' : ''}${g.country || g.country_code || ''}`;
-  return `<span class="vpin${medium ? ' vpin-unsure' : ''}" data-tip="${esc(tip)}"><img src="https://flagcdn.com/w40/${cc}.png" alt="" loading="lazy"></span>`;
+  return pinFlagSvg(cc, { unsure: medium, tip });
 }
 
 function locationHtml(r, ctx) {
@@ -156,7 +192,7 @@ function locationHtml(r, ctx) {
     const src = providerLogoUrl(ctx.summary, name, g.asn);
     const tags = providerTagsText(ctx.summary, name);
     const logo = `<span class="dc-logo" data-initial="${esc((name || '?').charAt(0).toUpperCase())}">${src ? `<img src="${src}" alt="" loading="lazy" onerror="this.remove()">` : ''}</span>`;
-    const link = g.asn ? copyButtonHtml(datacenterHref(g.asn, ctx.cluster, true), 'Copy link to this datacenter on SONDA', 'datacenter link') : '';
+    const link = name ? copyButtonHtml(providerHref(name, ctx.cluster, true), 'Copy link to this provider on SONDA', 'provider link') : '';
     prov = `<div class="vprov">${logo}<span class="vprov-name" ${tags.length ? `data-tip="${esc([name, ...tags].join('\n'))}"` : 'data-tip-ellipsis'}>${esc(name)}</span>${link}</div>` +
       (g.asn ? `<div class="vasn">${esc(g.asn)}${copyButtonHtml(g.asn, 'Copy ASN')}</div>` : '');
   }
@@ -198,7 +234,14 @@ export function perfBadges(r, opts = {}) {
   if (!opts.short) {
     if (avail.skip) out.push(pb('vperf-sec', r.skip_rate != null ? `${r.skip_rate.toFixed(2)}%` : '—', 'skip', 'Skip rate: leader slots skipped this epoch'));
     if (avail.slot) out.push(pb('vperf-sec', r.slot_duration_median != null ? r.slot_duration_median.toFixed(0) : '—', 'ms', 'Median slot time'));
-    if (avail.vlat) out.push(pb('vperf-sec', r.median_vote_latency != null ? r.median_vote_latency.toFixed(1) : '—', 'vlat', 'Median vote latency, slots'));
+    // vote performance (v3.13): credits vs the best validator, last full epoch; latencies in the tooltip
+    if (avail.votes) {
+      const vcr = r.vote_credits_ratio_prev;
+      const lat = r.mean_vote_latency != null ? `Average vote latency ${r.mean_vote_latency.toFixed(2)} slots` : '';
+      out.push(pb('vperf-sec', vcr != null ? `${(vcr * 100).toFixed(2)}%` : '—', 'votes', `Vote credits vs the best validator, last full epoch${lat ? `\n${lat}` : ''}`));
+    } else if (avail.vlat) {
+      out.push(pb('vperf-sec', r.mean_vote_latency != null ? r.mean_vote_latency.toFixed(2) : (r.median_vote_latency != null ? r.median_vote_latency.toFixed(1) : '—'), 'vlat', 'Vote latency, slots'));
+    }
     if (avail.ibrl) out.push(pb('vperf-sec vperf-ibrl', r.ibrl?.ibrl_score != null ? r.ibrl.ibrl_score.toFixed(0) : '—', 'ibrl', 'IBRL score'));
   }
   return out.join('');
@@ -210,7 +253,8 @@ export function tableAvailability(records) {
   return {
     skip: rs.some(r => r.skip_rate != null),
     slot: rs.some(r => r.slot_duration_median != null),
-    vlat: rs.some(r => r.median_vote_latency != null),
+    vlat: rs.some(r => r.mean_vote_latency != null || r.median_vote_latency != null),
+    votes: rs.some(r => r.vote_credits_ratio_prev != null),
     ibrl: rs.some(r => r.ibrl?.ibrl_score != null),
     sfdp: rs.some(r => r.sfdp_state),
     connections: rs.some(r => r.dz_connected || r.bam_node || r.dz_multicast_publisher || r.rakurai),
@@ -225,7 +269,7 @@ export function applyAvailability(wrapEl, avail) {
 
 // ---------- row ----------
 export function renderRow(r, ctx) {
-  const href = validatorHref(r, ctx.cluster);
+  const href = validatorHref(r, ctx.cluster, ctx.from || null);
   const conn = connectionBadges(r);
   return `<tr data-href="${href}" data-id="${esc(r.identity_pubkey)}">
     <td class="c-pos"><div class="logo-wrap">${logoHtml(r, 48)}</div>${ctx.pos != null ? `<div class="vpos" data-tip="#${ctx.pos} in this list with the current sort and filters">#${ctx.pos}</div>` : ''}</td>
@@ -241,7 +285,7 @@ export function renderRow(r, ctx) {
 
 // ---------- mobile card ----------
 export function renderCard(r, ctx) {
-  const href = validatorHref(r, ctx.cluster);
+  const href = validatorHref(r, ctx.cluster, ctx.from || null);
   const g = r.geolocation || {};
   const inG = isInGossip(r);
   const cl = inG ? displayClient(r.client_type, r.client_id_raw) : { label: '' };
@@ -255,7 +299,7 @@ export function renderCard(r, ctx) {
       <div class="vname-row">${nameHtml(r, { size: 'is-card' })}${linksHtml(r).replace('class="vlinks"', 'class="vlinks is-inline"')}</div>
       <div class="vcard-line"><span class="vstake">${fmtStakeSol(r.activated_stake_lamports)} <small>SOL</small></span>${stakeMeterHtml(r, ctx.tiers, 'is-small')}<span class="vcard-sep"></span><span class="vver${versionStatusCls(r)}">${esc(inG ? (r.version || '—') : '—')}</span>${cl.label ? `<span class="vcli" style="color:${clientColor(r.client_type)}">${esc(cl.label)}</span>` : ''}</div>
       <div class="vcard-line">${pinHtml(r)}<span class="vcity-name">${esc(inG ? (g.city || 'Unknown') : 'Not in gossip')}</span>${prov ? `<span class="vcard-sep"></span><span class="dc-logo" data-initial="${esc(prov.charAt(0).toUpperCase())}">${provLogo ? `<img src="${provLogo}" alt="" loading="lazy" onerror="this.remove()">` : ''}</span><span class="vprov-name">${esc(prov)}</span>` : ''}</div>
-      <div class="vbadges vcard-badges">${connectionBadges(r)}${flagBadges(r)}${commissionBadges(r)}</div>
+      <div class="vbadges vcard-badges"><span class="vcard-perf-inline">${perfBadges(r, { short: true })}</span>${connectionBadges(r)}${flagBadges(r)}${commissionBadges(r)}</div>
       ${keysHtml(r, 'row')}
     </div>
     <div class="vcard-side">

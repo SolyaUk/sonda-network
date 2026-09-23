@@ -25,6 +25,7 @@
 .th-arrow { opacity: 0.45; margin-left: 0.25rem; }
 .vtable th.is-active .th-arrow { opacity: 1; color: var(--cluster-accent); }
 .th-hint { font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--text-muted); margin-left: 0.3rem; }
+@media (max-width: 1400px) { .th-hint { display: none; } }
 .vtable td { padding: 0.9rem 0.75rem; border-bottom: 1px solid var(--border); vertical-align: middle; overflow: hidden; }
 .vtable td.c-id { padding-right: 1.4rem; }   /* air between the name/copy icon and the Version column */
 .vtable tbody tr { cursor: pointer; transition: background 0.12s ease; }
@@ -104,10 +105,13 @@
 /* location */
 .vcity { display: flex; align-items: center; gap: 0.45rem; font-size: 0.9rem; color: var(--text-primary); min-width: 0; }
 .vcity-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-.vpin { width: 18px; height: 18px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); overflow: hidden; border: 1px solid var(--border); background: var(--bg-card-hover); flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; margin: 0 3px 3px 0; cursor: help; }
-.vpin img { width: 100%; height: 100%; object-fit: cover; transform: rotate(45deg) scale(1.4); }
-.vpin-none { transform: none; border-radius: 50%; font-size: 0.6rem; color: var(--text-muted); cursor: default; }
-.vpin-unsure { border: 1.5px dashed var(--accent-amber); opacity: 0.85; }
+/* pin (city) and circle (country) flags: inline SVG with the flag clipped to the shape */
+svg.vpin, svg.vflag-circle { flex-shrink: 0; display: inline-block; vertical-align: middle; overflow: visible; cursor: help; }
+svg.vpin { margin-bottom: -2px; }
+.vpin-bg { fill: var(--bg-card-hover); }
+.vpin-ring { fill: none; stroke: var(--border); stroke-width: 1; }
+svg.vpin-unsure .vpin-ring { stroke: var(--accent-amber); stroke-width: 1.5; stroke-dasharray: 2 1.5; }
+.vpin-none { width: 18px; height: 18px; border-radius: 50%; border: 1px solid var(--border); background: var(--bg-card-hover); flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; font-size: 0.6rem; color: var(--text-muted); }
 .vunsure { font-family: var(--font-mono); font-size: 0.62rem; color: var(--accent-amber); border: 1px dashed rgba(251,191,36,0.6); border-radius: 999px; width: 15px; height: 15px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; cursor: help; }
 .vprov { display: flex; align-items: center; gap: 0.35rem; margin-top: 0.3rem; font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-secondary); white-space: nowrap; min-width: 0; }
 .vprov-name { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
@@ -144,16 +148,32 @@
 .vcard-side { display: flex; flex-direction: column; gap: 0.35rem; align-items: flex-end; }
 .vcard-go { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 8px; background: var(--cluster-accent); color: white; text-decoration: none; flex-shrink: 0; }
 .vcard-perf { justify-content: flex-end; }
+/* card columns: logo + rank (full height) | everything about the validator | go button.
+   On tablets the TVC / credits badges sit under the go button; on phones they move into
+   the badge row of the middle column so the right column is only the button and the
+   middle column keeps its width (Viktor, 2026-09-25). */
 .vcard-badges { gap: 0.25rem; margin-top: 0.1rem; }
 .vcard .vkeys { margin-top: 0.1rem; }
+.vcard-perf-inline { display: none; gap: 0.25rem; }
+@media (max-width: 640px) {
+  .vcard { gap: 0.45rem 0.6rem; padding: 0.65rem 0.7rem; }
+  .vcard-side .vcard-perf { display: none; }
+  .vcard-perf-inline { display: inline-flex; flex-wrap: wrap; }
+  .vcard-go { width: 30px; height: 30px; }
+}
 .vcard .vkeys-row .vkey { font-size: 0.68rem; }
 @media (max-width: 1000px) {
   .vtable-wrap { display: none; }
   .vcards-wrap { display: flex; }
 }
 
-/* clusters without DZ/BAM (devnet) hide Connections; clusters without IBRL hide that badge */
+/* clusters without DZ/BAM (devnet) hide Connections; the freed width goes to Location and
+   Performance, never to the position column (its share is fixed in px) */
 .vtable-wrap.hide-connections col.c-conn, .vtable-wrap.hide-connections .c-conn { display: none; }
+.vtable-wrap.hide-connections col.c-id { width: 21%; }
+.vtable-wrap.hide-connections col.c-loc { width: 21%; }
+.vtable-wrap.hide-connections col.c-perf { width: 24%; }
+.vtable-wrap.hide-connections col.c-flags { width: 11%; }
 .hide-ibrl .vperf-ibrl { display: none; }
 
 /* sort menu (src/lib/sort-menu.js) */
@@ -183,3 +203,20 @@
 
 /* sort menu on the datacenter page sits in its own tools row above the table */
 .dc-vals-tools { display: flex; justify-content: flex-end; align-items: center; margin: 0 0 0.75rem; }
+
+/* sort direction button next to the trigger */
+.sort-menu { display: inline-flex; align-items: center; gap: 0.35rem; }
+.sort-dir { width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-card); color: var(--cluster-accent); font-size: 0.95rem; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font-family: var(--font-mono); }
+.sort-dir:hover { border-color: var(--border-accent); }
+
+/* network-infrastructure badges: outlined, in contrast to the tinted validator badges */
+.vbadge-net { color: var(--text-secondary); border-style: dashed; border-color: color-mix(in srgb, var(--cluster-accent) 55%, transparent); background: transparent; }
+.vbadge-net b { color: var(--text-primary); font-weight: 700; }
+.vbadges-group { display: flex; flex-wrap: wrap; gap: 0.25rem; align-items: center; }
+.vbadges-lbl { font-family: var(--font-mono); font-size: 0.56rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); margin-right: 0.15rem; }
+
+/* flag markers never clipped by their containers; sizes for the two big uses */
+svg.vpin.is-marker { width: 18px; height: 22px; }
+svg.vpin.is-big { width: 34px; height: 42px; }
+.v-loc-flag { overflow: visible !important; }
+.vcity, .dc-city-head, .vagg-row { overflow: visible; }

@@ -221,7 +221,10 @@ document.querySelectorAll('.cluster-btn').forEach(btn => {
       return;
     }
     if (path === '/datacenter') {
-      window.location.href = `/datacenters?cluster=${cluster}`;
+      // keep the provider (its slug is the same on every cluster); the page shows a
+      // fallback with the clusters where the provider exists if it is absent here
+      const slug = new URLSearchParams(window.location.search).get('provider');
+      window.location.href = slug ? `/datacenter?provider=${encodeURIComponent(slug)}&cluster=${cluster}` : `/datacenters?cluster=${cluster}`;
       return;
     }
     setClusterShared(cluster);

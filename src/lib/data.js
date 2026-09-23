@@ -339,16 +339,19 @@ export function filterValidators(records, params) {
   const dz = params.get('dz');
   if (dz === 'connected') out = out.filter(r => r.dz_connected);
   else if (dz === 'multicast') out = out.filter(r => r.dz_multicast_publisher);
+  else if (dz === 'unicast') out = out.filter(r => r.dz_connected && !r.dz_multicast_publisher);
   else if (dz === 'no') out = out.filter(r => !r.dz_connected);
 
   const bam = params.get('bam');
   if (bam === 'true') out = out.filter(r => !!r.bam_node);
+  else if (bam === 'false') out = out.filter(r => !r.bam_node);
 
   const rakurai = params.get('rakurai');
   if (rakurai === 'true') out = out.filter(r => r.is_rakurai);
 
-  const sfdp = params.get('sfdp');
-  if (sfdp) out = out.filter(r => r.sfdp_state === sfdp);
+  // sfdp is a list: Approved,Retired,... (any of the selected states)
+  const sfdp = list('sfdp');
+  if (sfdp.length) out = out.filter(r => sfdp.includes(r.sfdp_state));
 
   const delinquent = params.get('delinquent');
   if (delinquent === 'true') out = out.filter(r => r.delinquent);
@@ -406,7 +409,8 @@ export function sortValidators(records, sort = 'rank', dir = 'asc') {
     skip: r => r.skip_rate ?? nullSink(),
     credits: r => r.epoch_credits ?? nullSink(),
     slot: r => r.slot_duration_median ?? nullSink(),
-    vlat: r => r.median_vote_latency ?? nullSink(),
+    vlat: r => r.mean_vote_latency ?? r.median_vote_latency ?? nullSink(),
+    votes: r => r.vote_credits_ratio_prev ?? nullSink(),
     ibrl: r => r.ibrl?.ibrl_score ?? nullSink(),
     commission: r => r.commission ?? -1,
     country: r => r.geolocation?.country_code || '',
@@ -533,16 +537,33 @@ export function aggregateByAsn(records) {
  */
 export const DATA_ORIGIN = 'https://data.sonda.network';
 
-export function providerMeta(summary, name) {
+// Registry lookup: exact name, then case-insensitive name, then an entry whose asns list
+// contains the given ASN (a provider seen under a slightly different name on one cluster).
+export function providerMeta(summary, name, asn = null) {
   const m = summary?.metrics?.providers;
-  if (!m || typeof m !== 'object' || !name) return null;
-  return m[name] || null;
+  if (!m || typeof m !== 'object') return null;
+  if (name && m[name]) return m[name];
+  if (name) {
+    const lower = String(name).toLowerCase();
+    for (const [k, v] of Object.entries(m)) if (k.toLowerCase() === lower) return v;
+  }
+  if (asn) {
+    const want = String(asn).replace(/^AS/i, '');
+    for (const v of Object.values(m)) if (Array.isArray(v?.asns) && v.asns.some(a => String(a).replace(/^AS/i, '') === want)) return v;
+  }
+  return null;
 }
 
+// Logo lookup chain: providers[name].logo (v3.12) -> the provider's first registry ASN
+// (providers[name].asns) -> the most common ASN of its validators on this cluster. The
+// registry ASN comes before the cluster ASN so a provider seen on a different ASN on
+// testnet (Monogon, backend 2026-09-24) still finds assets/dc/AS<registry>.png.
 export function providerLogoUrl(summary, name, fallbackAsn) {
-  const meta = providerMeta(summary, name);
+  const meta = providerMeta(summary, name, fallbackAsn);
   if (meta && meta.logo) return `${DATA_ORIGIN}/${String(meta.logo).replace(/^\/+/, '')}`;
-  return fallbackAsn ? `${DATA_ORIGIN}/assets/dc/${fallbackAsn}.png` : '';
+  const regAsn = Array.isArray(meta?.asns) && meta.asns.length ? String(meta.asns[0]).replace(/^(?!AS)/, 'AS') : null;
+  const asn = regAsn || fallbackAsn;
+  return asn ? `${DATA_ORIGIN}/assets/dc/${asn}.png` : '';
 }
 
 // Provider tags (F-E, pack 2026-09-12). No tag = a regular hosting provider, not labelled.

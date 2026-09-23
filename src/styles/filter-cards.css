@@ -1,0 +1,154 @@
+/* Filter cards: Breakdown on /validators and provider cards on /datacenters. Moved out of
+   validators.astro on 2026-09-15 so both pages share one kit. */
+.vagg { margin: 0 0 1.4rem; }
+.vagg-head { display: flex; align-items: center; gap: 0.6rem; margin: 0 0 0.6rem; }
+.vagg-toggle {
+  display: flex; align-items: center; gap: 0.6rem; flex: 1 1 auto; min-width: 0;
+  background: none; border: 0; padding: 0.35rem 0; margin: 0;
+  color: var(--text-primary); cursor: pointer; text-align: left; font-family: inherit;
+}
+.vagg-clear { flex-shrink: 0; }
+.vagg-title { font-family: var(--font-display); font-size: 1.05rem; font-weight: 700; }
+.vagg-hint { font-size: 0.74rem; color: var(--text-muted); font-weight: 400; }
+@media (max-width: 760px) { .vagg-hint { display: none; } }
+.vagg-toggle-pill {
+  flex-shrink: 0; display: inline-flex; align-items: center; gap: 0.35rem;
+  padding: 0.28rem 0.7rem; border: 1px solid var(--border); border-radius: 999px;
+  background: var(--bg-card); color: var(--text-secondary); font-size: 0.74rem; font-weight: 500;
+  cursor: pointer; font-family: inherit;
+  transition: border-color 0.15s, color 0.15s;
+}
+.vagg-toggle:hover ~ .vagg-toggle-pill, .vagg-toggle-pill:hover { border-color: var(--border-accent); color: var(--text-primary); }
+.vagg-chevron { color: var(--text-muted); transition: transform 0.2s ease; }
+.vagg.is-collapsed .vagg-chevron { transform: rotate(-90deg); }
+.vagg.is-collapsed .vagg-body { display: none; }
+.vagg-block { margin-bottom: 0.9rem; }
+.vagg-block.is-collapsed { margin-bottom: 0.4rem; }
+.vagg-block-title {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  background: none; border: 0; padding: 0.15rem 0; margin: 0 0 0.45rem 0; cursor: pointer;
+  font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted);
+}
+.vagg-block-title:hover { color: var(--text-secondary); }
+.vagg-block.is-collapsed .vagg-block-title .vagg-chevron { transform: rotate(-90deg); }
+.vagg-block.is-collapsed .vagg-grid { display: none; }
+.vagg-grid { display: grid; gap: 0.85rem; align-items: stretch; }
+/* software: two wide cards + narrow status card (~22%) */
+.vagg-grid-software { grid-template-columns: minmax(0, 1.75fr) minmax(0, 1.75fr) minmax(0, 1fr); }
+.vagg-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 1100px) { .vagg-grid-3, .vagg-grid-software { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 640px) { .vagg-grid-software, .vagg-grid-3 { grid-template-columns: 1fr; } }
+
+/* Status card: big number (validators in view) + bar rows, the DZ/BAM-card language.
+   Track = share of validators in view; number and fill take the flag's own colour. */
+/* Compact: number and caption share a line so the card is no taller than its neighbours */
+.vagg-status-head { display: flex; align-items: baseline; gap: 0.45rem; margin-top: 0.1rem; }
+.vagg-view-status .story-big { font-size: 1.7rem; line-height: 1; margin: 0; }
+.vagg-view-status .story-sub { margin: 0; }
+.vagg-view-status .bar-rows-wrap.with-divider { padding-top: 0.45rem; margin-top: 0.5rem; gap: 0.15rem; }
+.vagg-view-status .bar-row { grid-template-columns: minmax(0, 1fr) 72px 34px; cursor: pointer; padding: 0.18rem 0.3rem; margin: 0 -0.3rem; border-radius: 6px; }
+.vagg-view-status .bar-row .bar-row-label { color: var(--text-primary); }
+.vagg-view-status .bar-row.is-dim { opacity: 0.38; }
+.vagg-view-status .bar-row-fill.crit { background: var(--status-critical); }
+.vagg-view-status .bar-row-fill.cluster { background: var(--cluster-accent); }
+.vagg-view-status .bar-row-fill.warn { background: var(--accent-amber); }
+.vagg-view-status .bar-row-fill.neutral { background: var(--text-muted); opacity: 0.7; }
+.vagg-view-status .bar-row-num.crit { color: var(--status-critical); }
+.vagg-view-status .bar-row-num.cluster { color: var(--cluster-accent); }
+
+/* Click-to-filter states (F-A.2) */
+.vagg-card [data-fkey] { cursor: pointer; border-radius: 6px; transition: background 0.12s, opacity 0.12s; }
+.vagg-card [data-fkey]:hover { background: var(--bg-card-hover); }
+.vagg-card [data-fkey].is-selected { background: color-mix(in srgb, var(--cluster-accent) 14%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cluster-accent) 45%, transparent); }
+.vagg-card [data-fkey].is-dim { opacity: 0.38; }
+.vagg-card [data-fkey].is-dim:hover { opacity: 0.7; }
+.vagg-card .stacked-legend-item[data-fkey] { padding: 0.1rem 0.3rem; margin: 0 -0.3rem; }
+.vagg-card .vagg-row[data-fkey] { padding: 0.15rem 0.3rem; margin: 0 -0.3rem; }
+
+.vagg-card { gap: 0.4rem; padding: 1rem 1.05rem 0.9rem; }
+.vagg-card .story-title { font-size: 0.9rem; }
+.vagg-meta { font-family: var(--font-mono); font-size: 0.66rem; color: var(--text-muted); white-space: nowrap; }
+.vagg-card .stacked-bar { height: 28px; margin: 0.35rem 0 0.2rem; }
+.vagg-card .stacked-segment { font-size: 0.68rem; }
+
+.vagg-rows { display: flex; flex-direction: column; gap: 0.2rem; margin-top: 0.3rem; }
+/* Expanded lists scroll inside the card instead of stretching the whole grid */
+.vagg-card.is-expanded .vagg-rows { max-height: 330px; overflow-y: auto; padding: 0 0.3rem; margin-left: -0.3rem; margin-right: -0.3rem; scrollbar-width: thin; }
+.vagg-foot { margin-top: auto; padding-top: 0.45rem; min-height: 1.6rem; display: flex; align-items: center; }
+.vagg-row {
+  display: grid; grid-template-columns: 18px minmax(0, 1fr) auto auto;
+  gap: 0.4rem; align-items: center;
+  font-size: 0.78rem; padding: 0.15rem 0; min-width: 0;
+}
+.vagg-name .legend-leader { margin-right: 0; }
+.vagg-row.has-bar { grid-template-columns: 18px minmax(0, 1fr) 56px auto auto; }
+.vagg-track { height: 5px; background: var(--bg-primary); border: 1px solid var(--border); border-radius: 3px; overflow: hidden; }
+.vagg-track-fill { height: 100%; border-radius: 2px; background: var(--cluster-accent); min-width: 1px; }
+.vagg-row.is-special .vagg-track-fill { background: var(--text-muted); opacity: 0.5; }
+.vagg-row.is-extra { display: none; }
+.vagg-card.is-expanded .vagg-row.is-extra { display: grid; }
+/* Donut view: bigger and thicker than the homepage donuts, rows to the right */
+/* align-items: start keeps the donut in place when "Show all" grows the row list */
+.vagg-donut { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 0.9rem; align-items: start; margin-top: 0.35rem; }
+.vagg-donut .donut-svg { margin-top: 0.4rem; }
+.vagg-donut .donut-svg { width: 150px; height: 150px; }
+.vagg-donut .vagg-rows { margin-top: 0; }
+.vagg-donut .vagg-row { grid-template-columns: 18px minmax(0, 1fr) auto auto; gap: 0.4rem; }
+@media (max-width: 480px) { .vagg-donut { grid-template-columns: 1fr; } .vagg-donut .donut-svg { margin: 0 auto; } }
+/* City marker: map-pin shape with the country flag inside (circle is the country marker) */
+/* Software cards reuse the homepage legend; version status colours the name (as in the table) */
+.vagg-card .stacked-legend { margin-top: 0.6rem; }
+.vagg-card .stacked-legend-item.is-extra { display: none; }
+.vagg-card.is-expanded .stacked-legend-item.is-extra { display: flex; }
+.vagg-card.is-expanded .vagg-other { display: none; }
+/* Scrolling lists clip at their box; the row highlight extends 0.3rem to the left, so give
+   the scroll box that much padding and pull it back with a margin. */
+.vagg-card.is-expanded .stacked-legend { max-height: 260px; overflow-y: auto; padding: 0 0.3rem; margin-left: -0.3rem; margin-right: -0.3rem; scrollbar-width: thin; }
+.vagg-card .vagg-other { cursor: pointer; }
+.vagg-card .stacked-legend-name.ver-outdated { color: var(--accent-amber); }
+.vagg-card .stacked-legend-name.ver-ancient { color: var(--status-critical); }
+.vagg-card .stacked-legend-item.is-special .stacked-legend-name { color: var(--text-muted); font-style: italic; font-weight: 400; }
+.vagg-card .stacked-legend-stat .vagg-delinq { margin-right: 0.35rem; }
+.vagg-row.is-special .vagg-name { color: var(--text-muted); font-style: italic; }
+.vagg-name { color: var(--text-primary); font-weight: 500; min-width: 0; display: flex; align-items: center; gap: 0.35rem; }
+.vagg-name > span:first-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 0 1 auto; }
+.vagg-count { font-family: var(--font-mono); font-size: 0.74rem; color: var(--text-secondary); text-align: right; white-space: nowrap; display: inline-flex; align-items: baseline; justify-content: flex-end; }
+/* Delinquent part of a count: thin red divider instead of a dot (35 | 3 reads as two numbers, 35.3 read as a decimal) */
+.vagg-delinq { color: var(--status-critical); font-size: 0.66rem; margin-left: 0.3rem; padding-left: 0.3rem; border-left: 1px solid color-mix(in srgb, var(--status-critical) 55%, transparent); line-height: 1; cursor: help; }
+.vagg-stake { font-family: var(--font-mono); font-size: 0.74rem; color: var(--text-primary); font-weight: 600; text-align: right; min-width: 3.4em; }
+
+/* Row markers: colour dot, round flag, round provider logo with initial as fallback */
+.vagg-dot { width: 9px; height: 9px; border-radius: 2px; margin: 0 auto; }
+.vagg-flag {
+  width: 18px; height: 18px; border-radius: 50%; overflow: hidden; position: relative;
+  background: var(--bg-card-hover); border: 1px solid var(--border); flex-shrink: 0;
+}
+.vagg-flag img { width: 100%; height: 100%; object-fit: cover; display: block; position: relative; z-index: 1; }
+/* provider logo slot: .dc-logo from cards.css */
+.vagg-marker-muted { width: 18px; height: 18px; border-radius: 50%; border: 1px dashed var(--border); }
+.vagg-empty { display: flex; align-items: center; justify-content: center; width: 150px; height: 150px; border-radius: 50%; border: 1px dashed var(--border); color: var(--text-muted); font-size: 0.72rem; }
+.vagg-more {
+  padding: 0; background: none; border: 0; color: var(--cluster-accent); font-size: 0.74rem;
+  cursor: pointer; font-family: inherit;
+}
+.vagg-more:hover { text-decoration: underline; }
+
+/* Version status (F-18): current has no accent; outdated amber; ancient red */
+.ver-tag {
+  font-family: var(--font-mono); font-size: 0.58rem; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.05em; padding: 0.05rem 0.3rem; border-radius: 3px; flex-shrink: 0;
+}
+.ver-tag-outdated { color: var(--accent-amber); border: 1px solid color-mix(in srgb, var(--accent-amber) 45%, transparent); }
+.ver-tag-ancient { color: var(--status-critical); border: 1px solid color-mix(in srgb, var(--status-critical) 45%, transparent); }
+.cell-ver-main.ver-outdated { color: var(--accent-amber); }
+.cell-ver-main.ver-ancient { color: var(--status-critical); }
+
+/* Filters */
+
+/* long status cards (mainnet Infrastructure) lay their rows in two columns; labels get
+   ellipsis + tooltip, bars are shorter, so long names never run into the numbers */
+.bar-rows-wrap.is-two-col { display: grid; grid-template-columns: 1fr 1fr; column-gap: 2.2rem; row-gap: 0.15rem; }
+.bar-rows-wrap.is-two-col .bar-row { grid-template-columns: minmax(0, 1fr) 44px 30px; min-width: 0; }
+.bar-rows-wrap.is-two-col .bar-row:nth-child(even) { border-left: 1px solid var(--border); padding-left: 0.6rem; margin-left: -0.3rem; }
+.vagg-view-status .bar-row-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+@media (max-width: 640px) { .bar-rows-wrap.is-two-col { grid-template-columns: 1fr; } }

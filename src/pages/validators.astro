@@ -144,152 +144,10 @@ import Footer from '../components/Footer.astro';
   .vsummary-line .vsl-warn b { color: var(--status-critical); }
 
   /* Breakdown section: collapsible grid of story cards */
-  .vagg { margin: 0 0 1.4rem; }
-  .vagg-head { display: flex; align-items: center; gap: 0.6rem; margin: 0 0 0.6rem; }
-  .vagg-toggle {
-    display: flex; align-items: center; gap: 0.6rem; flex: 1 1 auto; min-width: 0;
-    background: none; border: 0; padding: 0.35rem 0; margin: 0;
-    color: var(--text-primary); cursor: pointer; text-align: left; font-family: inherit;
-  }
-  .vagg-clear { flex-shrink: 0; }
-  .vagg-title { font-family: var(--font-display); font-size: 1.05rem; font-weight: 700; }
-  .vagg-hint { font-size: 0.74rem; color: var(--text-muted); font-weight: 400; }
-  @media (max-width: 760px) { .vagg-hint { display: none; } }
-  .vagg-toggle-pill {
-    flex-shrink: 0; display: inline-flex; align-items: center; gap: 0.35rem;
-    padding: 0.28rem 0.7rem; border: 1px solid var(--border); border-radius: 999px;
-    background: var(--bg-card); color: var(--text-secondary); font-size: 0.74rem; font-weight: 500;
-    cursor: pointer; font-family: inherit;
-    transition: border-color 0.15s, color 0.15s;
-  }
-  .vagg-toggle:hover ~ .vagg-toggle-pill, .vagg-toggle-pill:hover { border-color: var(--border-accent); color: var(--text-primary); }
-  .vagg-chevron { color: var(--text-muted); transition: transform 0.2s ease; }
-  .vagg.is-collapsed .vagg-chevron { transform: rotate(-90deg); }
-  .vagg.is-collapsed .vagg-body { display: none; }
-  .vagg-block { margin-bottom: 0.9rem; }
-  .vagg-block.is-collapsed { margin-bottom: 0.4rem; }
-  .vagg-block-title {
-    display: inline-flex; align-items: center; gap: 0.4rem;
-    background: none; border: 0; padding: 0.15rem 0; margin: 0 0 0.45rem 0; cursor: pointer;
-    font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted);
-  }
-  .vagg-block-title:hover { color: var(--text-secondary); }
-  .vagg-block.is-collapsed .vagg-block-title .vagg-chevron { transform: rotate(-90deg); }
-  .vagg-block.is-collapsed .vagg-grid { display: none; }
-  .vagg-grid { display: grid; gap: 0.85rem; align-items: stretch; }
-  /* software: two wide cards + narrow status card (~22%) */
-  .vagg-grid-software { grid-template-columns: minmax(0, 1.75fr) minmax(0, 1.75fr) minmax(0, 1fr); }
-  .vagg-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  @media (max-width: 1100px) { .vagg-grid-3, .vagg-grid-software { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-  @media (max-width: 640px) { .vagg-grid-software, .vagg-grid-3 { grid-template-columns: 1fr; } }
-
-  /* Status card: big number (validators in view) + bar rows, the DZ/BAM-card language.
-     Track = share of validators in view; number and fill take the flag's own colour. */
-  /* Compact: number and caption share a line so the card is no taller than its neighbours */
-  .vagg-status-head { display: flex; align-items: baseline; gap: 0.45rem; margin-top: 0.1rem; }
-  .vagg-view-status .story-big { font-size: 1.7rem; line-height: 1; margin: 0; }
-  .vagg-view-status .story-sub { margin: 0; }
-  .vagg-view-status .bar-rows-wrap.with-divider { padding-top: 0.45rem; margin-top: 0.5rem; gap: 0.15rem; }
-  .vagg-view-status .bar-row { grid-template-columns: minmax(0, 1fr) 72px 34px; cursor: pointer; padding: 0.18rem 0.3rem; margin: 0 -0.3rem; border-radius: 6px; }
-  .vagg-view-status .bar-row .bar-row-label { color: var(--text-primary); }
-  .vagg-view-status .bar-row.is-dim { opacity: 0.38; }
-  .vagg-view-status .bar-row-fill.crit { background: var(--status-critical); }
-  .vagg-view-status .bar-row-fill.cluster { background: var(--cluster-accent); }
-  .vagg-view-status .bar-row-fill.warn { background: var(--accent-amber); }
-  .vagg-view-status .bar-row-fill.neutral { background: var(--text-muted); opacity: 0.7; }
-  .vagg-view-status .bar-row-num.crit { color: var(--status-critical); }
-  .vagg-view-status .bar-row-num.cluster { color: var(--cluster-accent); }
-
-  /* Click-to-filter states (F-A.2) */
-  .vagg-card [data-fkey] { cursor: pointer; border-radius: 6px; transition: background 0.12s, opacity 0.12s; }
-  .vagg-card [data-fkey]:hover { background: var(--bg-card-hover); }
-  .vagg-card [data-fkey].is-selected { background: color-mix(in srgb, var(--cluster-accent) 14%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cluster-accent) 45%, transparent); }
-  .vagg-card [data-fkey].is-dim { opacity: 0.38; }
-  .vagg-card [data-fkey].is-dim:hover { opacity: 0.7; }
-  .vagg-card .stacked-legend-item[data-fkey] { padding: 0.1rem 0.3rem; margin: 0 -0.3rem; }
-  .vagg-card .vagg-row[data-fkey] { padding: 0.15rem 0.3rem; margin: 0 -0.3rem; }
-
-  .vagg-card { gap: 0.4rem; padding: 1rem 1.05rem 0.9rem; }
-  .vagg-card .story-title { font-size: 0.9rem; }
-  .vagg-meta { font-family: var(--font-mono); font-size: 0.66rem; color: var(--text-muted); white-space: nowrap; }
-  .vagg-card .stacked-bar { height: 28px; margin: 0.35rem 0 0.2rem; }
-  .vagg-card .stacked-segment { font-size: 0.68rem; }
-
-  .vagg-rows { display: flex; flex-direction: column; gap: 0.2rem; margin-top: 0.3rem; }
-  /* Expanded lists scroll inside the card instead of stretching the whole grid */
-  .vagg-card.is-expanded .vagg-rows { max-height: 330px; overflow-y: auto; padding: 0 0.3rem; margin-left: -0.3rem; margin-right: -0.3rem; scrollbar-width: thin; }
-  .vagg-foot { margin-top: auto; padding-top: 0.45rem; min-height: 1.6rem; display: flex; align-items: center; }
-  .vagg-row {
-    display: grid; grid-template-columns: 18px minmax(0, 1fr) auto auto;
-    gap: 0.4rem; align-items: center;
-    font-size: 0.78rem; padding: 0.15rem 0; min-width: 0;
-  }
-  .vagg-name .legend-leader { margin-right: 0; }
-  .vagg-row.has-bar { grid-template-columns: 18px minmax(0, 1fr) 56px auto auto; }
-  .vagg-track { height: 5px; background: var(--bg-primary); border: 1px solid var(--border); border-radius: 3px; overflow: hidden; }
-  .vagg-track-fill { height: 100%; border-radius: 2px; background: var(--cluster-accent); min-width: 1px; }
-  .vagg-row.is-special .vagg-track-fill { background: var(--text-muted); opacity: 0.5; }
-  .vagg-row.is-extra { display: none; }
-  .vagg-card.is-expanded .vagg-row.is-extra { display: grid; }
-  /* Donut view: bigger and thicker than the homepage donuts, rows to the right */
-  /* align-items: start keeps the donut in place when "Show all" grows the row list */
-  .vagg-donut { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 0.9rem; align-items: start; margin-top: 0.35rem; }
-  .vagg-donut .donut-svg { margin-top: 0.4rem; }
-  .vagg-donut .donut-svg { width: 150px; height: 150px; }
-  .vagg-donut .vagg-rows { margin-top: 0; }
-  .vagg-donut .vagg-row { grid-template-columns: 18px minmax(0, 1fr) auto auto; gap: 0.4rem; }
-  @media (max-width: 480px) { .vagg-donut { grid-template-columns: 1fr; } .vagg-donut .donut-svg { margin: 0 auto; } }
-  /* City marker: map-pin shape with the country flag inside (circle is the country marker) */
-  .vagg-pin { width: 17px; height: 17px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); overflow: hidden; border: 1px solid var(--border); background: var(--bg-card-hover); flex-shrink: 0; margin: 0 1px 2px 0; }
-  .vagg-pin img { width: 100%; height: 100%; object-fit: cover; display: block; transform: rotate(45deg) scale(1.4); }
-  /* Software cards reuse the homepage legend; version status colours the name (as in the table) */
-  .vagg-card .stacked-legend { margin-top: 0.6rem; }
-  .vagg-card .stacked-legend-item.is-extra { display: none; }
-  .vagg-card.is-expanded .stacked-legend-item.is-extra { display: flex; }
-  .vagg-card.is-expanded .vagg-other { display: none; }
-  /* Scrolling lists clip at their box; the row highlight extends 0.3rem to the left, so give
-     the scroll box that much padding and pull it back with a margin. */
-  .vagg-card.is-expanded .stacked-legend { max-height: 260px; overflow-y: auto; padding: 0 0.3rem; margin-left: -0.3rem; margin-right: -0.3rem; scrollbar-width: thin; }
-  .vagg-card .vagg-other { cursor: pointer; }
-  .vagg-card .stacked-legend-name.ver-outdated { color: var(--accent-amber); }
-  .vagg-card .stacked-legend-name.ver-ancient { color: var(--status-critical); }
-  .vagg-card .stacked-legend-item.is-special .stacked-legend-name { color: var(--text-muted); font-style: italic; font-weight: 400; }
-  .vagg-card .stacked-legend-stat .vagg-delinq { margin-right: 0.35rem; }
-  .vagg-row.is-special .vagg-name { color: var(--text-muted); font-style: italic; }
-  .vagg-name { color: var(--text-primary); font-weight: 500; min-width: 0; display: flex; align-items: center; gap: 0.35rem; }
-  .vagg-name > span:first-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 0 1 auto; }
-  .vagg-count { font-family: var(--font-mono); font-size: 0.74rem; color: var(--text-secondary); text-align: right; white-space: nowrap; display: inline-flex; align-items: baseline; justify-content: flex-end; }
-  /* Delinquent part of a count: thin red divider instead of a dot (35 | 3 reads as two numbers, 35.3 read as a decimal) */
-  .vagg-delinq { color: var(--status-critical); font-size: 0.66rem; margin-left: 0.3rem; padding-left: 0.3rem; border-left: 1px solid color-mix(in srgb, var(--status-critical) 55%, transparent); line-height: 1; cursor: help; }
-  .vagg-stake { font-family: var(--font-mono); font-size: 0.74rem; color: var(--text-primary); font-weight: 600; text-align: right; min-width: 3.4em; }
-
-  /* Row markers: colour dot, round flag, round provider logo with initial as fallback */
-  .vagg-dot { width: 9px; height: 9px; border-radius: 2px; margin: 0 auto; }
-  .vagg-flag {
-    width: 18px; height: 18px; border-radius: 50%; overflow: hidden; position: relative;
-    background: var(--bg-card-hover); border: 1px solid var(--border); flex-shrink: 0;
-  }
-  .vagg-flag img { width: 100%; height: 100%; object-fit: cover; display: block; position: relative; z-index: 1; }
-  /* provider logo slot: .dc-logo from cards.css */
-  .vagg-marker-muted { width: 18px; height: 18px; border-radius: 50%; border: 1px dashed var(--border); }
-  .vagg-empty { display: flex; align-items: center; justify-content: center; width: 150px; height: 150px; border-radius: 50%; border: 1px dashed var(--border); color: var(--text-muted); font-size: 0.72rem; }
-  .vagg-more {
-    padding: 0; background: none; border: 0; color: var(--cluster-accent); font-size: 0.74rem;
-    cursor: pointer; font-family: inherit;
-  }
-  .vagg-more:hover { text-decoration: underline; }
-
-  /* Version status (F-18): current has no accent; outdated amber; ancient red */
-  .ver-tag {
-    font-family: var(--font-mono); font-size: 0.58rem; font-weight: 600; text-transform: uppercase;
-    letter-spacing: 0.05em; padding: 0.05rem 0.3rem; border-radius: 3px; flex-shrink: 0;
-  }
-  .ver-tag-outdated { color: var(--accent-amber); border: 1px solid color-mix(in srgb, var(--accent-amber) 45%, transparent); }
-  .ver-tag-ancient { color: var(--status-critical); border: 1px solid color-mix(in srgb, var(--status-critical) 45%, transparent); }
-  .cell-ver-main.ver-outdated { color: var(--accent-amber); }
-  .cell-ver-main.ver-ancient { color: var(--status-critical); }
-
-  /* Filters */
+  /* Breakdown/filter cards: shared kit in src/styles/filter-cards.css */
+  #vagg-group-software.vagg-grid-software.has-4 { grid-template-columns: 1.3fr 1.3fr 1fr 1fr; }
+  @media (max-width: 1300px) { #vagg-group-software.vagg-grid-software.has-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 640px) { #vagg-group-software.vagg-grid-software.has-4 { grid-template-columns: 1fr; } }
   .filters-bar {
     display: flex;
     align-items: center;
@@ -403,7 +261,7 @@ import {
 import { fmt, pct, shortenIdentity, fmtSol, clientColor, versionColor, displayClient, fmtCompact, bamRegionCode } from '../lib/formatters.js';
 import { renderDonut } from '../lib/charts.js';
 import { copyButtonHtml } from '../lib/ui.js';
-import { renderRow, renderCard, tableHeadHtml, markSortedHeader, initHeaderSort, computeStakeTiers, tableAvailability, applyAvailability } from '../lib/validator-table.js';
+import { renderRow, renderCard, tableHeadHtml, markSortedHeader, initHeaderSort, computeStakeTiers, tableAvailability, applyAvailability, circleFlagSvg, pinFlagSvg } from '../lib/validator-table.js';
 import { initSortMenu } from '../lib/sort-menu.js';
 import { startAutoRefresh, signatureMap, changedIdentities, preserveScroll } from '../lib/refresh.js';
 
@@ -430,7 +288,7 @@ const FILTER_LABELS = {
   dz: 'DZ', bam: 'BAM', rakurai: 'Rakurai',
   sfdp: 'SFDP', delinquent: 'Delinquent', superminority: 'Superminority', gossip: 'Gossip',
 };
-const LIST_FILTERS = ['country', 'city', 'provider', 'asn', 'client', 'version'];
+const LIST_FILTERS = ['country', 'city', 'provider', 'asn', 'client', 'version', 'sfdp'];
 
 function listParam(key) {
   return (params.get(key) || '').split(',').map(v => v.trim()).filter(Boolean);
@@ -481,10 +339,10 @@ function chipText(key, value) {
   if (key === 'gossip') return value === 'no' ? 'Not in gossip' : 'In gossip';
   if (key === 'delinquent') return value === 'true' ? 'Delinquent' : 'Not delinquent';
   if (key === 'superminority') return 'Superminority';
-  if (key === 'sfdp') return `SFDP ${value.toLowerCase()}`;
-  if (key === 'bam') return 'Jito BAM';
+  if (key === 'sfdp') return `SFDP ${value.replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase()}`;
+  if (key === 'bam') return value === 'false' ? 'Not on BAM' : 'Jito BAM';
   if (key === 'rakurai') return 'Rakurai';
-  if (key === 'dz') return value === 'no' ? 'No DoubleZero' : value === 'multicast' ? 'DZ multicast' : 'DZ connected';
+  if (key === 'dz') return value === 'no' ? 'Not on DoubleZero' : value === 'multicast' ? 'Multicast publisher' : value === 'unicast' ? 'DZ without multicast' : 'DZ connected';
   return `${FILTER_LABELS[key] || key}: ${value}`;
 }
 
@@ -692,7 +550,32 @@ const VALIDATOR_CARDS = [
         { key: 'delinquent', label: 'Delinquent', filter: { key: 'delinquent', val: 'true' }, fill: 'crit', count: records.filter(r => r.delinquent).length },
         { key: 'gossip', label: 'Not in gossip', filter: { key: 'gossip', val: 'no' }, fill: 'neutral', count: records.filter(r => !isInGossip(r)).length },
       ];
-      if (has(r => r.sfdp_state)) rows.unshift({ key: 'sfdp', label: 'SFDP approved', filter: { key: 'sfdp', val: 'Approved' }, fill: 'cluster', count: records.filter(r => r.sfdp_state === 'Approved').length });
+      // Every SFDP state that exists in the cluster is a filter (Approved first); only
+      // Approved gets a badge in the table, the other states are too subjective to mark.
+      if (has(r => r.sfdp_state)) {
+        const states = ['Approved', 'TestnetOnboarded', 'Retired', 'Rejected'].concat([...new Set(records.map(r => r.sfdp_state).filter(Boolean))].filter(s => !['Approved', 'TestnetOnboarded', 'Retired', 'Rejected'].includes(s)));
+        const labels = { Approved: 'SFDP approved', TestnetOnboarded: 'SFDP testnet onboarded', Retired: 'SFDP retired', Rejected: 'SFDP rejected' };
+        const sfdpRows = states.filter(s => records.some(r => r.sfdp_state === s)).map(s => ({ key: `sfdp-${s}`, label: labels[s] || `SFDP ${s}`, filter: { key: 'sfdp', val: s }, fill: s === 'Approved' ? 'cluster' : 'neutral', count: records.filter(r => r.sfdp_state === s).length }));
+        rows.unshift(...sfdpRows);
+      }
+      return rows.map(r => Object.assign(r, { delinquent: 0, stake: 0, special: true }));
+    },
+  },
+  {
+    // Connections: what the validators plug into. Only where the cluster has such data.
+    id: 'connections', group: 'software', tag: 'Connections', title: 'Validator connections', clusters: '*',
+    fkey: null, view: 'status',
+    build(records) {
+      const has = (fn) => records.some(fn);
+      const rows = [];
+      if (has(r => r.dz_connected)) {
+        rows.push({ key: 'dz', label: 'DoubleZero', filter: { key: 'dz', val: 'connected' }, fill: 'cluster', count: records.filter(r => r.dz_connected).length });
+        rows.push({ key: 'mc', label: 'Multicast publishers', filter: { key: 'dz', val: 'multicast' }, fill: 'cluster', count: records.filter(r => r.dz_multicast_publisher).length });
+        rows.push({ key: 'uni', label: 'DZ without multicast', filter: { key: 'dz', val: 'unicast' }, fill: 'neutral', count: records.filter(r => r.dz_connected && !r.dz_multicast_publisher).length });
+      }
+      if (has(r => r.bam_node)) rows.push({ key: 'bam', label: 'Jito BAM', filter: { key: 'bam', val: 'true' }, fill: 'cluster', count: records.filter(r => !!r.bam_node).length });
+      if (has(r => r.dz_connected)) rows.push({ key: 'nodz', label: 'Not on DoubleZero', filter: { key: 'dz', val: 'no' }, fill: 'neutral', count: records.filter(r => !r.dz_connected).length });
+      if (has(r => r.bam_node)) rows.push({ key: 'nobam', label: 'Not on BAM', filter: { key: 'bam', val: 'false' }, fill: 'neutral', count: records.filter(r => !r.bam_node).length });
       return rows.map(r => Object.assign(r, { delinquent: 0, stake: 0, special: true }));
     },
   },
@@ -749,11 +632,12 @@ const VALIDATOR_CARDS = [
   },
 ];
 
-function markerHtml(m) {
+function markerHtml(m, label = '') {
   if (!m) return '<span></span>';
   if (m.type === 'dot') return `<span class="vagg-dot" style="background:${m.color}"></span>`;
-  if (m.type === 'flag') return `<span class="vagg-flag"><img src="https://flagcdn.com/w40/${m.cc.toLowerCase()}.png" alt="" loading="lazy"></span>`;
-  if (m.type === 'pin') return m.cc ? `<span class="vagg-pin"><img src="https://flagcdn.com/w40/${m.cc.toLowerCase()}.png" alt="" loading="lazy"></span>` : '<span class="vagg-pin"></span>';
+  // flags carry the name in a tooltip: on narrow cards the label next to them may be clipped
+  if (m.type === 'flag') return circleFlagSvg(m.cc.toLowerCase(), { tip: label || m.cc.toUpperCase() });
+  if (m.type === 'pin') return m.cc ? pinFlagSvg(m.cc.toLowerCase(), { extraClass: 'is-marker', tip: label ? `${label}, ${m.cc.toUpperCase()}` : m.cc.toUpperCase() }) : '<span class="vpin-none">?</span>';
   if (m.type === 'logo') return `<span class="dc-logo" data-initial="${escapeAttr(m.initial)}">${m.src ? `<img src="${m.src}" alt="" loading="lazy" onerror="this.remove()">` : ''}</span>`;
   return '<span class="vagg-marker-muted"></span>';
 }
@@ -766,13 +650,15 @@ function segmentColor(seg, i) {
 
 // Merge full-universe entries (labels, markers, order of existence) with counts from the
 // filtered set. Entries absent from the filtered set keep zero counts and get dimmed.
+// Order is the universe order (stake, then count over ALL validators), so a card never
+// reshuffles when the reader clicks its rows; counts come from the facet set (below).
 function mergeSegments(all, filteredSegs) {
   const f = new Map(filteredSegs.map(x => [x.key, x]));
   const merged = all.map(seg => {
     const m = f.get(seg.key);
-    return Object.assign({}, seg, { count: m ? m.count : 0, delinquent: m ? m.delinquent : 0, stake: m ? m.stake : 0 });
+    return Object.assign({}, seg, { count: m ? m.count : 0, delinquent: m ? m.delinquent : 0, stake: m ? m.stake : 0, all_stake: seg.stake, all_count: seg.count });
   });
-  merged.sort((a, b) => (a.special === b.special ? (b.stake - a.stake || b.count - a.count) : (a.special ? 1 : -1)));
+  merged.sort((a, b) => (a.special === b.special ? (b.all_stake - a.all_stake || b.all_count - a.all_count) : (a.special ? 1 : -1)));
   return merged;
 }
 
@@ -873,7 +759,7 @@ function renderDonutCard(card, segs, totals) {
   const rowsHtml = segs.map((seg, i) => {
     const name = `<span class="vagg-name"><span${seg.tip ? ` data-tip="${escapeAttr(seg.tip)}"` : ' data-tip-ellipsis'}>${escapeAttr(seg.label)}</span><span class="legend-leader"></span></span>`;
     return `<div class="vagg-row ${rowClasses(card, seg)}${i >= AGG_ROWS_VISIBLE ? ' is-extra' : ''}"${fattr(card, seg)}>
-      ${markerHtml(seg.marker)}
+      ${markerHtml(seg.marker, seg.label)}
       ${name}
       <span class="vagg-count">${fmt(seg.count)}${delinqHtml(seg)}</span>
       <span class="vagg-stake"${colorOf.has(seg.key) ? ` style="color:${colorOf.get(seg.key)}"` : ''}>${stakePct(seg).toFixed(1)}%</span>
@@ -891,14 +777,15 @@ function renderDonutCard(card, segs, totals) {
   </div>`;
 }
 
-function renderStatusCard(card, rowsAll, rowsFiltered, totals) {
+function renderStatusCard(card, rowsAll, rowsFiltered, totals, facetCount) {
   const f = new Map(rowsFiltered.map(x => [x.key, x]));
   const denom = Math.max(1, totals.total);
   // Bars are relative to the largest row, like the DZ/BAM cards on the homepage: the
   // rows compare with each other, the share of all validators is in the tooltip.
-  const maxRow = Math.max(1, ...rowsAll.map(r => f.get(r.key)?.count ?? 0));
+  const countOf = (row) => (facetCount ? facetCount(card, row) : (f.get(row.key)?.count ?? 0));
+  const maxRow = Math.max(1, ...rowsAll.map(r => countOf(r)));
   const rows = rowsAll.map(row => {
-    const cur = f.get(row.key)?.count ?? 0;
+    const cur = countOf(row);
     const active = isFilterActive(row.filter.key, row.filter.val);
     const cls = active ? 'is-selected' : (cur === 0 ? 'is-dim' : '');
     const numCls = (row.fill === 'crit' || row.fill === 'cluster') ? row.fill : '';
@@ -914,7 +801,7 @@ function renderStatusCard(card, rowsAll, rowsFiltered, totals) {
     </div>
     <div class="story-title">${card.title}</div>
     <div class="vagg-status-head"><span class="story-big mono">${fmt(totals.total)}</span><span class="story-sub">validators in view</span></div>
-    <div class="bar-rows-wrap with-divider">${rows}</div>
+    <div class="bar-rows-wrap with-divider${rowsAll.length > 8 ? ' is-two-col' : ''}">${rows}</div>
   </div>`;
 }
 
@@ -930,15 +817,37 @@ function renderAggCards(records, filteredRecords, cluster, summary) {
   const ctx = { summary, cluster };
   const totals = { total: filteredRecords.length, totalStake: filteredRecords.reduce((s, r) => s + (r.activated_stake_lamports || 0), 0) };
   const cards = VALIDATOR_CARDS.filter(c => c.clusters === '*' || c.clusters.includes(cluster));
+  // Faceted counting: a card's numbers come from the records matching every OTHER filter,
+  // so its own selections never zero out its sibling rows ("how many if I add this one").
+  const facetCache = new Map();
+  const facetSet = (key) => {
+    if (!key) return filteredRecords;
+    if (!facetCache.has(key)) {
+      const p = new URLSearchParams(params.toString());
+      p.delete(key);
+      facetCache.set(key, filterValidators(records, p));
+    }
+    return facetCache.get(key);
+  };
+  const facetCount = (card, row) => {
+    const set = facetSet(row.filter?.key);
+    const built = card.build(set, ctx);
+    return built.find(x => x.key === row.key)?.count ?? 0;
+  };
   CARD_GROUPS.forEach((g, gi) => {
     const grid = grids[gi];
     if (!grid) return;
     const html = cards.filter(c => c.group === g.id).map(card => {
-      if (card.view === 'status') return renderStatusCard(card, card.build(records, ctx), card.build(filteredRecords, ctx), totals);
-      const segs = mergeSegments(card.build(records, ctx), card.build(filteredRecords, ctx));
+      if (card.view === 'status') {
+        const rowsAll = card.build(records, ctx);
+        if (rowsAll.length === 0) return '';   // no such data on this cluster: no card (11.36)
+        return renderStatusCard(card, rowsAll, card.build(filteredRecords, ctx), totals, facetCount);
+      }
+      const segs = mergeSegments(card.build(records, ctx), card.build(facetSet(card.fkey), ctx));
       return card.view === 'donut' ? renderDonutCard(card, segs, totals) : renderSoftwareCard(card, segs, totals);
     }).join('');
     grid.innerHTML = html;
+    grid.classList.toggle('has-4', grid.children.length === 4);
     const block = grid.closest('.vagg-block');
     if (block) block.hidden = html === '';
   });

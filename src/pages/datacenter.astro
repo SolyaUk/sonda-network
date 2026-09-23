@@ -6,7 +6,7 @@ import ClusterBanner from '../components/ClusterBanner.astro';
 import Footer from '../components/Footer.astro';
 ---
 
-<BaseLayout title="Datacenter · SONDA">
+<BaseLayout title="Datacenter · SONDA" description="Validators hosted by one provider: stake, locations, infrastructure participation and performance.">
   <Header activePage="datacenters" />
   <StatusStrip />
   <ClusterBanner />
@@ -14,89 +14,67 @@ import Footer from '../components/Footer.astro';
   <div class="dev-banner">
     <div class="dev-banner-inner">
       <span class="dev-badge">BETA</span>
-      SONDA is under active development. Some sections are incomplete.
+      <span class="dev-text">SONDA is under active development. Some sections are incomplete.</span>
       <a href="https://github.com/SolyaUk/sonda-network" target="_blank" rel="noopener" class="dev-link">View on GitHub</a>
     </div>
   </div>
 
   <main class="page-main">
-    <a href="/datacenters" class="back-link" id="back-link">← Back to datacenters</a>
+    <a href="/datacenters" class="back-link" id="back-link">&larr; Back to datacenters</a>
 
-    <div id="dc-loading" class="page-loading">Loading datacenter…</div>
+    <div id="dc-loading" class="page-loading">Loading provider…</div>
     <div id="dc-error" class="page-error" style="display:none"></div>
 
     <div id="dc-content" style="display:none">
-      <section class="dc-header-card">
-        <div class="dc-head-row">
-          <div class="dc-head-main">
-            <div class="dc-head-tag" id="dc-head-tag">NETWORK PROVIDER</div>
+      <section class="dc-head">
+        <div class="dc-head-main">
+          <div class="dc-logo dc-big-logo" id="dc-logo" data-initial="?"></div>
+          <div class="dc-head-text">
+            <div class="dc-head-tag">Network provider</div>
             <h1 class="dc-name" id="dc-name">—</h1>
-            <div class="dc-meta-line" id="dc-meta-line">—</div>
+            <div class="dc-sub" id="dc-sub"></div>
+            <div class="vbadges dc-tags" id="dc-tags"></div>
+            <div class="dc-asns" id="dc-asns"></div>
           </div>
-          <div class="dc-head-side" id="dc-head-side"></div>
         </div>
+        <div class="dc-head-side" id="dc-head-side"></div>
       </section>
 
-      <section class="dc-quick-stats">
-        <div class="qs-card">
-          <div class="qs-label">VALIDATORS</div>
-          <div class="qs-val mono" id="qs-validators">—</div>
-          <div class="qs-sub" id="qs-validators-sub">— active · — delinquent</div>
-        </div>
-        <div class="qs-card">
-          <div class="qs-label">TOTAL STAKE</div>
-          <div class="qs-val mono" id="qs-stake">—</div>
-          <div class="qs-sub" id="qs-stake-pct">— of network</div>
-        </div>
-        <div class="qs-card">
-          <div class="qs-label">SKIP RATE</div>
-          <div class="qs-val mono" id="qs-skip">—</div>
-          <div class="qs-sub">stake-weighted</div>
-        </div>
-        <div class="qs-card">
-          <div class="qs-label">DZ / BAM</div>
-          <div class="qs-val mono" id="qs-dzbam">—</div>
-          <div class="qs-sub" id="qs-dzbam-sub">— SFDP approved</div>
-        </div>
-      </section>
+      <div class="dc-scope" id="dc-scope" style="display:none"></div>
 
-      <section class="dc-card" id="dc-cities-card" style="display:none">
-        <div class="dc-card-tag">LOCATIONS</div>
-        <h2 class="dc-card-title">Cities where this network provider hosts validators</h2>
+      <div class="dc-stats" id="dc-stats"></div>
+
+      <section class="dc-card dc-cities-card" id="dc-cities-card">
+        <div class="story-tag cluster-tag">Locations</div>
+        <div class="dc-card-head">
+          <h2 class="dc-card-title" id="dc-cities-title">Cities</h2>
+          <div class="dc-countries" id="dc-countries"></div>
+        </div>
+        <div class="dc-card-hint">click a country or a city to filter the validators below; several combine, click again to remove</div>
         <div class="dc-cities-grid" id="dc-cities-grid"></div>
+        <div class="dc-cities-foot" id="dc-cities-foot"></div>
       </section>
 
-      <div class="dc-filter-line" id="dc-filter-line" style="display:none"></div>
-
-      <section class="dc-card">
-        <div class="dc-card-tag">VALIDATORS</div>
-        <h2 class="dc-card-title" id="dc-vals-title">Validators in this datacenter</h2>
-        <div class="dc-vals-tools">
-          <select id="dc-sort-select" hidden aria-hidden="true"><option value="rank-asc" selected>TVC rank, best first</option></select>
-          <div id="dc-sort-menu"></div>
+      <section class="dc-vals">
+        <div class="dc-vals-head">
+          <div class="story-tag cluster-tag">Validators</div>
+          <h2 class="dc-card-title" id="dc-vals-title">Validators</h2>
+        </div>
+        <div class="filters-bar">
+          <div class="active-filters" id="dc-active-filters"></div>
+          <button class="filter-clear" id="dc-clear" type="button" style="display:none">Clear all filters &times;</button>
+        </div>
+        <div class="results-bar">
+          <div class="result-count" id="dc-vals-count">—</div>
+          <div class="sort-controls">
+            <select id="dc-sort-select" hidden aria-hidden="true"><option value="rank-asc" selected>TVC rank, best first</option></select>
+            <div id="dc-sort-menu"></div>
+          </div>
         </div>
         <div class="vtable-wrap" id="dc-vtable-wrap">
           <table class="vtable" id="dc-vtable"><tbody id="dc-vals-body"></tbody></table>
         </div>
         <div class="vcards-wrap" id="dc-vcards"></div>
-      </section>
-
-      <section class="v-placeholder-section">
-        <div class="ph-card">
-          <div class="ph-card-tag">COMING SOON</div>
-          <h3 class="ph-card-title">DC profile</h3>
-          <p class="ph-card-text">Display name, website, logo, tags, and any affiliate information.</p>
-        </div>
-        <div class="ph-card">
-          <div class="ph-card-tag">COMING SOON</div>
-          <h3 class="ph-card-title">Non-validator nodes</h3>
-          <p class="ph-card-text">RPC nodes, Jito relayers, DoubleZero devices, and other infrastructure hosted at this provider.</p>
-        </div>
-        <div class="ph-card">
-          <div class="ph-card-tag">COMING SOON</div>
-          <h3 class="ph-card-title">Validator count over time</h3>
-          <p class="ph-card-text">Daily counts of active and delinquent validators with recent joins/leaves and prior locations.</p>
-        </div>
       </section>
     </div>
   </main>
@@ -104,245 +82,555 @@ import Footer from '../components/Footer.astro';
 </BaseLayout>
 
 <style is:global>
-  .page-main { max-width: 1180px; margin: 0 auto; padding: 1rem 1.5rem 4rem; }
-  .back-link { color: var(--text-muted); font-size: 0.85rem; text-decoration: none; display: inline-block; margin-bottom: 1.2rem; }
-  .back-link:hover { color: var(--cluster-accent); }
+  /* BETA banner (same as the other pages) */
   .dev-banner { background: rgba(59,130,246,0.08); border-bottom: 1px solid rgba(59,130,246,0.2); font-size: 0.78rem; color: var(--text-secondary); }
   .dev-banner-inner { max-width: 1280px; margin: 0 auto; padding: 0.5rem 1.5rem; display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
   .dev-badge { font-family: var(--font-mono); font-size: 0.65rem; font-weight: 600; background: var(--accent-blue); color: #fff; padding: 0.15rem 0.45rem; border-radius: 4px; letter-spacing: 0.08em; flex-shrink: 0; }
   .dev-link { color: var(--accent-blue); text-decoration: none; margin-left: auto; }
+
+  .page-main { max-width: 1400px; margin: 0 auto; padding: 1.5rem 2rem 4rem; }
+  .back-link { display: inline-block; color: var(--text-muted); font-size: 0.85rem; text-decoration: none; margin-bottom: 1.2rem; }
   .back-link:hover { color: var(--cluster-accent); }
   .page-loading, .page-error { text-align: center; color: var(--text-muted); padding: 4rem 1rem; }
   .page-error { color: var(--status-critical); }
+  /* not-found state, same look as the validator page */
+  .nf-block { max-width: 580px; margin: 2rem auto; text-align: center; background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 2.2rem 1.8rem; }
+  .nf-title { font-family: var(--font-display); font-size: clamp(1.1rem, 2.5vw, 1.4rem); font-weight: 600; color: var(--text-primary); margin-bottom: 0.85rem; }
+  .nf-id { margin-bottom: 1rem; }
+  .nf-id code { font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-secondary); background: var(--bg-secondary); border: 1px solid var(--border); padding: 0.25rem 0.55rem; border-radius: 5px; word-break: break-all; text-transform: capitalize; }
+  .nf-message { color: var(--text-secondary); font-size: 0.92rem; line-height: 1.55; margin: 0 0 1.4rem; }
+  .nf-linked { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1.5rem; }
+  .nf-linked:empty { display: none; }
+  .nf-linked-card { display: grid; grid-template-columns: 100px 1fr auto; align-items: center; gap: 0.8rem; padding: 0.75rem 1rem; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; text-decoration: none; transition: border-color 0.15s, background 0.15s; }
+  .nf-linked-card:hover { background: var(--bg-card-hover); border-color: var(--c-accent, var(--cluster-accent)); }
+  .nf-linked-card.cluster-mainnet { --c-accent: #3b82f6; }
+  .nf-linked-card.cluster-testnet { --c-accent: #e879f9; }
+  .nf-linked-card.cluster-devnet { --c-accent: #fbbf24; }
+  .nf-linked-card.cluster-alpenglow { --c-accent: #fb7185; }
+  .nf-linked-card .nf-linked-cluster { color: var(--c-accent, var(--cluster-accent)); }
+  .nf-linked-card .nf-linked-arrow { color: var(--c-accent, var(--cluster-accent)); }
+  .nf-linked-cluster { font-family: var(--font-mono); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; text-align: left; font-weight: 600; }
+  .nf-linked-name { color: var(--text-primary); font-weight: 600; text-align: left; }
+  .nf-linked-arrow { font-size: 1.1rem; }
+  .nf-actions { display: flex; gap: 0.6rem; justify-content: center; flex-wrap: wrap; }
+  .nf-btn { background: var(--cluster-accent); color: white; border: 1px solid var(--cluster-accent); padding: 0.55rem 1.1rem; border-radius: 8px; font-size: 0.88rem; text-decoration: none; }
+  .nf-btn:hover { opacity: 0.9; }
+  .nf-btn-ghost { background: transparent; color: var(--text-primary); border-color: var(--border); }
+  .nf-btn-ghost:hover { border-color: var(--cluster-accent); }
+  /* presence chips: the provider on every cluster it exists on, in cluster colours */
+  .dc-presence { display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap; justify-content: flex-end; margin-top: 0.4rem; }
+  .dc-presence-l { font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); margin-right: 0.2rem; }
+  .dc-presence-wait { color: var(--text-muted); font-size: 0.8rem; }
+  .dc-cluster-chip { display: inline-flex; align-items: center; gap: 0.35rem; font-family: var(--font-mono); font-size: 0.7rem; text-decoration: none; border: 1px solid; border-radius: 999px; padding: 0.2rem 0.6rem; color: var(--c-accent); border-color: color-mix(in srgb, var(--c-accent) 45%, transparent); background: color-mix(in srgb, var(--c-accent) 8%, transparent); }
+  .dc-cluster-chip .n { color: var(--text-secondary); }
+  .dc-cluster-chip:hover { background: color-mix(in srgb, var(--c-accent) 20%, transparent); }
+  .dc-cluster-chip.is-current { background: var(--c-accent); color: #fff; }
+  .dc-cluster-chip.is-current .n { color: rgba(255,255,255,0.85); }
+  .dc-cluster-chip.cluster-mainnet { --c-accent: #3b82f6; }
+  .dc-cluster-chip.cluster-testnet { --c-accent: #e879f9; }
+  .dc-cluster-chip.cluster-devnet { --c-accent: #fbbf24; }
+  .dc-cluster-chip.cluster-alpenglow { --c-accent: #fb7185; }
 
-  .dc-header-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 1.3rem 1.5rem; margin-bottom: 1.2rem; }
-  .dc-head-row { display: flex; gap: 1.1rem; align-items: flex-start; flex-wrap: wrap; }
-  .dc-head-main { flex: 1; min-width: 0; }
-  .dc-head-tag { display: inline-block; background: var(--bg-card-hover); color: var(--cluster-accent); border-radius: 5px; padding: 0.15rem 0.55rem; font-size: 0.62rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.65rem; }
-  .dc-name { font-family: var(--font-display); font-size: clamp(1.4rem, 3vw, 1.9rem); font-weight: 700; color: var(--text-primary); margin: 0 0 0.4rem; }
-  .dc-meta-line { font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-muted); }
-  .dc-head-side { display: flex; flex-direction: column; gap: 0.5rem; align-items: flex-end; }
-  .dc-risk-large { display: inline-block; padding: 0.4rem 1rem; border-radius: 16px; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
-  .dc-risk-large.bad { background: rgba(239, 68, 68, 0.15); color: var(--status-critical); border: 1px solid rgba(239, 68, 68, 0.4); }
-  .dc-risk-large.warn { background: rgba(249, 115, 22, 0.15); color: var(--status-warning); border: 1px solid rgba(249, 115, 22, 0.4); }
-  .dc-risk-large.caution { background: rgba(251, 191, 36, 0.12); color: #d97706; border: 1px solid rgba(251, 191, 36, 0.35); }
-  .dc-risk-large.good { background: rgba(34, 197, 94, 0.12); color: var(--status-good); border: 1px solid rgba(34, 197, 94, 0.3); }
+  /* header */
+  .dc-head { display: flex; justify-content: space-between; gap: 1.2rem; align-items: flex-start; flex-wrap: wrap; background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 1.4rem 1.5rem; margin-bottom: 1.2rem; }
+  .dc-head-main { display: flex; gap: 1.1rem; align-items: flex-start; min-width: 0; flex: 1; }
+  .dc-big-logo { width: 72px; height: 72px; flex-shrink: 0; }
+  .dc-big-logo::before { font-size: 1.6rem; }
+  .dc-head-text { min-width: 0; display: flex; flex-direction: column; gap: 0.45rem; }
+  .dc-head-tag { font-family: var(--font-mono); font-size: 0.64rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--cluster-accent); }
+  .dc-name { font-family: var(--font-display); font-size: 1.9rem; font-weight: 700; margin: 0; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; line-height: 1.15; }
+  .dc-name-text { min-width: 0; overflow-wrap: anywhere; }
+  .dc-name-actions { display: inline-flex; gap: 0.4rem; flex-shrink: 0; }
+  .dc-site { max-width: 100%; }
+  .dc-site span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 240px; }
+  .dc-sub { font-size: 0.86rem; color: var(--text-secondary); }
+  .dc-sub b { color: var(--text-primary); font-family: var(--font-mono); font-weight: 600; }
+  .dc-sub .sep { color: var(--text-muted); margin: 0 0.35rem; }
+  /* two distinct actions: copy the name (copy icon) and share the SONDA link (link icon) */
+  .dc-act { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 7px; border: 1px solid var(--border); background: var(--bg-primary); color: var(--text-secondary); cursor: pointer; padding: 0; }
+  .dc-act:hover { border-color: var(--cluster-accent); color: var(--cluster-accent); }
+  .dc-act.is-share { color: var(--cluster-accent); border-color: color-mix(in srgb, var(--cluster-accent) 45%, transparent); }
+  .dc-act.copy-btn { opacity: 1; }
+  .dc-tags { gap: 0.3rem; align-items: center; }
+  .dc-site { display: inline-flex; align-items: center; gap: 0.35rem; font-family: var(--font-body); font-size: 0.8rem; font-weight: 500; color: var(--cluster-accent); text-decoration: none; border: 1px solid color-mix(in srgb, var(--cluster-accent) 45%, transparent); background: color-mix(in srgb, var(--cluster-accent) 8%, transparent); border-radius: 6px; padding: 0.18rem 0.55rem; cursor: pointer; }
+  .dc-site:hover { text-decoration: underline; background: color-mix(in srgb, var(--cluster-accent) 16%, transparent); }
+  .dc-site svg { width: 12px; height: 12px; }
+  .dc-tags .copy-btn { width: 22px; height: 22px; }
+  .dc-asns { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.2rem; }
+  .dc-asn { display: inline-flex; align-items: center; gap: 0.4rem; font-family: var(--font-mono); font-size: 0.74rem; color: var(--text-secondary); border: 1px solid var(--border); border-radius: 8px; padding: 0.3rem 0.55rem; background: var(--bg-primary); cursor: pointer; transition: border-color 0.12s, background 0.12s; }
+  .dc-asn:hover { border-color: color-mix(in srgb, var(--cluster-accent) 60%, transparent); }
+  .dc-asn.is-active { border-color: var(--cluster-accent); background: color-mix(in srgb, var(--cluster-accent) 12%, var(--bg-primary)); }
+  .dc-asn.is-dim { opacity: 0.45; }
+  .dc-asn b { color: var(--text-primary); font-weight: 600; }
+  .dc-asn .muted { color: var(--text-muted); }
+  .dc-asn-flags { display: inline-flex; gap: 2px; }
+  .dc-asn .copy-btn { margin-left: 0.1rem; }
+  .dc-head-side { display: flex; flex-direction: column; align-items: flex-end; gap: 0.5rem; }
+  .dc-level { display: inline-flex; flex-direction: column; align-items: flex-end; gap: 0.15rem; }
+  .dc-level-badge { font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 700; border: 1px solid; border-radius: 999px; padding: 0.35rem 0.8rem; }
+  .dc-level-critical { color: var(--status-critical); border-color: rgba(239,68,68,0.5); background: rgba(239,68,68,0.1); }
+  .dc-level-warning { color: var(--accent-amber); border-color: rgba(251,191,36,0.5); background: rgba(251,191,36,0.08); }
+  .dc-level-ok { color: var(--status-good); border-color: rgba(34,197,94,0.45); background: rgba(34,197,94,0.08); }
+  .dc-level-sub { font-size: 0.72rem; color: var(--text-muted); }
 
-  .dc-quick-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.85rem; margin-bottom: 1.3rem; }
-  .qs-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 0.9rem 1.1rem 1rem; }
-  .qs-label { font-size: 0.6rem; letter-spacing: 0.1em; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.45rem; }
-  .qs-val { font-family: var(--font-display); font-size: 1.5rem; font-weight: 700; color: var(--text-primary); line-height: 1; }
-  .qs-sub { font-size: 0.72rem; color: var(--text-muted); margin-top: 0.3rem; }
+  /* stat cards: one row of six, they follow the current selection */
+  .dc-stats { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 0.6rem; margin-bottom: 1.2rem; }
+  .dc-stats.is-5 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .dc-stats.is-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .dc-stat { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 0.8rem 0.9rem; min-width: 0; }
+  .dc-stat-l { font-family: var(--font-mono); font-size: 0.6rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.4rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dc-stat-v { font-family: var(--font-mono); font-size: 1.25rem; font-weight: 700; color: var(--text-primary); line-height: 1; white-space: nowrap; }
+  .dc-stat-v small { font-size: 0.66rem; font-weight: 500; color: var(--text-muted); margin-left: 0.25rem; }
+  .dc-stat-v .dim { color: var(--text-muted); font-weight: 500; font-size: 0.9rem; margin-left: 0.3rem; }
+  .dc-stat-s { font-size: 0.7rem; color: var(--text-muted); margin-top: 0.4rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dc-stat-s .crit { color: var(--status-critical); }
+  @media (max-width: 1100px) { .dc-stats, .dc-stats.is-5, .dc-stats.is-4 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  @media (max-width: 640px) { .dc-stats, .dc-stats.is-5, .dc-stats.is-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
+  /* cards */
   .dc-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 1.2rem 1.35rem 1.3rem; margin-bottom: 1.2rem; }
-  .dc-card-tag { display: inline-block; background: var(--bg-card-hover); color: var(--cluster-accent); border-radius: 5px; padding: 0.15rem 0.55rem; font-size: 0.62rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.65rem; }
-  .dc-card-title { font-family: var(--font-display); font-size: 1.05rem; font-weight: 600; color: var(--text-primary); margin: 0 0 0.9rem; }
+  .dc-card-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 1rem; flex-wrap: wrap; margin-bottom: 0.9rem; }
+  .dc-card > .story-tag { display: block; width: 100%; box-sizing: border-box; }
+  /* context strip: how the reader got here (a flag on the list) and how to leave */
+  .dc-scope { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; margin: -0.4rem 0 1rem; padding: 0.6rem 0.9rem; border-radius: 10px; background: color-mix(in srgb, var(--cluster-accent) 10%, var(--bg-card)); border: 1px solid color-mix(in srgb, var(--cluster-accent) 45%, transparent); font-size: 0.86rem; color: var(--text-primary); }
+  .dc-scope .vflag-circle { flex-shrink: 0; }
+  .dc-scope b { font-weight: 600; }
+  .dc-scope .muted { color: var(--text-secondary); }
+  .dc-scope .filter-clear { margin-left: auto; }
+  .dc-card-title { font-family: var(--font-display); font-size: 1.15rem; font-weight: 600; margin: 0.5rem 0 0; }
+  .dc-card-hint { font-size: 0.74rem; color: var(--text-muted); margin: -0.5rem 0 0.8rem; }
+  /* country chips: every country of the provider, multi-select, in sync with the scope strip */
+  .dc-countries { display: flex; flex-wrap: wrap; gap: 0.3rem; justify-content: flex-end; }
+  .dc-country { display: inline-flex; align-items: center; gap: 0.35rem; font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-secondary); border: 1px solid var(--border); border-radius: 999px; padding: 0.2rem 0.55rem 0.2rem 0.3rem; background: var(--bg-primary); cursor: pointer; }
+  .dc-country:hover { border-color: color-mix(in srgb, var(--cluster-accent) 60%, transparent); color: var(--text-primary); }
+  .dc-country.is-active { border-color: var(--cluster-accent); background: color-mix(in srgb, var(--cluster-accent) 14%, var(--bg-primary)); color: var(--text-primary); }
+  .dc-country b { font-weight: 600; }
+  .dc-cities-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(215px, 1fr)); gap: 0.55rem; }
+  .dc-city { display: block; background: var(--bg-primary); border: 1px solid var(--border); border-radius: 10px; padding: 0.65rem 0.8rem; cursor: pointer; transition: border-color 0.15s, background 0.15s; min-width: 0; }
+  .dc-city:hover { border-color: var(--border-accent); }
+  .dc-city.is-active { border-color: var(--cluster-accent); background: color-mix(in srgb, var(--cluster-accent) 10%, var(--bg-primary)); }
+  .dc-city.is-dim { opacity: 0.45; }
+  .dc-city.is-extra { display: none; }
+  .dc-cities-card.is-expanded .dc-city.is-extra { display: block; }
+  .dc-city-head { display: flex; align-items: center; gap: 0.45rem; min-width: 0; }
+  .dc-city-name { font-family: var(--font-display); font-size: 0.95rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .dc-city-cc { font-family: var(--font-mono); font-size: 0.64rem; color: var(--text-muted); flex-shrink: 0; }
+  .dc-city-line { display: flex; align-items: baseline; gap: 0.4rem; margin-top: 0.4rem; font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dc-city-line b { color: var(--text-primary); font-weight: 600; }
+  .dc-city .vbadges { margin-top: 0.45rem; }
+  .dc-city .vbadge { font-size: 0.58rem; padding: 0.1rem 0.32rem; }
+  .dc-cities-foot { margin-top: 0.7rem; }
+  .vagg-more { background: none; border: 0; color: var(--cluster-accent); font-size: 0.82rem; cursor: pointer; padding: 0; font-family: inherit; }
+  @media (max-width: 640px) { .dc-cities-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.4rem; } .dc-city { padding: 0.5rem 0.6rem; } .dc-city .vbadges { display: none; } }
 
-  .dc-cities-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.65rem; }
-  .dc-city-cell { background: var(--bg-card-hover); border: 1px solid var(--border); border-radius: 8px; padding: 0.65rem 0.85rem 0.75rem; cursor: pointer; transition: border-color 0.15s ease; text-decoration: none; color: inherit; display: block; }
-  .dc-city-cell:hover { border-color: var(--cluster-accent); }
-  .dc-city-name { font-weight: 600; color: var(--text-primary); font-size: 0.9rem; }
-  .dc-city-stats { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.3rem; font-family: var(--font-mono); }
-
-  .dc-filter-line { background: var(--bg-card-hover); border: 1px solid var(--border); border-radius: 8px; padding: 0.5rem 0.85rem; color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; }
-  .dc-filter-clear-btn { background: none; border: 1px solid var(--border); color: var(--text-muted); border-radius: 6px; padding: 0.2rem 0.6rem; font-size: 0.75rem; cursor: pointer; font-family: inherit; }
-  .dc-filter-clear-btn:hover { color: var(--text-primary); border-color: var(--text-muted); }
-
-  .dc-vals-wrap { overflow-x: visible; }
-  @media (max-width: 720px) { .dc-vals-wrap { overflow-x: auto; } }
-  /* validators table: shared kit (vtable.css + validator-table.js) */
-  .perf-skip-good { color: var(--status-good); }
-  .perf-skip-warn { color: var(--status-warning); }
-  .perf-skip-bad { color: var(--status-critical); }
-
-  .v-placeholder-section { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 0.85rem; margin-top: 1rem; }
-  .ph-card { background: var(--bg-card); border: 1px dashed var(--border); border-radius: 12px; padding: 1rem 1.15rem 1.15rem; opacity: 0.85; }
-  .ph-card-tag { display: inline-block; font-size: 0.6rem; color: var(--text-muted); background: var(--bg-card-hover); border-radius: 4px; padding: 0.15rem 0.5rem; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem; }
-  .ph-card-title { font-family: var(--font-display); font-size: 0.95rem; font-weight: 600; color: var(--text-secondary); margin: 0 0 0.4rem; }
-  .ph-card-text { font-size: 0.82rem; color: var(--text-muted); line-height: 1.5; margin: 0; }
-
+  /* validators section: count and sort above the table, like /validators */
+  .dc-vals { margin-top: 0.4rem; }
+  .dc-vals-head { margin-bottom: 0.7rem; }
+  .filters-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; margin-bottom: 0.6rem; }
+  .active-filters { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+  .filter-chip { display: inline-flex; align-items: center; gap: 0.35rem; background: color-mix(in srgb, var(--cluster-accent) 12%, transparent); border: 1px solid color-mix(in srgb, var(--cluster-accent) 45%, transparent); color: var(--text-primary); border-radius: 999px; padding: 0.25rem 0.6rem; font-size: 0.76rem; }
+  .filter-chip .chip-x { cursor: pointer; color: var(--text-muted); font-size: 0.9rem; line-height: 1; }
+  .filter-chip .chip-x:hover { color: var(--text-primary); }
+  .filter-clear { background: color-mix(in srgb, var(--cluster-accent) 12%, transparent); border: 1px solid color-mix(in srgb, var(--cluster-accent) 55%, transparent); color: var(--text-primary); border-radius: 999px; padding: 0.35rem 0.8rem; font-size: 0.76rem; font-weight: 600; cursor: pointer; font-family: inherit; }
+  .results-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem; gap: 1rem; }
+  .result-count { font-size: 0.85rem; color: var(--text-muted); }
+  .sort-controls { display: flex; align-items: center; gap: 0.5rem; }
   @media (max-width: 900px) {
-    .dc-quick-stats { grid-template-columns: repeat(2, 1fr); }
-    .dc-head-side { align-items: flex-start; }
-  }
-  @media (max-width: 600px) {
     .page-main { padding: 0.85rem 1rem 3rem; }
-    .dc-header-card { padding: 1rem; }
+    .dc-head { flex-direction: column; padding: 1rem 1.1rem; }
+    .dc-head-main { width: 100%; gap: 0.8rem; }
+    .dc-head-side { width: 100%; align-items: flex-start; border-top: 1px solid var(--border); padding-top: 0.8rem; }
+    .dc-level { align-items: flex-start; }
+    .dc-presence { justify-content: flex-start; }
+    .dc-name { font-size: 1.45rem; }
+    .dc-big-logo { width: 56px; height: 56px; }
+    .dc-asns { gap: 0.3rem; }
+  }
+  @media (max-width: 640px) {
+    .dc-countries { justify-content: center; width: 100%; }
+    .dc-card-head { flex-direction: column; align-items: stretch; }
+    .dc-presence { flex-direction: row; }
+    .dc-presence-l { width: 100%; margin: 0 0 0.1rem; }
   }
 </style>
 
 <script>
-import { bootstrapCluster, getCluster, fetchValidators, fetchSummary, aggregateDatacenters, concentrationLevel, fmtStakeShort, computeTvcRanks, sortValidators } from '../lib/data.js';
-import { renderRow, renderCard, tableHeadHtml, markSortedHeader, initHeaderSort, computeStakeTiers, tableAvailability, applyAvailability } from '../lib/validator-table.js';
+import { bootstrapCluster, getCluster, fetchValidators, fetchSummary, fetchInfrastructure, computeTvcRanks, sortValidators, isValidatorRecord, providerOf } from '../lib/data.js';
+import { aggregateProviders, findProvider, networkInfraFromRecords, netTotal, providerPresence, CLUSTER_ORDER, CLUSTER_SHORT } from '../lib/providers.js';
+import { fmt, pct } from '../lib/formatters.js';
+import { copyButtonHtml } from '../lib/ui.js';
+import { renderRow, renderCard, tableHeadHtml, markSortedHeader, initHeaderSort, computeStakeTiers, tableAvailability, applyAvailability, circleFlagSvg, pinFlagSvg, fmtStakeSol, providerHref as sharedProviderHref } from '../lib/validator-table.js';
 import { initSortMenu } from '../lib/sort-menu.js';
 import { startAutoRefresh, preserveScroll } from '../lib/refresh.js';
 
+const params = new URLSearchParams(window.location.search);
+const providerParam = params.get('provider') || params.get('asn');
+
+// Filters live in the URL (shareable) but apply in place: replaceState, no navigation.
+const listParam = (k) => (params.get(k) || '').split(',').map(v => v.trim()).filter(Boolean);
+const filters = { city: listParam('city'), asn: listParam('asn'), country: listParam('country') };
+
 let lastSnapshotTs = null;
-let dcValidators = [];
+let allProviderRecords = [];   // every validator of this provider
 let dcStakeTiers = null;
-let dcAvail = null;
 let dcSummary = null;
+let dcAvail = null;
 let dcSort = { key: 'rank', dir: 'asc' };
 let dcSortMenu = null;
+let entry = null;
+let citiesExpanded = false;
+let cityNet = new Map();   // "City|CC" -> {bam_nodes, jito, harmonic, dz_devices, solana}
 
-// Same rows and cards as /validators (shared renderer), sorted by the header choice.
-function renderDcTable() {
+// Network infrastructure per city comes from infrastructure.json records (each carries
+// role + geolocation.provider/city, backend 2026-09-24), so the attribution is exact and the
+// Jito family can be split by service.
+async function loadCityNet(cluster, provider, asns) {
+  cityNet = new Map();
+  try {
+    const infra = await fetchInfrastructure(cluster);
+    const asnToProvider = new Map(asns.map(a => [a, provider]));
+    const { byProviderCity } = networkInfraFromRecords(infra?.records || [], asnToProvider);
+    cityNet = byProviderCity.get(provider) || new Map();
+  } catch (e) { console.warn('[SONDA] infrastructure.json:', e); }
+}
+const NET_LABELS = [
+  ['bam_nodes', 'BAM node', 'BAM nodes', 'Jito BAM nodes running in this city at this provider'],
+  ['block_engines', 'block engine', 'block engines', 'Jito block engines here'],
+  ['shred_receivers', 'shred receiver', 'shred receivers', 'Jito shred receivers here'],
+  ['ntp', 'NTP', 'NTP', 'Jito NTP servers here'],
+  ['harmonic', 'Harmonic', 'Harmonic', 'Harmonic endpoints here'],
+  ['dz_devices', 'DZ device', 'DZ devices', 'DoubleZero devices here'],
+  ['solana', 'RPC', 'RPC', 'Official Solana RPC / entrypoints here'],
+];
+function cityNetBadges(c) {
+  const n = cityNet.get(`${c.city}|${c.cc || '??'}`);
+  if (!n) return '';
+  const out = NET_LABELS.filter(([k]) => n[k] > 0).map(([k, one, many, tip]) => `<span class="vbadge vbadge-net" data-tip="${esc(tip)}"><b>${fmt(n[k])}</b> ${n[k] === 1 ? one : many}</span>`);
+  return out.length ? `<div class="vbadges">${out.join('')}</div>` : '';
+}
+function renderCountries(e) {
+  const host = document.getElementById('dc-countries');
+  if (!host) return;
+  host.innerHTML = e.countries.map(c => `<span class="dc-country${filters.country.includes(c.cc) ? ' is-active' : ''}" data-cc="${esc(c.cc)}" data-tip="${esc(c.country)}: ${c.count} validators, ${fmtStakeSol(c.stake_lamports)} SOL\nclick to filter">${circleFlagSvg(c.cc.toLowerCase(), { size: 16 })}<b>${esc(c.cc)}</b>${fmt(c.count)}</span>`).join('');
+  host.querySelectorAll('.dc-country').forEach(el => el.addEventListener('click', () => toggleFilter('country', el.dataset.cc)));
+}
+
+function esc(v) { return String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+const TAG_TIP = {
+  isp: 'Internet access provider: validators here run on residential or office connections, not in a datacenter',
+  transit: 'Backbone carrier that owns the IP range but rents no servers; the datacenter is unknown',
+  private: 'The validator operator\'s own network (own ASN)',
+  'solana-focused': 'Solana-focused hosting provider',
+  'DZ-partner': 'DoubleZero partner',
+  banned: 'Listed as banned for SFDP delegation',
+};
+const LINK_ICON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.5 1.5"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.5-1.5"/></svg>';
+const EXT_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6"/><path d="M20 4L10 14"/><path d="M18 14v6H4V6h6"/></svg>';
+
+function syncUrl() {
+  const url = new URL(window.location.href);
+  for (const k of ['city', 'asn', 'country']) {
+    if (filters[k].length) url.searchParams.set(k, filters[k].join(',')); else url.searchParams.delete(k);
+  }
+  window.history.replaceState(null, '', url.toString());
+}
+function toggleFilter(k, v) {
+  const i = filters[k].indexOf(v);
+  if (i >= 0) filters[k].splice(i, 1); else filters[k].push(v);
+  syncUrl(); renderAll();
+}
+function clearFilters() { filters.city = []; filters.asn = []; filters.country = []; syncUrl(); renderAll(); }
+
+function selected() {
+  return allProviderRecords.filter(r => {
+    const g = r.geolocation || {};
+    if (filters.city.length && !filters.city.includes(g.city)) return false;
+    if (filters.asn.length && !filters.asn.includes(g.asn)) return false;
+    if (filters.country.length && !filters.country.includes(g.country_code)) return false;
+    return true;
+  });
+}
+function scopeOf(records) {
+  const clusterStake = dcClusterStake || 1;
+  const nums = (fn) => records.map(fn).filter(v => v != null).sort((a, b) => a - b);
+  const med = (a) => (a.length ? (a.length % 2 ? a[(a.length - 1) / 2] : (a[a.length / 2 - 1] + a[a.length / 2]) / 2) : null);
+  const skips = records.map(r => r.skip_rate).filter(v => v != null);
+  const stake = records.reduce((s, r) => s + (r.activated_stake_lamports || 0), 0);
+  return {
+    count: records.length,
+    delinquent: records.filter(r => r.delinquent).length,
+    stake_lamports: stake,
+    stake_pct: (stake / clusterStake) * 100,
+    dz: records.filter(r => r.dz_connected).length,
+    multicast: records.filter(r => r.dz_multicast_publisher).length,
+    bam: records.filter(r => r.bam_node).length,
+    sfdp: records.filter(r => r.sfdp_state === 'Approved').length,
+    skip_avg: skips.length ? skips.reduce((s, v) => s + v, 0) / skips.length : null,
+    rank_median: med(nums(r => r._tvc_rank)),
+    rank_best: records.reduce((m, r) => (r._tvc_rank != null && (m == null || r._tvc_rank < m) ? r._tvc_rank : m), null),
+    ibrl_median: med(nums(r => r.ibrl?.ibrl_score)),
+    cities: new Set(records.map(r => `${r.geolocation?.city}|${r.geolocation?.country_code}`)).size,
+    countries: new Set(records.map(r => r.geolocation?.country_code).filter(Boolean)).size,
+  };
+}
+let dcClusterStake = 0;
+
+function providerHref() { return sharedProviderHref(entry.provider, getCluster()); }
+
+function renderHeader(e) {
+  const logo = document.getElementById('dc-logo');
+  logo.dataset.initial = e.provider.charAt(0).toUpperCase();
+  logo.innerHTML = e.logo ? `<img src="${esc(e.logo)}" alt="" onerror="this.remove()">` : '';
+  const link = `${location.origin}${providerHref()}`;
+  document.getElementById('dc-name').innerHTML = `<span class="dc-name-text">${esc(e.provider)}</span><span class="dc-name-actions">` +
+    `<button type="button" class="dc-act copy-btn" data-copy="${esc(e.provider)}" data-tip="Copy provider name" aria-label="Copy provider name"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>` +
+    `<button type="button" class="dc-act is-share copy-btn" data-copy="${esc(link)}" data-copy-label="SONDA link to this provider" data-tip="Copy link to this page on SONDA" aria-label="Copy link to this page on SONDA">${LINK_ICON}</button></span>`;
+  document.getElementById('dc-sub').innerHTML = `<b>${fmt(e.cities.length)}</b> cit${e.cities.length === 1 ? 'y' : 'ies'}<span class="sep">·</span><b>${fmt(e.countries.length)}</b> countr${e.countries.length === 1 ? 'y' : 'ies'}<span class="sep">·</span><b>${fmt(e.asns.length)}</b> network${e.asns.length === 1 ? '' : 's'}`;
+  const tags = e.tags.map(t => `<span class="vbadge vbadge-tag vbadge-tag-${esc(t).replace(/[^a-z-]/gi, '')}" data-tip="${esc(TAG_TIP[t] || t)}">${esc(t)}</span>`);
+  if (e.website) {
+    const host = e.website.replace(/^https?:\/\//, '').replace(/\/$/, '');
+    tags.push(`<a class="dc-site" href="${esc(e.website)}" target="_blank" rel="noopener" data-tip="Provider website, opens in a new tab"><span>${esc(host)}</span>${EXT_ICON}</a>${copyButtonHtml(e.website, 'Copy website URL')}`);
+  }
+  document.getElementById('dc-tags').innerHTML = tags.join('');
+  // ASN chips: countries the ASN is seen in, node count, copy; a click filters the table
+  const asnCountries = new Map();
+  for (const r of allProviderRecords) { const g = r.geolocation || {}; if (!g.asn) continue; const set = asnCountries.get(g.asn) || new Map(); if (g.country_code && g.country_code !== '??') set.set(g.country_code, (set.get(g.country_code) || 0) + 1); asnCountries.set(g.asn, set); }
+  document.getElementById('dc-asns').innerHTML = e.asns.map(a => {
+    const cs = [...(asnCountries.get(a.asn) || new Map()).entries()].sort((x, y) => y[1] - x[1]).slice(0, 4);
+    const flags = cs.map(([cc, n]) => circleFlagSvg(cc.toLowerCase(), { size: 14, tip: `${cc}: ${n}` })).join('');
+    return `<span class="dc-asn${filters.asn.includes(a.asn) ? ' is-active' : ''}" data-asn="${esc(a.asn)}" data-tip="${esc(`${a.asn}${a.name && a.name !== e.provider ? ` (${a.name})` : ''}\n${a.count} validators, ${fmtStakeSol(a.stake_lamports)} SOL\nclick to filter the validators below`)}"><span class="dc-asn-flags">${flags}</span><b>${esc(a.asn)}</b><span class="muted">${fmt(a.count)}</span>${copyButtonHtml(a.asn, 'Copy ASN')}</span>`;
+  }).join('');
+  document.querySelectorAll('.dc-asn').forEach(el => el.addEventListener('click', (ev) => {
+    if (ev.target instanceof Element && ev.target.closest('[data-copy]')) return;
+    toggleFilter('asn', el.dataset.asn);
+  }));
+  const lvl = e.level;
+  document.getElementById('dc-head-side').innerHTML = `<div class="dc-level"><span class="dc-level-badge dc-level-${lvl}">${lvl === 'critical' ? 'Critical concentration' : lvl === 'warning' ? 'Elevated concentration' : 'Healthy concentration'}</span><span class="dc-level-sub">${pct(e.stake_pct, 2)} of cluster stake · SFDP threshold 25%</span></div><div class="dc-presence" id="dc-presence"></div>`;
+  renderPresence(e, getCluster());
+}
+
+// "Available on: mainnet / testnet / devnet / alpenglow": the same provider on other
+// clusters, each chip in its cluster colour and a link; resolved in the background.
+async function renderPresence(e, cluster) {
+  const host = document.getElementById('dc-presence');
+  if (!host) return;
+  const chip = (c, count, current) => `<a class="dc-cluster-chip cluster-${c.replace(/-beta|-community/g, '')}${current ? ' is-current' : ''}" href="/datacenter?provider=${esc(e.slug)}&cluster=${c}" data-tip="${esc(e.provider)} on ${CLUSTER_SHORT[c]}: ${fmt(count)} validator${count === 1 ? '' : 's'}${current ? ' (this page)' : ''}">${CLUSTER_SHORT[c]}<span class="n">${fmt(count)}</span></a>`;
+  host.innerHTML = `<span class="dc-presence-l">Available on</span>${chip(cluster, e.count, true)}<span class="dc-presence-wait">…</span>`;
+  const others = await providerPresence(e.slug, cluster);
+  if (getCluster() !== cluster) return;
+  const all = CLUSTER_ORDER.map(c => (c === cluster ? { cluster: c, count: e.count } : others.find(o => o.cluster === c))).filter(Boolean);
+  host.innerHTML = `<span class="dc-presence-l">Available on</span>${all.map(o => chip(o.cluster, o.count, o.cluster === cluster)).join('')}`;
+}
+
+function renderStats(s, total) {
+  const inView = s.count !== total.count;
+  const cards = [
+    { l: 'Validators', v: `${fmt(s.count)}${inView ? `<span class="dim">of ${fmt(total.count)}</span>` : ''}`, s: `${fmt(s.count - s.delinquent)} active${s.delinquent ? ` · <span class="crit">${fmt(s.delinquent)} delinquent</span>` : ''}` },
+    { l: 'Stake', v: `${fmtStakeSol(s.stake_lamports)}<small>SOL</small>`, s: `${pct(s.stake_pct, 2)} of cluster` },
+    { l: 'Performance', v: s.rank_median != null ? `#${fmt(Math.round(s.rank_median))}` : '—', s: `median TVC${s.rank_best != null ? ` · best #${fmt(s.rank_best)}` : ''}${s.skip_avg != null ? ` · skip ${s.skip_avg.toFixed(2)}%` : ''}` },
+  ];
+  if (dcAvail?.connections) {
+    cards.push({ l: 'DoubleZero', v: fmt(s.dz), s: `${fmt(s.multicast)} multicast publishers` });
+    cards.push({ l: 'Jito BAM', v: fmt(s.bam), s: s.count ? `${pct((s.bam / s.count) * 100, 0)} of validators here` : '' });
+  }
+  if (dcAvail?.sfdp) cards.push({ l: 'SFDP approved', v: fmt(s.sfdp), s: s.count ? `${pct((s.sfdp / s.count) * 100, 0)} of validators here` : '' });
+  if (!dcAvail?.connections) cards.push({ l: 'Locations', v: `${fmt(s.cities)}<small>cit${s.cities === 1 ? 'y' : 'ies'}</small>`, s: `${fmt(s.countries)} countr${s.countries === 1 ? 'y' : 'ies'}` });
+  const el = document.getElementById('dc-stats');
+  el.className = `dc-stats is-${cards.length}`;
+  el.innerHTML = cards.map(c => `<div class="dc-stat"><div class="dc-stat-l">${c.l}</div><div class="dc-stat-v">${c.v}</div><div class="dc-stat-s">${c.s}</div></div>`).join('');
+}
+
+const CITIES_VISIBLE = () => (window.innerWidth <= 640 ? 6 : 12);
+function renderCities(e) {
+  const grid = document.getElementById('dc-cities-grid');
+  const card = document.getElementById('dc-cities-card');
+  document.getElementById('dc-cities-title').textContent = `${fmt(e.cities.length)} cit${e.cities.length === 1 ? 'y' : 'ies'} where ${e.provider} hosts validators`;
+  const visible = CITIES_VISIBLE();
+  // counts inside a city follow the other filters (asn, country), not the city selection
+  const byCity = new Map();
+  for (const r of allProviderRecords) {
+    const g = r.geolocation || {};
+    if (filters.asn.length && !filters.asn.includes(g.asn)) continue;
+    if (filters.country.length && !filters.country.includes(g.country_code)) continue;
+    const k = `${g.city || 'Unknown'}|${g.country_code || '??'}`;
+    const x = byCity.get(k) || { count: 0, delinquent: 0, stake: 0, dz: 0, mc: 0, bam: 0, sfdp: 0 };
+    x.count++; if (r.delinquent) x.delinquent++; x.stake += r.activated_stake_lamports || 0; if (r.dz_connected) x.dz++; if (r.dz_multicast_publisher) x.mc++; if (r.bam_node) x.bam++; if (r.sfdp_state === 'Approved') x.sfdp++;
+    byCity.set(k, x);
+  }
+  grid.innerHTML = e.cities.map((c, i) => {
+    const k = `${c.city}|${c.cc || '??'}`;
+    const x = byCity.get(k) || { count: 0, delinquent: 0, stake: 0, dz: 0, mc: 0, bam: 0, sfdp: 0 };
+    const active = filters.city.includes(c.city);
+    const badges = [];
+    if (x.dz) badges.push(`<span class="vbadge vbadge-dz" data-tip="${x.dz} validators here connected to DoubleZero">DZ ${fmt(x.dz)}</span>`);
+    if (x.mc) badges.push(`<span class="vbadge vbadge-mc" data-tip="${x.mc} validators here publish DoubleZero multicast">MC ${fmt(x.mc)}</span>`);
+    if (x.bam) badges.push(`<span class="vbadge vbadge-bam" data-tip="${x.bam} validators here connected to Jito BAM">BAM ${fmt(x.bam)}</span>`);
+    if (x.sfdp) badges.push(`<span class="vbadge vbadge-sfdp" data-tip="${x.sfdp} SFDP-approved validators here">SFDP ${fmt(x.sfdp)}</span>`);
+    if (c.asns.length > 1) badges.push(`<span class="vbadge vbadge-comm" data-tip="${esc(c.asns.join(', '))}">${c.asns.length} ASNs</span>`);
+    if (x.delinquent) badges.push(`<span class="vbadge vbadge-del">${fmt(x.delinquent)} delinquent</span>`);
+    return `<div class="dc-city${active ? ' is-active' : ''}${x.count === 0 ? ' is-dim' : ''}${i >= visible ? ' is-extra' : ''}" data-city="${esc(c.city)}" role="button" tabindex="0">
+      <div class="dc-city-head">${c.cc ? pinFlagSvg(c.cc.toLowerCase(), { tip: c.country }) : '<span class="vpin-none">?</span>'}<span class="dc-city-name" data-tip-ellipsis>${esc(c.city)}</span><span class="dc-city-cc">${esc(c.cc || '')}</span></div>
+      <div class="dc-city-line"><b>${fmt(x.count)}</b> validators<span class="vcard-sep"></span><b>${fmtStakeSol(x.stake)}</b> SOL<span class="vcard-sep"></span><span data-tip="${esc(e.provider)}'s validators in this city as a share of the whole cluster stake">${pct((x.stake / (dcClusterStake || 1)) * 100, 2)}</span></div>
+      ${badges.length ? `<div class="vbadges">${badges.join('')}</div>` : ''}${cityNetBadges(c)}
+    </div>`;
+  }).join('');
+  card.classList.toggle('is-expanded', citiesExpanded);
+  const foot = document.getElementById('dc-cities-foot');
+  foot.innerHTML = e.cities.length > visible ? `<button class="vagg-more" type="button">${citiesExpanded ? 'Show less' : `Show all ${e.cities.length} cities`}</button>` : '';
+  if (e.cities.length <= visible) card.classList.remove('is-expanded');
+  foot.querySelector('.vagg-more')?.addEventListener('click', () => { citiesExpanded = !citiesExpanded; renderCities(e); });
+  grid.querySelectorAll('.dc-city').forEach(el => {
+    el.addEventListener('click', () => toggleFilter('city', el.dataset.city));
+    el.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); toggleFilter('city', el.dataset.city); } });
+  });
+}
+
+function renderChips() {
+  const chips = [];
+  filters.city.forEach(v => chips.push({ k: 'city', v, label: v }));
+  filters.country.forEach(v => chips.push({ k: 'country', v, label: `Country: ${v}` }));
+  filters.asn.forEach(v => chips.push({ k: 'asn', v, label: v }));
+  document.getElementById('dc-active-filters').innerHTML = chips.map(c => `<span class="filter-chip">${esc(c.label)}<span class="chip-x" data-k="${c.k}" data-v="${esc(c.v)}">&times;</span></span>`).join('');
+  document.getElementById('dc-clear').style.display = chips.length ? 'inline-block' : 'none';
+  document.querySelectorAll('#dc-active-filters .chip-x').forEach(x => x.addEventListener('click', () => toggleFilter(x.dataset.k, x.dataset.v)));
+}
+
+function renderDcTable(records) {
   const cluster = getCluster();
-  const list = sortValidators(dcValidators, dcSort.key, dcSort.dir);
-  const ctx = (i) => ({ cluster, pos: i + 1, tiers: dcStakeTiers, summary: dcSummary, avail: dcAvail });
+  const list = sortValidators(records, dcSort.key, dcSort.dir);
+  const from = `provider:${entry.slug}`;
+  const ctx = (i) => ({ cluster, pos: i + 1, tiers: dcStakeTiers, summary: dcSummary, avail: dcAvail, from });
   const tbody = document.getElementById('dc-vals-body');
   const cards = document.getElementById('dc-vcards');
-  if (tbody) {
-    tbody.innerHTML = list.map((r, i) => renderRow(r, ctx(i))).join('');
-    tbody.querySelectorAll('tr[data-href]').forEach(tr => tr.addEventListener('click', (e) => {
-      if (e.target instanceof Element && e.target.closest('[data-copy]')) return;
-      window.location.href = tr.dataset.href;
-    }));
-  }
-  if (cards) {
-    cards.innerHTML = list.map((r, i) => renderCard(r, ctx(i))).join('');
-    cards.querySelectorAll('.vcard').forEach(card => card.addEventListener('click', (e) => {
-      if (e.target instanceof Element && e.target.closest('.vcard-go, [data-copy]')) return;
-      const go = card.querySelector('.vcard-go');
-      if (go) window.location.href = go.getAttribute('href');
-    }));
-  }
-  const table = document.getElementById('dc-vtable');
-  if (table) markSortedHeader(table, dcSort.key, dcSort.dir);
+  tbody.innerHTML = list.map((r, i) => renderRow(r, ctx(i))).join('');
+  tbody.querySelectorAll('tr[data-href]').forEach(tr => tr.addEventListener('click', (e) => {
+    if (e.target instanceof Element && e.target.closest('[data-copy]')) return;
+    window.location.href = tr.dataset.href;
+  }));
+  cards.innerHTML = list.map((r, i) => renderCard(r, ctx(i))).join('');
+  cards.querySelectorAll('.vcard').forEach(card => card.addEventListener('click', (e) => {
+    if (e.target instanceof Element && e.target.closest('.vcard-go, [data-copy]')) return;
+    const go = card.querySelector('.vcard-go');
+    if (go) window.location.href = go.getAttribute('href');
+  }));
+  markSortedHeader(document.getElementById('dc-vtable'), dcSort.key, dcSort.dir);
+  document.getElementById('dc-vals-count').textContent = `${fmt(list.length)} validator${list.length === 1 ? '' : 's'}${list.length !== allProviderRecords.length ? ` of ${fmt(allProviderRecords.length)}` : ''}`;
+  document.getElementById('dc-vals-title').textContent = list.length === allProviderRecords.length ? `All ${fmt(list.length)} validators at ${entry.provider}` : `${fmt(list.length)} of ${fmt(allProviderRecords.length)} validators at ${entry.provider}`;
+}
+
+function renderScope() {
+  const el = document.getElementById('dc-scope');
+  if (!filters.country.length) { el.style.display = 'none'; el.innerHTML = ''; return; }
+  const names = filters.country.map(cc => entry.countries.find(c => c.cc === cc)?.country || cc);
+  const inCountry = allProviderRecords.filter(r => filters.country.includes(r.geolocation?.country_code));
+  const cities = new Set(inCountry.map(r => r.geolocation?.city)).size;
+  el.style.display = 'flex';
+  el.innerHTML = `${filters.country.map(cc => circleFlagSvg(cc.toLowerCase(), { size: 20 })).join('')}<span>Showing <b>${esc(entry.provider)}</b> in <b>${esc(names.join(', '))}</b><span class="muted">: ${fmt(inCountry.length)} validator${inCountry.length === 1 ? '' : 's'} in ${fmt(cities)} cit${cities === 1 ? 'y' : 'ies'}</span></span><button type="button" class="filter-clear" id="dc-scope-clear">Show all countries &times;</button>`;
+  el.querySelector('#dc-scope-clear').addEventListener('click', () => { filters.country = []; syncUrl(); renderAll(); });
+}
+
+function renderAll() {
+  renderScope();
+  renderCountries(entry);
+  const sel = selected();
+  renderStats(scopeOf(sel), scopeOf(allProviderRecords));
+  renderCities(entry);
+  renderChips();
+  // ASN chips: active when selected, dimmed when the other filters leave no validator on that ASN
+  const asnAlive = new Set(allProviderRecords.filter(r => {
+    const g = r.geolocation || {};
+    if (filters.city.length && !filters.city.includes(g.city)) return false;
+    if (filters.country.length && !filters.country.includes(g.country_code)) return false;
+    return true;
+  }).map(r => r.geolocation?.asn));
+  document.querySelectorAll('.dc-asn').forEach(el => {
+    el.classList.toggle('is-active', filters.asn.includes(el.dataset.asn));
+    el.classList.toggle('is-dim', !asnAlive.has(el.dataset.asn) && !filters.asn.includes(el.dataset.asn));
+  });
+  renderDcTable(sel);
 }
 
 function initDcTableHead() {
   const table = document.getElementById('dc-vtable');
-  if (!table || table.querySelector('thead')) return;
+  if (table.querySelector('thead')) return;
   table.insertAdjacentHTML('afterbegin', tableHeadHtml());
-  // Same grouped sort menu as /validators; the hidden select is the shared state for the
-  // menu and the header clicks.
   const select = document.getElementById('dc-sort-select');
-  const host = document.getElementById('dc-sort-menu');
-  if (select && host) {
-    dcSortMenu = initSortMenu(host, select, { avail: dcAvail || {} });
-    select.addEventListener('change', () => {
-      const [key, dir] = (select.value || 'rank-asc').split('-');
-      dcSort = { key, dir };
-      renderDcTable();
-    });
-  }
-  initHeaderSort(table, () => dcSort, (key, dir) => { if (dcSortMenu) dcSortMenu.set(key, dir); else { dcSort = { key, dir }; renderDcTable(); } });
+  dcSortMenu = initSortMenu(document.getElementById('dc-sort-menu'), select, { avail: dcAvail || {} });
+  select.addEventListener('change', () => { const [key, dir] = (select.value || 'rank-asc').split('-'); dcSort = { key, dir }; renderDcTable(selected()); });
+  initHeaderSort(table, () => dcSort, (key, dir) => dcSortMenu.set(key, dir));
+  document.getElementById('dc-clear').addEventListener('click', clearFilters);
 }
-import { fmt, shortenIdentity } from '../lib/formatters.js';
-
-const params = new URLSearchParams(window.location.search);
-const asn = params.get('asn');
-const cityFilter = params.get('city') || null;
 
 async function loadAndRender() {
   const cluster = getCluster();
   document.getElementById('back-link').href = `/datacenters?cluster=${cluster}`;
-
   if (window.sondaSetClusterBanner) window.sondaSetClusterBanner(cluster);
-
-  fetchSummary(cluster).then(s => {
-    dcSummary = s;
-    if (!s) return;
-    if (window.sondaUpdateStrip) window.sondaUpdateStrip(s);
-  }).catch(() => {});
-
-  if (!asn) {
+  if (!providerParam) {
     document.getElementById('dc-loading').style.display = 'none';
     document.getElementById('dc-error').style.display = 'block';
-    document.getElementById('dc-error').textContent = 'No ASN specified. Open from the datacenters list.';
+    document.getElementById('dc-error').textContent = 'No provider specified. Open one from the datacenters list.';
     return;
   }
-
   try {
-    const data = await fetchValidators(cluster);
+    const [data, summary] = await Promise.all([fetchValidators(cluster), fetchSummary(cluster).catch(() => null)]);
+    if (summary && window.sondaUpdateStrip) window.sondaUpdateStrip(summary);
     lastSnapshotTs = data?.meta?.timestamp || null;
-    const records = (data?.records || []).filter(r => r && r.role === 'validator');
-    // TVC ranks and stake tiers are cluster-wide, like on /validators, not local to the DC
+    dcSummary = summary;
+    const records = (data?.records || []).filter(isValidatorRecord);
     computeTvcRanks(records);
     dcStakeTiers = computeStakeTiers(records);
     dcAvail = tableAvailability(records);
+    dcClusterStake = records.reduce((s, r) => s + (r.activated_stake_lamports || 0), 0);
     applyAvailability(document.getElementById('dc-vtable-wrap'), dcAvail);
     if (dcSortMenu) dcSortMenu.update(dcAvail);
-    const aggregated = aggregateDatacenters(records);
-    const asnEntry = aggregated.by_asn.find(d => d.asn === asn);
-
-    if (!asnEntry) {
+    const providers = aggregateProviders(records, summary);
+    entry = findProvider(providers, providerParam);
+    if (!entry) {
+      // Same state as the validator page: the provider is not in this cluster; list the
+      // clusters where it is (canonical order, cluster colours), one click to go there.
+      const pretty = providerParam.replace(/-/g, ' ');
+      const clusterName = CLUSTER_SHORT[cluster] || cluster;
       document.getElementById('dc-loading').style.display = 'none';
-      document.getElementById('dc-error').style.display = 'block';
-      document.getElementById('dc-error').textContent = `ASN ${asn} not found on ${cluster}.`;
+      const err = document.getElementById('dc-error');
+      err.style.display = 'block';
+      err.innerHTML = `<div class="nf-block">
+        <div class="nf-title">This provider has no validators in the selected cluster</div>
+        <div class="nf-id"><code>${esc(pretty)}</code></div>
+        <p class="nf-message" id="nf-message">Checking the other clusters…</p>
+        <div class="nf-linked" id="nf-linked"></div>
+        <div class="nf-actions"><a href="/datacenters?cluster=${esc(cluster)}" class="nf-btn">Back to datacenters in ${esc(clusterName)}</a><a href="/" class="nf-btn nf-btn-ghost">Overview</a></div>
+      </div>`;
+      const found = await providerPresence(providerParam, cluster);
+      const msg = document.getElementById('nf-message');
+      const linked = document.getElementById('nf-linked');
+      if (!msg || !linked) return;
+      if (found.length) {
+        msg.textContent = 'It is present on the cluster(s) listed below. Click to view it there.';
+        linked.innerHTML = found.map(f => `<a class="nf-linked-card cluster-${f.cluster.replace(/-beta|-community/g, '')}" href="/datacenter?provider=${esc(f.slug)}&cluster=${f.cluster}"><div class="nf-linked-cluster">${CLUSTER_SHORT[f.cluster]}</div><div class="nf-linked-name">${fmt(f.count)} validator${f.count === 1 ? '' : 's'} · ${pct(f.stake_pct, 1)} of stake</div><div class="nf-linked-arrow">&#8594;</div></a>`).join('');
+      } else {
+        msg.textContent = 'It has no validators on the other clusters either right now.';
+      }
       return;
     }
-
-    let displayEntry = asnEntry;
-    if (cityFilter) {
-      const dcEntry = aggregated.by_dc.find(d => d.asn === asn && d.city === cityFilter);
-      if (dcEntry) displayEntry = dcEntry;
-    }
-
+    // legacy asn= links: keep the ASN as a filter, normalise the URL to the slug
+    if (!params.get('provider') && params.get('asn') && !filters.asn.includes(params.get('asn'))) filters.asn.push(params.get('asn'));
+    const url = new URL(window.location.href); url.searchParams.set('provider', entry.slug); window.history.replaceState(null, '', url.toString());
+    allProviderRecords = records.filter(r => r.geolocation && providerOf(r) === entry.provider);
+    if (entry.net_total > 0) await loadCityNet(cluster, entry.provider, entry.asns.map(a => a.asn));
+    renderHeader(entry);
+    initDcTableHead();
+    renderAll();
     document.getElementById('dc-loading').style.display = 'none';
     document.getElementById('dc-content').style.display = 'block';
-    document.title = `${displayEntry.asn_name || asn} ${cityFilter ? '· ' + cityFilter : ''} · SONDA`;
-
-    document.getElementById('dc-head-tag').textContent = cityFilter ? 'DATACENTER' : 'NETWORK PROVIDER';
-    document.getElementById('dc-name').textContent = displayEntry.asn_name || asn;
-    document.getElementById('dc-meta-line').textContent = cityFilter
-      ? `${asn} · ${cityFilter}${displayEntry.country ? ', ' + displayEntry.country : ''}`
-      : `${asn} · ${asnEntry.cities?.length || 0} cit${asnEntry.cities?.length === 1 ? 'y' : 'ies'}`;
-
-    const risk = concentrationLevel(displayEntry.stake_pct);
-    const riskLabel = risk === 'bad' ? 'CRITICAL CONCENTRATION'
-      : risk === 'warn' ? 'HIGH CONCENTRATION'
-      : risk === 'caution' ? 'WATCH' : 'LOW CONCENTRATION';
-    document.getElementById('dc-head-side').innerHTML = `<span class="dc-risk-large ${risk}">${riskLabel}</span>`;
-
-    document.getElementById('qs-validators').textContent = fmt(displayEntry.validators_total);
-    document.getElementById('qs-validators-sub').textContent = `${displayEntry.validators_active} active · ${displayEntry.validators_delinquent} delinquent`;
-    document.getElementById('qs-stake').textContent = `${fmtStakeShort(displayEntry.stake_lamports)} SOL`;
-    document.getElementById('qs-stake-pct').textContent = displayEntry.stake_pct != null ? `${displayEntry.stake_pct.toFixed(2)}% of network` : '— of network';
-    document.getElementById('qs-skip').textContent = displayEntry.weighted_skip_rate != null ? displayEntry.weighted_skip_rate.toFixed(2) + '%' : '—';
-    document.getElementById('qs-dzbam').textContent = `${displayEntry.dz_connected} / ${displayEntry.bam_count}`;
-    document.getElementById('qs-dzbam-sub').textContent = `${displayEntry.sfdp_approved} SFDP approved`;
-
-    if (!cityFilter && asnEntry.cities && asnEntry.cities.length > 1) {
-      document.getElementById('dc-cities-card').style.display = 'block';
-      const cityRows = aggregated.by_dc.filter(d => d.asn === asn).sort((a, b) => b.stake_lamports - a.stake_lamports);
-      document.getElementById('dc-cities-grid').innerHTML = cityRows.map(c => `
-        <a class="dc-city-cell" href="/datacenter?asn=${asn}&cluster=${cluster}&city=${encodeURIComponent(c.city)}">
-          <div class="dc-city-name">${c.city}${c.country ? `, ${c.country}` : ''}</div>
-          <div class="dc-city-stats">${c.validators_total} validators · ${fmtStakeShort(c.stake_lamports)} SOL · ${c.stake_pct.toFixed(2)}%</div>
-        </a>`).join('');
-    }
-
-    if (cityFilter) {
-      document.getElementById('dc-filter-line').style.display = 'flex';
-      document.getElementById('dc-filter-line').innerHTML = `
-        <span>Filtered to <strong>${cityFilter}</strong> only, showing ${displayEntry.validators_total} of ${asnEntry.validators_total} ASN validators</span>
-        <button class="dc-filter-clear-btn" id="dc-clear-city">Show all ${asn} cities</button>`;
-      document.getElementById('dc-clear-city').addEventListener('click', () => {
-        const url = new URL(window.location.href);
-        url.searchParams.delete('city');
-        window.location.href = url.toString();
-      });
-      document.getElementById('dc-vals-title').textContent = `Validators in ${asn} · ${cityFilter}`;
-    } else {
-      document.getElementById('dc-vals-title').textContent = `All ${asnEntry.validators_total} validators across ${asnEntry.cities.length} cit${asnEntry.cities.length === 1 ? 'y' : 'ies'}`;
-    }
-
-    let validatorsList = records.filter(r => r.geolocation?.asn === asn);
-    if (cityFilter) validatorsList = validatorsList.filter(r => r.geolocation?.city === cityFilter);
-    dcValidators = validatorsList;
-    renderDcTable();
+    document.title = `${entry.provider} · SONDA`;
   } catch (e) {
+    console.error('datacenter:', e);
     document.getElementById('dc-loading').style.display = 'none';
     document.getElementById('dc-error').style.display = 'block';
-    document.getElementById('dc-error').textContent = `Failed to load: ${e.message}`;
-    console.error(e);
+    document.getElementById('dc-error').textContent = 'Could not load this provider.';
   }
 }
 
-// In-place refresh (F-6): loadAndRender is idempotent (renders by element id), so a
-// changed snapshot simply re-runs it at the same scroll position.
 async function refreshDatacenter() {
   const cluster = getCluster();
   const data = await fetchValidators(cluster);
@@ -352,9 +640,14 @@ async function refreshDatacenter() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  initDcTableHead();
-  startAutoRefresh(refreshDatacenter, { intervalMs: 60000 });
   bootstrapCluster();
   loadAndRender();
+  // Cluster switch keeps the provider (its slug is cluster-independent); filters are
+  // cluster-specific and are dropped. A provider absent there gets the fallback below.
+  window.addEventListener('sonda:cluster-change', () => {
+    const slug = entry?.slug || providerParam;
+    window.location.href = slug ? `/datacenter?provider=${encodeURIComponent(slug)}&cluster=${getCluster()}` : `/datacenters?cluster=${getCluster()}`;
+  });
+  startAutoRefresh(refreshDatacenter, { intervalMs: 60000 });
 });
 </script>
