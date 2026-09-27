@@ -780,7 +780,7 @@ import ClusterBanner from '../components/ClusterBanner.astro';
 .sfdp-other { font-size: 0.72rem; color: var(--text-muted); padding-top: 0.4rem; border-top: 1px solid var(--border); }
 
 /* Performance card */
-.perf-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 0.5rem; }
+.perf-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 0.5rem; }
 @media (max-width: 480px) { .perf-grid { grid-template-columns: 1fr 1fr; } }
 .perf-tile { background: var(--bg-secondary); border-radius: 6px; padding: 0.55rem 0.65rem; display: flex; flex-direction: column; gap: 0.15rem; }
 .perf-tile-num { font-family: var(--font-mono); font-size: 1.25rem; font-weight: 700; line-height: 1; }
@@ -1059,6 +1059,11 @@ import ClusterBanner from '../components/ClusterBanner.astro';
 .geo-row { display: grid; grid-template-columns: 75px 1fr 50px 70px; align-items: center; gap: 0.6rem; }
 /* provider rows: room for the name plus a round logo slot (dc-logo from cards.css) */
 #geo-asns .geo-row { grid-template-columns: minmax(150px, 190px) 1fr 50px 70px; }
+#geo-countries .geo-row { grid-template-columns: minmax(120px, 150px) 1fr 50px 70px; }
+.geo-link { text-decoration: none; color: inherit; border-radius: 6px; padding: 0.1rem 0.3rem; margin: 0 -0.3rem; transition: background 0.12s; }
+.geo-link:hover { background: var(--bg-card-hover); }
+.geo-link:hover .geo-cc { color: var(--cluster-accent); }
+.geo-country { display: flex; align-items: center; gap: 0.4rem; min-width: 0; }
 #geo-asns .geo-cc { color: var(--text-secondary); }
 .geo-country { display: flex; align-items: center; gap: 0.35rem; min-width: 0; }
 .geo-flag { font-size: 0.95rem; line-height: 1; }
@@ -1340,7 +1345,8 @@ import ClusterBanner from '../components/ClusterBanner.astro';
 
 
 <script>
-import { fetchSummary, fetchValidators, fetchValidatorsCached, fetchMainnetSummaryCached, bootstrapCluster, aggregateByAsn, aggregateByProvider, isValidatorRecord, providerLogoUrl, providerTagsText } from '../lib/data.js';
+import { fetchSummary, fetchValidators, fetchValidatorsCached, fetchMainnetSummaryCached, bootstrapCluster, aggregateByAsn, aggregateByProvider, isValidatorRecord, providerLogoUrl, providerTagsText, getCluster } from '../lib/data.js';
+import { circleFlagSvg, slugOf } from '../lib/validator-table.js';
 import { fmt, pct, flag, fmtTimestamp, fmtCompact, hhiRating, giniRating, nakRating, smRating, shannonRating, versionColor, clientColor } from '../lib/formatters.js';
 import { renderDonut, PIE_PALETTE } from '../lib/charts.js';
 import { savePreviousFetch } from '../lib/compare.js';
@@ -1446,7 +1452,8 @@ function consensusBadgeHtml(d: any): string {
   const consensus = detectConsensus(d);
   if (!consensus) return '';
   const isAlp = consensus === 'Alpenglow';
-  return `<span class="consensus-badge ${isAlp ? 'is-alpenglow' : ''}" data-tip="${escapeHtml(consensusNote(d))}">${isAlp ? '🏔 ' : ''}Consensus: ${escapeHtml(consensus)}</span>`;
+  const mountain = '<svg class="consensus-ico" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M3 20L10 7l4 7 2-3 5 9z"/></svg>';
+  return `<span class="consensus-badge ${isAlp ? 'is-alpenglow' : ''}" data-tip="${escapeHtml(consensusNote(d))}">${isAlp ? mountain : ''}Consensus: ${escapeHtml(consensus)}</span>`;
 }
 
 // Voting / delinquent / total counts over ALL vote accounts (validator + hidden + inactive),
@@ -1558,7 +1565,7 @@ function renderVitals(d: any, records: any[], cluster: string) {
   const tiles = [
     {
       name: 'Consensus', cls: 'vital-consensus',
-      main: consensus ? `<span class="${consensus === 'Alpenglow' ? 'vital-alpenglow' : ''}">${consensus === 'Alpenglow' ? '🏔 ' : ''}${escapeHtml(consensus)}</span>` : 'no data',
+      main: consensus ? `<span class="${consensus === 'Alpenglow' ? 'vital-alpenglow' : ''}">${consensus === 'Alpenglow' ? '<svg class="consensus-ico" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M3 20L10 7l4 7 2-3 5 9z"/></svg>' : ''}${escapeHtml(consensus)}</span>` : 'no data',
       textMain: true, sub: finalityTxt, status: consensus ? finalityStatus : 'neutral',
     },
     { name: 'Slot time', main: slotOk ? `${Math.round(slotMs)}<span class="vital-unit">ms</span>` : 'no data', sub: slotOk ? windowTxt : (halted ? 'cluster halted' : 'this cycle'), status: halted ? 'bad' : slotStatus },
@@ -1914,22 +1921,66 @@ function renderMainnetStories(records: any[], d: any): string {
   `;
 }
 
+// Versions from records, same universe and grouping as the Versions card on /validators
+// (validators in gossip with a known version, delinquent ones included); stake_by_version
+// counted voters only, which is why the homepage and the table disagreed (2026-09-27).
+function versionRowsFromRecords(records: any[]) {
+  const map = new Map<string, { version: string; current: number; stake: number }>();
+  for (const r of records) {
+    if (!isValidatorRecord(r) || r.role !== 'validator' || !r.version || r.version === 'unknown') continue;
+    const row = map.get(r.version) || { version: r.version, current: 0, stake: 0 };
+    row.current++; row.stake += r.activated_stake_lamports || 0; map.set(r.version, row);
+  }
+  return [...map.values()].sort((a, b) => (b.stake - a.stake) || (b.current - a.current));
+}
+
 // ───────── Performance brackets (Variant D) ─────────
 // Top: ≥97% of max credits | Mid: 65–97% | Lagging: <65%
+// Under Alpenglow, credits scale with stake, so "credits vs the cluster maximum" would mark
+// one whale green and everyone else red. Detected automatically (credits and stake strongly
+// correlated): validators are then bracketed by credits per unit of stake against the
+// cluster's 90th percentile. Tower BFT clusters keep the plain credits comparison.
+function creditsStakeLinked(active: any[]): boolean {
+  const pts = active.filter(r => (r.epoch_credits || 0) > 0 && (r.activated_stake_lamports || 0) > 0);
+  if (pts.length < 8) return false;
+  const xs = pts.map(r => r.activated_stake_lamports), ys = pts.map(r => r.epoch_credits);
+  const mx = xs.reduce((a, b) => a + b, 0) / xs.length, my = ys.reduce((a, b) => a + b, 0) / ys.length;
+  let sxy = 0, sxx = 0, syy = 0;
+  for (let i = 0; i < xs.length; i++) { const dx = xs[i] - mx, dy = ys[i] - my; sxy += dx * dy; sxx += dx * dx; syy += dy * dy; }
+  const r = sxx && syy ? sxy / Math.sqrt(sxx * syy) : 0;
+  return r >= 0.9;
+}
+// Under Alpenglow credits follow stake, so no credits-based verdict works (a 303-SOL node
+// that votes perfectly would still look poor). The card then brackets block production
+// instead: skip rate of each validator's own leader slots, a stake-independent measure.
+// Top: skip under 1%. Mid: 1 to 5%. Lagging: over 5% (or no leader slots yet).
 function computePerformanceBrackets(recordsAll: any[]) {
   const records = recordsAll.filter(isValidatorRecord);
   const active = records.filter(r => !r.delinquent);
-  const credits = active.map(r => r.epoch_credits || 0).filter(c => c > 0);
-  if (credits.length === 0) return { top: 0, mid: 0, lagging: 0, max: 0, total: active.length, delinq: records.length - active.length };
-  const max = Math.max(...credits);
+  const linked = creditsStakeLinked(active);
   let top = 0, mid = 0, lagging = 0;
+  if (linked) {
+    // validators without a leader slot yet have no skip rate: neither good nor bad, counted apart
+    const withSkip = active.filter(r => r.skip_rate != null);
+    const noSlots = active.length - withSkip.length;
+    if (withSkip.length === 0) return { top: 0, mid: 0, lagging: 0, max: 0, total: active.length, delinq: records.length - active.length, linked, mode: 'none', noSlots };
+    for (const r of withSkip) {
+      if (r.skip_rate < 1) top++;
+      else if (r.skip_rate <= 5) mid++;
+      else lagging++;
+    }
+    return { top, mid, lagging, max: 0, total: active.length, delinq: records.length - active.length, linked, mode: 'skip', noSlots };
+  }
+  const credits = active.map(r => r.epoch_credits || 0).filter(c => c > 0);
+  if (credits.length === 0) return { top: 0, mid: 0, lagging: 0, max: 0, total: active.length, delinq: records.length - active.length, linked, mode: 'credits' };
+  const max = Math.max(...credits);
   for (const c of credits) {
     const ratio = c / max;
     if (ratio >= 0.97) top++;
     else if (ratio >= 0.65) mid++;
     else lagging++;
   }
-  return { top, mid, lagging, max, total: active.length, delinq: records.length - active.length };
+  return { top, mid, lagging, max, total: active.length, delinq: records.length - active.length, linked, mode: 'credits' };
 }
 
 function renderTestnetDevnetStories(records: any[], d: any, cluster: 'testnet' | 'devnet', sfdpPlaceholder: boolean): string {
@@ -1947,21 +1998,9 @@ function renderTestnetDevnetStories(records: any[], d: any, cluster: 'testnet' |
   // Software versions — use cluster_health.stake_by_version for full picture (count + stake share).
   // Bar segments are sized by validator count (more informative on testnet/devnet where stake is artificial),
   // but legend shows stake share too — important context (one version may dominate stake while others test fixes).
-  const sbv = d?.metrics?.cluster_health?.stake_by_version || {};
-  const totalActiveStake = d?.metrics?.cluster_health?.total_active_stake || 0;
-  const versionRows = Object.entries(sbv).map(([v, info]: [string, any]) => ({
-    version: v,
-    current: info.currentValidators || 0,
-    stake: info.currentActiveStake || 0,
-  })).filter(r => r.current > 0).sort((a, b) => (b.stake - a.stake) || (b.current - a.current));
-
-  // Fallback to record-based counting if cluster_health not available
-  const versionsForRender = versionRows.length > 0 ? versionRows : (() => {
-    const counts: Record<string, number> = {};
-    records.forEach(r => { const v = r.version || 'unknown'; counts[v] = (counts[v] || 0) + 1; });
-    return Object.entries(counts).sort((a, b) => b[1] - a[1])
-      .map(([version, current]) => ({ version, current, stake: 0 }));
-  })();
+  const versionRows = versionRowsFromRecords(records);
+  const totalActiveStake = versionRows.reduce((s, r) => s + r.stake, 0);
+  const versionsForRender = versionRows;
 
   const totalVer = versionsForRender.reduce((s, r) => s + r.current, 0) || 1;
   // Bar is stake-weighted (share of stake per version); the count share stays in the tooltip.
@@ -2069,15 +2108,15 @@ function renderTestnetDevnetStories(records: any[], d: any, cluster: 'testnet' |
         <span class="story-tag cluster-tag">Performance</span>
         <span class="tooltip-wrap">
           <span class="tooltip-icon" aria-label="info">${infoIcon()}</span>
-          <span class="tooltip-box">Validators bracketed by epoch credits earned, relative to the cluster maximum. Top: at least 97% of the leader. Mid: 65–97%. Lagging: under 65%. Delinquent: not voting.</span>
+          <span class="tooltip-box">${perf.mode === 'skip' ? `Under Alpenglow credits follow stake, so validators are bracketed by block production instead: the skip rate of their own leader slots. Top: under 1% skipped. Mid: 1 to 5%. Lagging: over 5%.${perf.noSlots ? ` ${fmt(perf.noSlots)} validators had no leader slot yet this epoch and are not bracketed.` : ''}` : 'Validators bracketed by epoch credits earned, relative to the cluster maximum. Top: at least 97%. Mid: 65 to 97%. Lagging: under 65%.'} Delinquent: not voting.</span>
         </span>
       </div>
-      <div class="story-title">Network performance</div>
+      <div class="story-title">${perf.mode === 'skip' ? 'Block production' : 'Network performance'}</div>
       <div class="perf-grid">
         <div class="perf-tile"><div class="perf-tile-num good">${fmt(perf.top)}</div><div class="perf-tile-label">top performers</div></div>
         <div class="perf-tile"><div class="perf-tile-num neutral">${fmt(perf.mid)}</div><div class="perf-tile-label">mid</div></div>
         <div class="perf-tile"><div class="perf-tile-num crit">${fmt(perf.lagging)}</div><div class="perf-tile-label">lagging</div></div>
-        <div class="perf-tile"><div class="perf-tile-num muted">${fmt(perf.delinq)}</div><div class="perf-tile-label">delinquent</div></div>
+        <div class="perf-tile"><div class="perf-tile-num muted">${fmt(perf.delinq)}</div><div class="perf-tile-label">delinquent</div></div>${perf.mode === 'skip' && perf.noSlots ? `<div class="perf-tile" data-tip="Active validators that had no leader slot yet this epoch, so no skip rate to judge"><div class="perf-tile-num muted">${fmt(perf.noSlots)}</div><div class="perf-tile-label">no slots yet</div></div>` : ''}
       </div>
       <div class="perf-bar">
         <div class="perf-bar-seg good" style="width:${perfTopW}%"></div>
@@ -2154,19 +2193,9 @@ function renderAlpenglowStories(records: any[], d: any): string {
   const blsPctText = blsTotal > 0 ? `${(blsAdopted / blsTotal * 100).toFixed(1)}% adopted` : 'no data';
 
   // ── Card: Software versions (span-2) ── (same pattern as testnet/devnet)
-  const sbv = m.cluster_health?.stake_by_version || {};
-  const totalActiveStake = m.cluster_health?.total_active_stake || 0;
-  const versionRows = Object.entries(sbv).map(([ver, info]: [string, any]) => ({
-    version: ver,
-    current: info.currentValidators || 0,
-    stake: info.currentActiveStake || 0,
-  })).filter(r => r.current > 0).sort((a, b) => (b.stake - a.stake) || (b.current - a.current));
-  const versionsForRender = versionRows.length > 0 ? versionRows : (() => {
-    const counts: Record<string, number> = {};
-    records.forEach(r => { const vr = r.version || 'unknown'; counts[vr] = (counts[vr] || 0) + 1; });
-    return Object.entries(counts).sort((a, b) => b[1] - a[1])
-      .map(([version, current]) => ({ version, current, stake: 0 }));
-  })();
+  const versionRows = versionRowsFromRecords(records);
+  const totalActiveStake = versionRows.reduce((s, r) => s + r.stake, 0);
+  const versionsForRender = versionRows;
   const totalVer = versionsForRender.reduce((s, r) => s + r.current, 0) || 1;
   // Bar is stake-weighted (share of stake per version); the count share stays in the tooltip.
   const versionSegments = versionsForRender.map(r => {
@@ -3061,6 +3090,12 @@ function renderPath(d: any) {
 
 // ───────── Geographic distribution ─────────
 
+const COUNTRY_NAMES: Record<string, string> = { DE: 'Germany', NL: 'The Netherlands', US: 'United States', GB: 'United Kingdom', JP: 'Japan', LT: 'Lithuania', SG: 'Singapore', FR: 'France', CA: 'Canada', IE: 'Ireland', SE: 'Sweden', FI: 'Finland', PL: 'Poland', CH: 'Switzerland', AT: 'Austria', ES: 'Spain', IT: 'Italy', BR: 'Brazil', AR: 'Argentina', AU: 'Australia', HK: 'Hong Kong', KR: 'South Korea', IN: 'India', CZ: 'Czechia', UA: 'Ukraine', NO: 'Norway', DK: 'Denmark', BE: 'Belgium', RO: 'Romania', LV: 'Latvia', EE: 'Estonia', ZA: 'South Africa', MX: 'Mexico', TR: 'Turkey', IL: 'Israel', AE: 'United Arab Emirates', TW: 'Taiwan', TH: 'Thailand', MY: 'Malaysia', ID: 'Indonesia', VN: 'Vietnam', PH: 'Philippines', NZ: 'New Zealand', CL: 'Chile', CO: 'Colombia', PT: 'Portugal', GR: 'Greece', HU: 'Hungary', SK: 'Slovakia', BG: 'Bulgaria', RS: 'Serbia', HR: 'Croatia', SI: 'Slovenia', LU: 'Luxembourg', IS: 'Iceland', MD: 'Moldova', KZ: 'Kazakhstan', RU: 'Russia', CN: 'China' };
+function countryName(cc: string): string {
+  try { const dn = new (Intl as any).DisplayNames(['en'], { type: 'region' }); const n = dn.of(cc); if (n && n !== cc) return n; } catch (e) { /* fallback below */ }
+  return COUNTRY_NAMES[cc] || cc;
+}
+
 function renderGeo(d: any) {
   const v = d?.metrics?.validators || {};
 
@@ -3075,12 +3110,13 @@ function renderGeo(d: any) {
       geoCountries.innerHTML = countries.map(([cc, count]) => {
         const w = Math.round((count as number / maxC) * 100);
         const stake = v.stake_by_country?.[cc as string];
-        return `<div class="geo-row">
-          <div class="geo-country"><span class="geo-flag">${flag(cc as string)}</span><span class="geo-cc">${escapeHtml(cc as string)}</span></div>
+        const name = countryName(cc as string);
+        return `<a class="geo-row geo-link" href="/validators?cluster=${getCluster()}&country=${escapeHtml(cc as string)}" data-tip="${escapeHtml(`${name}: ${fmt(count)} validators\nOpen the validators of ${name}`)}">
+          <div class="geo-country">${circleFlagSvg(String(cc).toLowerCase())}<span class="geo-cc">${escapeHtml(name)}</span></div>
           <div class="geo-bar-wrap"><div class="geo-bar normal" style="width:${w}%"></div></div>
           <div class="geo-count">${fmt(count)}</div>
           <div class="geo-stake">${stake != null ? pct(Number(stake), 1) : ''}</div>
-        </div>`;
+        </a>`;
       }).join('');
     }
   }
@@ -3155,12 +3191,12 @@ function renderGeoAsnFromRecords(d: any, records: any[]) {
         ? [`${e.name}: ${info.asns.length} networks`, ...info.asns.map(a => `${a.asn}${a.name && a.name !== e.name ? ` ${a.name}` : ''} · ${a.count}`)]
         : [`${e.name}${asn ? ` (${asn})` : ''}`];
       const tip = [...asnLines, ...providerTagsText(d, e.name)].join('\n');
-      return `<div class="geo-row">
-        <div class="geo-country">${logo}<span class="geo-cc" data-tip="${escapeHtml(tip)}">${escapeHtml(label)}</span></div>
+      return `<a class="geo-row geo-link" href="/datacenter?provider=${slugOf(e.name)}&cluster=${getCluster()}" data-tip="${escapeHtml(`${tip}\nOpen the provider page`)}">
+        <div class="geo-country">${logo}<span class="geo-cc">${escapeHtml(label)}</span></div>
         <div class="geo-bar-wrap"><div class="geo-bar ${cls}" style="width:${w}%"></div></div>
         <div class="geo-count">${fmt(e.count)}</div>
         <div class="geo-stake">${pct(e.stake_pct, 1)}</div>
-      </div>`;
+      </a>`;
     }).join('');
   }
   const geoDesc = document.getElementById('geo-desc');

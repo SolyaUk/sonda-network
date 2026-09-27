@@ -152,3 +152,23 @@
 .bar-rows-wrap.is-two-col .bar-row:nth-child(even) { border-left: 1px solid var(--border); padding-left: 0.6rem; margin-left: -0.3rem; }
 .vagg-view-status .bar-row-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 @media (max-width: 640px) { .bar-rows-wrap.is-two-col { grid-template-columns: 1fr; } }
+
+/* include / exclude: a small "not" button appears on row hover (long press on touch);
+   excluded rows are struck through with a dashed outline; chips read "not X" */
+.vagg-row, .bar-row, .stacked-legend-item { position: relative; }
+.vagg-not { position: absolute; right: 2px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; border-radius: 50%; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-muted); line-height: 0; display: none; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
+/* rows keep a small right gutter for the button, so its appearance never widens the row or
+   scrolls the list sideways */
+.vagg-row, .bar-row, .stacked-legend-item { padding-right: 22px; box-sizing: border-box; }
+.vagg-rows, .bar-rows-wrap, .stacked-legend { overflow-x: hidden; }
+.vagg-not svg { display: block; }
+.vagg-row:hover .vagg-not, .bar-row:hover .vagg-not, .stacked-legend-item:hover .vagg-not { display: inline-flex; }
+.vagg-not:hover { color: var(--status-critical); border-color: var(--status-critical); }
+.vagg-row.is-excluded, .bar-row.is-excluded, .stacked-legend-item.is-excluded { outline: 1px dashed color-mix(in srgb, var(--status-critical) 55%, transparent); outline-offset: -1px; border-radius: 6px; }
+.vagg-row.is-excluded .vagg-name, .bar-row.is-excluded .bar-row-label, .stacked-legend-item.is-excluded .stacked-legend-name { text-decoration: line-through; color: var(--text-muted); }
+.vagg-row.is-excluded .vagg-not, .bar-row.is-excluded .vagg-not, .stacked-legend-item.is-excluded .vagg-not { display: inline-flex; color: var(--status-critical); border-color: color-mix(in srgb, var(--status-critical) 55%, transparent); }
+/* excluded segments in the stacked bar are hatched */
+.stacked-legend-item.is-excluded .stacked-legend-dot { background: repeating-linear-gradient(45deg, transparent 0 2px, var(--text-muted) 2px 3px) !important; }
+.filter-chip.is-not { border-style: dashed; border-color: color-mix(in srgb, var(--status-critical) 55%, transparent); background: color-mix(in srgb, var(--status-critical) 8%, transparent); }
+.chip-not { font-family: var(--font-mono); font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--status-critical); margin-right: 0.35rem; }
+@media (hover: none) { .vagg-not { display: none !important; } .vagg-row.is-excluded .vagg-not, .bar-row.is-excluded .vagg-not, .stacked-legend-item.is-excluded .vagg-not { display: inline-flex !important; } }

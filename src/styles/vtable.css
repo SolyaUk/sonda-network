@@ -220,3 +220,7 @@ svg.vpin.is-marker { width: 18px; height: 22px; }
 svg.vpin.is-big { width: 34px; height: 42px; }
 .v-loc-flag { overflow: visible !important; }
 .vcity, .dc-city-head, .vagg-row { overflow: visible; }
+
+/* performance bands: pale tints against the whole cluster (best third / worst third) */
+.vperf.is-good { background: color-mix(in srgb, var(--status-good) 11%, var(--bg-primary)); border-color: color-mix(in srgb, var(--status-good) 32%, var(--border)); }
+.vperf.is-poor { background: color-mix(in srgb, var(--status-critical) 9%, var(--bg-primary)); border-color: color-mix(in srgb, var(--status-critical) 30%, var(--border)); }

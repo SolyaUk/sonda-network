@@ -45,7 +45,7 @@ import Footer from '../components/Footer.astro';
     </section>
 
     <section class="filters-bar">
-      <input type="search" id="dcs-search" class="filter-search" placeholder="Search provider, ASN or city…" autocomplete="off" />
+      <span class="search-wrap"><input type="search" id="dcs-search" class="filter-search" placeholder="Search provider, ASN or city…" autocomplete="off" /><button type="button" class="search-clear" data-for="dcs-search" aria-label="Clear search" hidden>&times;</button></span>
       <div class="active-filters" id="dcs-active-filters"></div>
       <button class="filter-clear" id="dcs-clear" type="button" style="display:none">Clear all filters &times;</button>
     </section>
@@ -83,6 +83,7 @@ import Footer from '../components/Footer.astro';
   .vsummary-line b { color: var(--text-primary); font-family: var(--font-mono); font-weight: 600; }
   .vsummary-line .sep { color: var(--text-muted); margin: 0 0.45rem; }
   .vsummary-line .warn { color: var(--status-critical); }
+  .vsummary-line .muted { color: var(--text-muted); font-weight: 400; }
   .filters-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; margin-bottom: 0.8rem; }
   .filter-search { flex: 1 1 320px; min-width: 200px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 0.55rem 0.8rem; color: var(--text-primary); font-size: 0.9rem; font-family: inherit; }
   .filter-search:focus { outline: none; border-color: var(--border-accent); }
@@ -188,11 +189,11 @@ import Footer from '../components/Footer.astro';
 
 <script>
 import { bootstrapCluster, getCluster, fetchValidators, fetchSummary, fetchInfrastructure, computeTvcRanks, isValidatorRecord } from '../lib/data.js';
-import { aggregateProviders, sortProviders, filterProviders, networkInfraFromRecords, applyNetworkInfra } from '../lib/providers.js';
+import { aggregateProviders, sortProviders, filterProviders, networkInfraFromRecords, applyNetworkInfra, networkOnlyProviders, netBadgeTip } from '../lib/providers.js';
 import { fmt, pct } from '../lib/formatters.js';
-import { copyButtonHtml } from '../lib/ui.js';
+import { copyButtonHtml, listValueState, nextListValues, initLongPress, NOT_BUTTON } from '../lib/ui.js';
 import { renderDonut } from '../lib/charts.js';
-import { circleFlagSvg, pinFlagSvg, fmtStakeSol, slugOf, logoHtml as vLogoHtml, validatorHref } from '../lib/validator-table.js';
+import { circleFlagSvg, pinFlagSvg, fmtStakeSol, slugOf, logoHtml as vLogoHtml, validatorHref, creditsFollowStake } from '../lib/validator-table.js';
 import { initSortMenu, PROVIDER_SORT_GROUPS } from '../lib/sort-menu.js';
 import { startAutoRefresh, preserveScroll } from '../lib/refresh.js';
 
@@ -214,20 +215,28 @@ function setUrlParam(key, value) {
 const LIST_FILTERS = ['country', 'tag', 'city'];
 const FILTER_LABELS = { country: 'Country', tag: 'Tag', level: 'Concentration', infra: 'Infrastructure', size: 'Size', net: 'Network', city: 'City', perf: 'Performance' };
 function listParam(key) { return (params.get(key) || '').split(',').map(v => v.trim()).filter(Boolean); }
-function isActive(key, val) { return LIST_FILTERS.includes(key) ? listParam(key).includes(val) : params.get(key) === val; }
-function toggleFilter(key, val) {
+function isActive(key, val) { return filterState(key, val) === 'include'; }
+// 'include' | 'exclude' | null; single-value keys store "!value" for exclude
+function filterState(key, val) {
+  if (LIST_FILTERS.includes(key)) return listValueState(listParam(key), val);
+  const cur = params.get(key);
+  return cur === val ? 'include' : cur === `!${val}` ? 'exclude' : null;
+}
+function toggleFilter(key, val, mode = 'include') {
   if (LIST_FILTERS.includes(key)) {
-    const cur = listParam(key);
-    const next = cur.includes(val) ? cur.filter(v => v !== val) : cur.concat(val);
+    const next = nextListValues(listParam(key), val, mode);
     if (next.length) params.set(key, next.join(',')); else params.delete(key);
     setUrlParam(key, next.join(','));
-  } else if (params.get(key) === val) { params.delete(key); setUrlParam(key, null); }
-  else { params.set(key, val); setUrlParam(key, val); }
+  } else {
+    const want = mode === 'exclude' ? `!${val}` : val;
+    if (params.get(key) === want) { params.delete(key); setUrlParam(key, null); }
+    else { params.set(key, want); setUrlParam(key, want); }
+  }
   applyAndRender();
 }
 function removeFilter(key, val) {
   if (LIST_FILTERS.includes(key)) {
-    const next = listParam(key).filter(v => v !== val);
+    const next = listParam(key).filter(v => v !== val && v !== `!${val}`);
     if (next.length) params.set(key, next.join(',')); else params.delete(key);
     setUrlParam(key, next.join(','));
   } else { params.delete(key); setUrlParam(key, null); }
@@ -241,7 +250,7 @@ function chipText(key, val) {
   if (key === 'level') return val === 'critical' ? 'Critical concentration' : val === 'warning' ? 'Elevated concentration' : 'Healthy concentration';
   if (key === 'infra') return { dz: 'DoubleZero connected', mc: 'Multicast publishers', bam: 'Jito BAM connected', sfdp: 'Hosts SFDP validators', none: 'No DZ or BAM', net: 'Hosts network infrastructure' }[val] || val;
   if (key === 'net') return { bam_nodes: 'Hosts BAM nodes', jito: 'Hosts Jito endpoints', block_engines: 'Hosts block engines', shred_receivers: 'Hosts shred receivers', harmonic: 'Hosts Harmonic', dz_devices: 'Hosts DZ devices', solana: 'Hosts official RPC' }[val] || val;
-  if (key === 'size') return { '1': 'Single validator', '2-5': '2 to 5 validators', '6-20': '6 to 20 validators', '21+': '21+ validators' }[val] || val;
+  if (key === 'size') return { '0': 'Network nodes only', '1': 'Single validator', '2-5': '2 to 5 validators', '6-20': '6 to 20 validators', '21+': '21+ validators' }[val] || val;
   if (key === 'city') return `City: ${val.split('|')[0]}`;
   if (key === 'perf') return { '1': 'Best performers', '2': 'Good performers', '3': 'Average performers', '4': 'Weakest performers' }[val] || val;
   return `${FILTER_LABELS[key] || key}: ${val}`;
@@ -252,7 +261,11 @@ function renderChips() {
     if (LIST_FILTERS.includes(key)) listParam(key).forEach(v => chips.push({ key, v }));
     else if (params.get(key)) chips.push({ key, v: params.get(key) });
   }
-  document.getElementById('dcs-active-filters').innerHTML = chips.map(c => `<span class="filter-chip">${esc(chipText(c.key, c.v))}<span class="chip-x" data-key="${c.key}" data-value="${esc(c.v)}">&times;</span></span>`).join('');
+  document.getElementById('dcs-active-filters').innerHTML = chips.map(c => {
+    const not = c.v.startsWith('!');
+    const raw = not ? c.v.slice(1) : c.v;
+    return `<span class="filter-chip${not ? ' is-not' : ''}">${not ? '<span class="chip-not">not</span>' : ''}${esc(chipText(c.key, raw))}<span class="chip-x" data-key="${c.key}" data-value="${esc(raw)}">&times;</span></span>`;
+  }).join('');
   ['dcs-clear', 'dcs-clear-top'].forEach(id => { const b = document.getElementById(id); if (b) b.style.display = chips.length ? 'inline-block' : 'none'; });
   document.querySelectorAll('#dcs-active-filters .chip-x').forEach(x => x.addEventListener('click', () => removeFilter(x.dataset.key, x.dataset.value)));
 }
@@ -313,7 +326,7 @@ function netBadges(e) {
   for (const [key, one, many, tip] of NET_LABELS) {
     const v = n[key] || 0;
     if (!v) continue;
-    out.push(`<span class="vbadge vbadge-net" data-tip="${esc(tip)}"><b>${fmt(v)}</b> ${v === 1 ? one : many}</span>`);
+    out.push(`<span class="vbadge vbadge-net" data-tip="${esc(netBadgeTip(n, key, tip))}"><b>${fmt(v)}</b> ${v === 1 ? one : many}</span>`);
   }
   // summary-only fallback: Jito endpoints as one badge when the split is unknown
   const jitoRest = (n.jito || 0) - (n.block_engines || 0) - (n.shred_receivers || 0) - (n.ntp || 0) - (split ? 0 : (n.bam_nodes || 0) * 0);
@@ -328,15 +341,39 @@ function facesHtml(e) {
   const label = (v) => v.name || `${v.identity.slice(0, 6)}...${v.identity.slice(-6)}`;
   return `<div class="p-faces">${shown.map(v => `<a class="p-face" href="${esc(validatorHref({ vote_account: v.vote, identity_pubkey: v.identity }, getCluster(), `provider:${e.slug}`))}" data-tip="${esc(label(v))}\n${fmtStakeSol(v.stake)} SOL">${vLogoHtml({ identity_pubkey: v.identity, icon_url: v.icon_url, name: v.name }, 18)}</a>`).join('')}${rest > 0 ? `<span class="p-more">+${fmt(rest)}</span>` : ''}</div>`;
 }
+// bands across providers (thirds), pale tints like the validator table
+let providerBands = null;
+function computeProviderBands(list) {
+  const defs = [['skip', e => e.skip_avg, 'low'], ['ibrl', e => e.ibrl_median, 'high'], ['slot', e => e.slot_median, 'low'], ['votes', e => e.votes_mean, 'high'], ['vlat', e => e.vlat_mean, 'low']];
+  const out = {};
+  const minSpread = { skip: 0.5, ibrl: 5, slot: 15, votes: 0.003, vlat: 0.1 };
+  const linked = creditsFollowStake(allRecords);
+  for (const [k, get, better] of defs) {
+    if (k === 'votes' && linked) continue;
+    const vals = list.map(get).filter(v => v != null && !Number.isNaN(v)).sort((a, b) => a - b);
+    if (vals.length < 8) continue;
+    const q = p => vals[Math.min(vals.length - 1, Math.floor(p * vals.length))];
+    const lo = q(0.2), hi = q(0.8);
+    if (hi - lo < minSpread[k]) continue;
+    out[k] = { lo, hi, better };
+  }
+  return out;
+}
+function bandCls(k, v) {
+  const b = providerBands?.[k];
+  if (!b || v == null || b.lo === b.hi) return '';
+  if (b.better === 'low') return v <= b.lo ? ' is-good' : v >= b.hi ? ' is-poor' : '';
+  return v >= b.hi ? ' is-good' : v <= b.lo ? ' is-poor' : '';
+}
 function perfBadgesP(e, opts = {}) {
   const out = [];
   if (e.rank_median != null) out.push(`<span class="vperf vperf-rank" data-tip="Median TVC rank of this provider's validators\nbest validator here: #${e.rank_best}"><b>#${fmt(Math.round(e.rank_median))}</b><i>median TVC</i></span>`);
-  if (availability.skip && e.skip_avg != null) out.push(`<span class="vperf" data-tip="Average skip rate across the provider's validators"><b>${e.skip_avg.toFixed(2)}%</b><i>skip</i></span>`);
+  if (availability.skip && e.skip_avg != null) out.push(`<span class="vperf${bandCls('skip', e.skip_avg)}" data-tip="Average skip rate across the provider's validators"><b>${e.skip_avg.toFixed(2)}%</b><i>skip</i></span>`);
   if (!opts.short) {
-    if (availability.ibrl && e.ibrl_median != null) out.push(`<span class="vperf" data-tip="Median IBRL score of the validators here"><b>${e.ibrl_median.toFixed(0)}</b><i>ibrl</i></span>`);
-    if (availability.slot && e.slot_median != null) out.push(`<span class="vperf" data-tip="Median slot time of the validators here"><b>${e.slot_median.toFixed(0)}</b><i>ms</i></span>`);
-    if (availability.votes && e.votes_mean != null) out.push(`<span class="vperf" data-tip="Average vote credits of the validators here vs the best validator, last full epoch${availability.vlat && e.vlat_mean != null ? `\nAverage vote latency ${e.vlat_mean.toFixed(2)} slots` : ''}"><b>${(e.votes_mean * 100).toFixed(2)}%</b><i>votes</i></span>`);
-    else if (availability.vlat && e.vlat_mean != null) out.push(`<span class="vperf" data-tip="Average vote latency of the validators here, slots"><b>${e.vlat_mean.toFixed(2)}</b><i>vlat</i></span>`);
+    if (availability.ibrl && e.ibrl_median != null) out.push(`<span class="vperf${bandCls('ibrl', e.ibrl_median)}" data-tip="Median IBRL score of the validators here"><b>${e.ibrl_median.toFixed(0)}</b><i>ibrl</i></span>`);
+    if (availability.slot && e.slot_median != null) out.push(`<span class="vperf${bandCls('slot', e.slot_median)}" data-tip="Median slot time of the validators here"><b>${e.slot_median.toFixed(0)}</b><i>ms</i></span>`);
+    if (availability.votes && e.votes_mean != null) out.push(`<span class="vperf${bandCls('votes', e.votes_mean)}" data-tip="Average vote credits of the validators here vs the best validator, last full epoch${availability.vlat && e.vlat_mean != null ? `\nAverage vote latency ${e.vlat_mean.toFixed(2)} slots` : ''}"><b>${(e.votes_mean * 100).toFixed(2)}%</b><i>votes</i></span>`);
+    else if (availability.vlat && e.vlat_mean != null) out.push(`<span class="vperf${bandCls('vlat', e.vlat_mean)}" data-tip="Average vote latency of the validators here, slots"><b>${e.vlat_mean.toFixed(2)}</b><i>vlat</i></span>`);
   }
   return out.join('');
 }
@@ -356,7 +393,7 @@ function providerHref(e) { return `/datacenter?provider=${e.slug || slugOf(e.pro
 // provider filtered by that country.
 function flagsRow(e, max = 12) {
   const shown = e.countries.slice(0, max);
-  return `<div class="p-flags-row">${shown.map(c => `<a class="p-flag-link" href="${esc(providerHref(e))}&country=${esc(c.cc)}">${circleFlagSvg(c.cc.toLowerCase(), { tip: `${c.country}: ${c.count} validators here` })}</a>`).join('')}${e.countries.length > max ? `<span class="p-more">+${e.countries.length - max}</span>` : ''}</div>`;
+  return `<div class="p-flags-row">${shown.map(c => `<a class="p-flag-link" href="${esc(providerHref(e))}&country=${esc(c.cc)}">${circleFlagSvg(c.cc.toLowerCase(), { tip: e.net_only ? `${c.country}: ${c.nodes} network node${c.nodes === 1 ? '' : 's'}` : `${c.country}: ${c.count} validators here` })}</a>`).join('')}${e.countries.length > max ? `<span class="p-more">+${e.countries.length - max}</span>` : ''}</div>`;
 }
 
 function renderRowP(e, pos, maxCount) {
@@ -371,11 +408,13 @@ function renderRowP(e, pos, maxCount) {
     <td class="p-networks-cell"><div class="p-networks">${fmt(e.asns.length)} <span class="p-networks-sub">ASN${e.asns.length === 1 ? '' : 's'}</span></div>${e.asns.length <= 2
       ? `<div class="p-asn-chips">${e.asns.map(a => asnChip(a, e)).join('')}</div>`
       : `<button type="button" class="p-expand" data-expand="${esc(e.provider)}" aria-expanded="${exp}">${exp ? 'hide' : 'show'} list</button>`}</td>
-    <td><span class="p-count">${fmt(e.count)}${e.delinquent ? `<span class="vagg-delinq" data-tip="${e.delinquent} of ${e.count} delinquent">${e.delinquent}</span>` : ''}</span><div class="p-share" data-tip="Share of validators among providers in this list"><i style="width:${Math.max(2, (e.count / maxCount) * 100)}%"></i></div>${facesHtml(e)}${e.sfdp ? `<div class="vbadges p-sfdp">${sfdpBadge(e)}</div>` : ''}</td>
-    <td class="p-stake-cell">${stakeMeterP(e)}<div class="vstake">${fmtStakeSol(e.stake_lamports)} <small>SOL</small></div><div class="p-stake-pct is-${e.level}" data-tip="${e.level === 'critical' ? 'Above the 25% SFDP threshold' : e.level === 'warning' ? 'Between 15% and 25% of cluster stake' : 'Share of all cluster stake hosted here'}">${pct(e.stake_pct, 1)} of cluster</div></td>
+    <td>${e.net_only
+      ? `<span class="vbadge vbadge-net" data-tip="No validators rent here; the provider hosts network infrastructure only">network only</span>`
+      : `<span class="p-count">${fmt(e.count)}${e.delinquent ? `<span class="vagg-delinq" data-tip="${e.delinquent} of ${e.count} delinquent">${e.delinquent}</span>` : ''}</span><div class="p-share" data-tip="Share of validators among providers in this list"><i style="width:${Math.max(2, (e.count / maxCount) * 100)}%"></i></div>${facesHtml(e)}${e.sfdp ? `<div class="vbadges p-sfdp">${sfdpBadge(e)}</div>` : ''}`}</td>
+    <td class="p-stake-cell">${e.net_only ? '<span class="vdash">—</span>' : `${stakeMeterP(e)}<div class="vstake">${fmtStakeSol(e.stake_lamports)} <small>SOL</small></div><div class="p-stake-pct is-${e.level}" data-tip="${e.level === 'critical' ? 'Above the 25% SFDP threshold' : e.level === 'warning' ? 'Between 15% and 25% of cluster stake' : 'Share of all cluster stake hosted here'}">${pct(e.stake_pct, 1)} of cluster</div>`}</td>
     <td>${flagsRow(e)}<div class="p-cities">${fmt(e.cities.length)} cit${e.cities.length === 1 ? 'y' : 'ies'} · ${fmt(e.countries.length)} countr${e.countries.length === 1 ? 'y' : 'ies'}</div></td>
     <td class="p-infra">${infraBadges(e) || '<span class="vdash">—</span>'}</td>
-    <td class="p-perf"><div class="vbadges">${perfBadgesP(e)}</div></td>
+    <td class="p-perf"><div class="vbadges">${e.net_only ? '<span class="vdash">—</span>' : perfBadgesP(e)}</div></td>
   </tr>${exp ? `<tr class="p-sub"><td colspan="8"><div class="p-sub-chips">${e.asns.map(a => asnChip(a, e)).join('')}</div></td></tr>` : ''}`;
 }
 
@@ -384,7 +423,7 @@ function renderCardP(e, pos) {
     <div class="vcard-logo">${logoHtml(e)}<div class="vpos">#${pos}</div></div>
     <div class="pcard-main">
       <div class="p-name-row"><a class="p-name" href="${esc(providerHref(e))}">${esc(e.provider)}</a></div>
-      <div class="pcard-line"><span class="p-count">${fmt(e.count)}${e.delinquent ? `<span class="vagg-delinq">${e.delinquent}</span>` : ''}</span><span>validators</span><span class="vcard-sep"></span><span class="vstake">${fmtStakeSol(e.stake_lamports)} <small>SOL</small></span><span>${pct(e.stake_pct, 1)}</span></div>
+      <div class="pcard-line">${e.net_only ? '<span class="vbadge vbadge-net">network only</span>' : `<span class="p-count">${fmt(e.count)}${e.delinquent ? `<span class="vagg-delinq">${e.delinquent}</span>` : ''}</span><span>validators</span><span class="vcard-sep"></span><span class="vstake">${fmtStakeSol(e.stake_lamports)} <small>SOL</small></span><span>${pct(e.stake_pct, 1)}</span>`}</div>
       <div class="pcard-line">${flagsRow(e, 6)}<span>${fmt(e.cities.length)} cities · ${fmt(e.asns.length)} ASN${e.asns.length === 1 ? '' : 's'}</span></div>
       <div class="vbadges">${levelBadge(e)}${tagBadges(e)}${infraBadges(e, { flat: true })}${sfdpBadge(e)}${perfBadgesP(e, { short: true })}</div>
     </div>
@@ -410,17 +449,20 @@ function renderCards(all, filtered) {
   // universe order (all providers), so the list is stable whatever is selected
   const uCc = new Map();
   for (const e of all) for (const c of e.countries) { const x = uCc.get(c.cc) || 0; uCc.set(c.cc, x + c.stake_lamports); }
-  const rows = [...allCc.values()].map(x => Object.assign(x, byCc.get(x.cc) || { count: 0, stake: 0, providers: 0 })).sort((a, b) => (uCc.get(b.cc) || 0) - (uCc.get(a.cc) || 0));
+  const stRank = (key, val) => { const st = filterState(key, val); return st === 'include' ? 2 : st === 'exclude' ? 1 : 0; };
+  // donut rows: selected first, then by the current facet counts (a chosen filter brings its matches up)
+  const rows = [...allCc.values()].map(x => Object.assign(x, byCc.get(x.cc) || { count: 0, stake: 0, providers: 0 })).sort((a, b) => stRank('country', b.cc) - stRank('country', a.cc) || b.stake - a.stake || (uCc.get(b.cc) || 0) - (uCc.get(a.cc) || 0));
   const top = rows.filter(x => x.count > 0).slice(0, 6);
   const rest = rows.filter(x => x.count > 0).slice(6);
   const items = top.map((x, i) => ({ label: x.country, value: x.stake, color: SEQ[i % SEQ.length], title: `${x.country}: ${x.providers} providers, ${x.count} validators` }));
   const restStake = rest.reduce((s, x) => s + x.stake, 0);
   if (restStake > 0) items.push({ label: 'Other', value: restStake, color: '#4b4f63', title: `Other (${rest.length})` });
   const colorOf = new Map(top.map((x, i) => [x.cc, SEQ[i % SEQ.length]]));
-  const countryRows = rows.map((x, i) => `<div class="vagg-row ${isActive('country', x.cc) ? 'is-selected' : x.count === 0 ? 'is-dim' : ''}${i >= 6 ? ' is-extra' : ''}" data-fkey="country" data-fval="${x.cc}">
+  const stCls = (key, val, count) => { const st = filterState(key, val); return st === 'include' ? 'is-selected' : st === 'exclude' ? 'is-excluded' : (count === 0 ? 'is-dim' : ''); };
+  const countryRows = rows.map((x, i) => `<div class="vagg-row ${stCls('country', x.cc, x.count)}${i >= 6 ? ' is-extra' : ''}" data-fkey="country" data-fval="${x.cc}">
       ${circleFlagSvg(x.cc.toLowerCase(), { tip: x.country })}<span class="vagg-name"><span data-tip-ellipsis>${esc(x.country)}</span><span class="legend-leader"></span></span>
       <span class="vagg-count">${fmt(x.providers)}<span class="p-more">prov</span></span>
-      <span class="vagg-stake"${colorOf.has(x.cc) ? ` style="color:${colorOf.get(x.cc)}"` : ''}>${totalStake ? ((x.stake / totalStake) * 100).toFixed(1) : '0.0'}%</span>
+      <span class="vagg-stake"${colorOf.has(x.cc) ? ` style="color:${colorOf.get(x.cc)}"` : ''}>${totalStake ? ((x.stake / totalStake) * 100).toFixed(1) : '0.0'}%</span>${NOT_BUTTON}
     </div>`).join('');
   const countriesCard = `<div class="story vagg-card vagg-view-donut${expandedCards.has('countries') ? ' is-expanded' : ''}" data-card="countries">
     <div class="story-header"><span class="story-tag cluster-tag">Countries</span><span class="vagg-meta">${rows.length} entries</span></div>
@@ -438,7 +480,7 @@ function renderCards(all, filtered) {
   }
   const uCity = new Map();
   for (const e of all) for (const c of e.cities) { const k = `${c.city}|${c.cc || '??'}`; uCity.set(k, (uCity.get(k) || 0) + c.stake_lamports); }
-  const cityRowsAll = [...uCity.keys()].map(k => byCity.get(k) || { key: k, city: k.split('|')[0], cc: k.split('|')[1], count: 0, stake: 0, providers: 0 }).sort((a, b) => (uCity.get(b.key) || 0) - (uCity.get(a.key) || 0));
+  const cityRowsAll = [...uCity.keys()].map(k => byCity.get(k) || { key: k, city: k.split('|')[0], cc: k.split('|')[1], count: 0, stake: 0, providers: 0 }).sort((a, b) => stRank('city', b.key) - stRank('city', a.key) || b.stake - a.stake || (uCity.get(b.key) || 0) - (uCity.get(a.key) || 0));
   const cityStake = fCity.reduce((s, e) => s + e.stake_lamports, 0);
   const cityTop = cityRowsAll.filter(x => x.count > 0).slice(0, 6);
   const cityRest = cityRowsAll.filter(x => x.count > 0).slice(6);
@@ -446,10 +488,10 @@ function renderCards(all, filtered) {
   const cityRestStake = cityRest.reduce((s, x) => s + x.stake, 0);
   if (cityRestStake > 0) cityItems.push({ label: 'Other', value: cityRestStake, color: '#4b4f63', title: `Other (${cityRest.length})` });
   const cityColorOf = new Map(cityTop.map((x, i) => [x.key, SEQ[i % SEQ.length]]));
-  const cityRowsHtml = cityRowsAll.map((x, i) => `<div class="vagg-row ${isActive('city', x.key) ? 'is-selected' : x.count === 0 ? 'is-dim' : ''}${i >= 6 ? ' is-extra' : ''}" data-fkey="city" data-fval="${esc(x.key)}">
+  const cityRowsHtml = cityRowsAll.map((x, i) => `<div class="vagg-row ${stCls('city', x.key, x.count)}${i >= 6 ? ' is-extra' : ''}" data-fkey="city" data-fval="${esc(x.key)}">
       ${x.cc && x.cc !== '??' ? pinFlagSvg(x.cc.toLowerCase(), { extraClass: 'is-marker', tip: `${x.city}, ${x.cc}` }) : '<span class="vpin-none">?</span>'}<span class="vagg-name"><span data-tip-ellipsis>${esc(x.city)}</span><span class="legend-leader"></span></span>
       <span class="vagg-count">${fmt(x.providers)}<span class="p-more">prov</span></span>
-      <span class="vagg-stake"${cityColorOf.has(x.key) ? ` style="color:${cityColorOf.get(x.key)}"` : ''}>${cityStake ? ((x.stake / cityStake) * 100).toFixed(1) : '0.0'}%</span>
+      <span class="vagg-stake"${cityColorOf.has(x.key) ? ` style="color:${cityColorOf.get(x.key)}"` : ''}>${cityStake ? ((x.stake / cityStake) * 100).toFixed(1) : '0.0'}%</span>${NOT_BUTTON}
     </div>`).join('');
   const citiesCard = `<div class="story vagg-card vagg-view-donut${expandedCards.has('cities') ? ' is-expanded' : ''}" data-card="cities">
     <div class="story-header"><span class="story-tag cluster-tag">Cities</span><span class="vagg-meta">${cityRowsAll.length} entries</span></div>
@@ -464,8 +506,8 @@ function renderCards(all, filtered) {
   const cntAll = (fn) => all.filter(fn).length;
   const barRows = (rowsDef) => {
     const max = Math.max(1, ...rowsDef.map(r => r.cur));
-    return rowsDef.map(r => `<div class="bar-row ${isActive(r.key, r.val) ? 'is-selected' : r.cur === 0 ? 'is-dim' : ''}" data-fkey="${r.key}" data-fval="${r.val}" data-tip="${esc(r.tip)}">
-      <div class="bar-row-label">${r.label}</div><div class="bar-row-track"><div class="bar-row-fill ${r.fill}" style="width:${r.cur > 0 ? Math.max(3, (r.cur / max) * 100) : 0}%"></div></div><div class="bar-row-num ${r.fill === 'crit' ? 'crit' : r.fill === 'cluster' ? 'cluster' : ''}">${fmt(r.cur)}</div>
+    return rowsDef.map(r => `<div class="bar-row ${stCls(r.key, r.val, r.cur)}" data-fkey="${r.key}" data-fval="${r.val}" data-tip="${esc(r.tip)}">
+      <div class="bar-row-label">${r.label}</div><div class="bar-row-track"><div class="bar-row-fill ${r.fill}" style="width:${r.cur > 0 ? Math.max(3, (r.cur / max) * 100) : 0}%"></div></div><div class="bar-row-num ${r.fill === 'crit' ? 'crit' : r.fill === 'cluster' ? 'cluster' : ''}">${fmt(r.cur)}</div>${NOT_BUTTON}
     </div>`).join('');
   };
   const concRows = [
@@ -479,6 +521,7 @@ function renderCards(all, filtered) {
     { key: 'size', val: '2-5', label: '2 to 5 validators', fill: 'neutral', cur: cntIn(fSize, e => e.count >= 2 && e.count <= 5), tip: 'Small providers' },
     { key: 'size', val: '1', label: 'Single validator', fill: 'neutral', cur: cntIn(fSize, e => e.count === 1), tip: 'One validator only: medians here are one node\'s numbers' },
   ];
+  if (all.some(e => e.net_only)) sizeRows.push({ key: 'size', val: '0', label: 'Network nodes only', fill: 'neutral', cur: cntIn(fSize, e => e.count === 0), tip: 'Carriers and hosts with DoubleZero devices, BAM nodes or endpoints but no validators' });
   // Performance: providers by quarter of median TVC rank (1 = best quarter)
   const perfRows = [
     { key: 'perf', val: '1', label: 'Best performers', fill: 'cluster', cur: cntIn(fPerf, e => e.perf_quarter === 1), tip: 'Providers with the best median TVC rank' },
@@ -563,12 +606,15 @@ function renderSummary(all) {
   const asns = new Set(all.flatMap(e => e.asns.map(a => a.asn))).size;
   const countries = new Set(all.flatMap(e => e.countries.map(c => c.cc))).size;
   const cities = new Set(all.flatMap(e => e.cities.map(c => `${c.city}|${c.cc}`))).size;
-  const top = all[0];
+  const hostingList = all.filter(e => !e.net_only);
+  const top = hostingList[0];
   // Nakamoto by provider: fewest providers whose stake reaches a third of the cluster
   let acc = 0, nak = 0;
   const clusterStake = allRecords.reduce((s, r) => s + (r.activated_stake_lamports || 0), 0);
-  for (const e of all) { acc += e.stake_lamports; nak++; if (acc > clusterStake / 3) break; }
-  const parts = [`<b>${fmt(all.length)}</b> providers`, `<b>${fmt(asns)}</b> networks`, `<b>${fmt(countries)}</b> countries`, `<b>${fmt(cities)}</b> cities`];
+  for (const e of hostingList) { acc += e.stake_lamports; nak++; if (acc > clusterStake / 3) break; }
+  const hosting = hostingList;
+  const netOnly = all.length - hosting.length;
+  const parts = [`<b>${fmt(hosting.length)}</b> providers${netOnly ? ` <span class="muted">(+${fmt(netOnly)} with network nodes only)</span>` : ''}`, `<b>${fmt(asns)}</b> networks`, `<b>${fmt(countries)}</b> countries`, `<b>${fmt(cities)}</b> cities`];
   if (top) parts.push(`top share <b class="${top.level === 'critical' ? 'warn' : ''}">${pct(top.stake_pct, 1)}</b> (${esc(top.provider)})`);
   parts.push(`<b>${fmt(nak)}</b> providers hold a third of stake`);
   document.getElementById('dcs-summary').innerHTML = parts.join('<span class="sep">·</span>');
@@ -652,8 +698,10 @@ function initToggles() {
   section.addEventListener('click', (e) => {
     const t = e.target instanceof Element ? e.target.closest('[data-fkey]') : null;
     if (!t) return;
-    toggleFilter(t.dataset.fkey, t.dataset.fval);
+    const not = e.target instanceof Element && e.target.closest('.vagg-not');
+    toggleFilter(t.dataset.fkey, t.dataset.fval, not ? 'exclude' : 'include');
   });
+  initLongPress(section, '[data-fkey]', (t) => toggleFilter(t.dataset.fkey, t.dataset.fval, 'exclude'));
   ['dcs-clear', 'dcs-clear-top'].forEach(id => document.getElementById(id).addEventListener('click', clearFilters));
 }
 
@@ -663,10 +711,13 @@ function ingest(data, summary) {
   computeTvcRanks(allRecords);
   latestSummary = summary;
   providers = aggregateProviders(allRecords, summary);
+  providerBands = computeProviderBands(providers);
   if (infraRecords) {
     const asnToProvider = new Map();
     for (const e of providers) for (const a of e.asns) asnToProvider.set(a.asn, e.provider);
     applyNetworkInfra(providers, networkInfraFromRecords(infraRecords, asnToProvider).byProvider);
+    // carriers with infrastructure but no validators join the list with 0 validators
+    providers = providers.concat(networkOnlyProviders(providers, infraRecords, summary, asnToProvider));
   }
   availability = {
     connections: allRecords.some(r => r.dz_connected || r.bam_node),

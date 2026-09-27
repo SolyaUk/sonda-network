@@ -6,6 +6,7 @@
  * metrics.providers (v3.12: tags, website, logo).
  */
 import { isValidatorRecord, isInGossip, providerOf, providerMeta, providerLogoUrl, providerTagsText, fetchValidators } from './data.js';
+import { applyListFilter } from './ui.js';
 
 export const CLUSTER_ORDER = ['mainnet-beta', 'testnet', 'devnet', 'alpenglow-community'];
 export const CLUSTER_SHORT = { 'mainnet-beta': 'mainnet', 'testnet': 'testnet', 'devnet': 'devnet', 'alpenglow-community': 'alpenglow' };
@@ -68,6 +69,16 @@ export function netFieldOfRole(role) {
  * { byProvider: Map(name -> net), byProviderCity: Map(name -> Map("City|CC" -> net)) }.
  * asnToProvider fills in records whose provider is missing.
  */
+/** Display name of an infrastructure node: endpoint label, record name, or its address. */
+export function infraNodeName(r) {
+  return r?.endpoint?.label || r?.name || r?.dz_device_name || r?.hostname || r?.ip_address || r?.identity_pubkey || '';
+}
+function bumpNames(e, field, r) {
+  const n = infraNodeName(r);
+  if (!n) return;
+  if (!e.names) e.names = {};
+  (e.names[field] = e.names[field] || []).push(n);
+}
 export function networkInfraFromRecords(records, asnToProvider = new Map()) {
   const byProvider = new Map();
   const byProviderCity = new Map();
@@ -79,14 +90,24 @@ export function networkInfraFromRecords(records, asnToProvider = new Map()) {
     if (!name) continue;
     const e = byProvider.get(name) || emptyNet();
     e[field]++; if (field !== 'bam_nodes' && field !== 'harmonic' && field !== 'dz_devices' && field !== 'solana') e.jito++;
+    bumpNames(e, field, r);
     byProvider.set(name, e);
     const cities = byProviderCity.get(name) || new Map();
     const ck = `${g.city || 'Unknown'}|${g.country_code || '??'}`;
     const c = cities.get(ck) || emptyNet();
     c[field]++; if (field !== 'bam_nodes' && field !== 'harmonic' && field !== 'dz_devices' && field !== 'solana') c.jito++;
+    bumpNames(c, field, r);
     cities.set(ck, c); byProviderCity.set(name, cities);
   }
   return { byProvider, byProviderCity };
+}
+
+/** Tooltip text for a network badge: the generic line plus the node names, one per line. */
+export function netBadgeTip(net, field, generic, max = 12) {
+  const names = net?.names?.[field] || [];
+  if (!names.length) return generic;
+  const shown = names.slice(0, max);
+  return `${generic}\n${shown.join('\n')}${names.length > max ? `\n+${names.length - max} more` : ''}`;
 }
 
 export function networkInfraByProvider(summary, asnToProvider) {
@@ -137,6 +158,48 @@ export function concentrationLevelOf(pct) {
  *   dz, multicast, bam, sfdp, superminority, skip_avg, rank_median, rank_best, tags, website, logo, level }]
  * sorted by stake desc. Records outside gossip (no geolocation) are skipped.
  */
+/**
+ * Providers that host network infrastructure (DoubleZero devices, BAM nodes, Jito or
+ * Harmonic endpoints, official RPC) but no validators: transit carriers like Cogent, Zayo,
+ * Tata. They get their own rows (count 0, net_only: true) so the infrastructure is
+ * visible even where nobody rents a validator (Viktor, 2026-09-27).
+ */
+export function networkOnlyProviders(existing, infraRecords, summary, asnToProvider = new Map()) {
+  const known = new Set(existing.map(e => e.provider));
+  const { byProvider, byProviderCity } = networkInfraFromRecords(infraRecords, asnToProvider);
+  const out = [];
+  for (const [name, net] of byProvider) {
+    if (known.has(name)) continue;
+    const asnMap = new Map(); const countries = new Map(); const cities = new Map();
+    for (const r of infraRecords || []) {
+      const g = r.geolocation || {};
+      const rn = g.provider || (g.asn ? asnToProvider.get(g.asn) : null) || g.asn_name || null;
+      if (rn !== name || !netFieldOfRole(r.role)) continue;
+      if (g.asn) { const a = asnMap.get(g.asn) || { asn: g.asn, name: g.asn_name || g.asn, count: 0, stake_lamports: 0, nodes: 0 }; a.nodes++; asnMap.set(g.asn, a); }
+      const cc = g.country_code && g.country_code !== '??' ? g.country_code : null;
+      if (cc) { const c = countries.get(cc) || { cc, country: g.country || cc, count: 0, stake_lamports: 0, nodes: 0 }; c.nodes++; countries.set(cc, c); }
+      const ck = `${g.city || 'Unknown'}|${cc || '??'}`;
+      const ci = cities.get(ck) || { city: g.city || 'Unknown', cc, country: g.country || cc || '', count: 0, delinquent: 0, stake_lamports: 0, stake_pct: 0, dz: 0, bam: 0, asns: new Set(), nodes: 0 };
+      ci.nodes++; if (g.asn) ci.asns.add(g.asn); cities.set(ck, ci);
+    }
+    const meta = providerMeta(summary, name, [...asnMap.keys()][0] || null) || {};
+    const asns = [...asnMap.values()].sort((a, b) => b.nodes - a.nodes);
+    out.push({
+      provider: name, slug: providerSlug(name), net_only: true,
+      count: 0, delinquent: 0, stake_lamports: 0, stake_pct: 0, level: 'ok', stake_tier: 0, perf_quarter: null,
+      asns, primary_asn: asns[0]?.asn || null,
+      countries: [...countries.values()].sort((a, b) => b.nodes - a.nodes),
+      cities: [...cities.values()].map(c => Object.assign(c, { asns: [...c.asns] })).sort((a, b) => b.nodes - a.nodes),
+      dz: 0, multicast: 0, bam: 0, sfdp: 0, superminority: 0,
+      skip_avg: null, rank_median: null, rank_best: null, ibrl_median: null, slot_median: null, vlat_median: null, vlat_mean: null, votes_mean: null,
+      tags: Array.isArray(meta.tags) ? meta.tags : [], tagsText: providerTagsText(summary, name), website: meta.website || null,
+      logo: providerLogoUrl(summary, name, asns[0]?.asn || null),
+      top: [], net, net_total: netTotal(net), net_cities: byProviderCity.get(name) || new Map(),
+    });
+  }
+  return out;
+}
+
 /** Replace the summary-based network numbers with exact ones from infrastructure.json. */
 export function applyNetworkInfra(providers, byProvider) {
   // the file is the complete inventory: providers absent from it host nothing
@@ -266,33 +329,31 @@ export function sortProviders(list, key, dir) {
 }
 
 /** Filters for the providers list: params country (list), tag (list), level, q (search). */
+/**
+ * Filters for the providers list: params country, tag, city (lists, "!value" excludes),
+ * level, size, infra, net, perf (single values, "!value" = everything but), q (search).
+ */
 export function filterProviders(list, params) {
   let out = list;
   const lst = (k) => (params.get(k) || '').split(',').map(v => v.trim()).filter(Boolean);
-  const countries = lst('country');
-  if (countries.length) out = out.filter(e => e.countries.some(c => countries.includes(c.cc)));
-  const tags = lst('tag');
-  if (tags.length) out = out.filter(e => tags.some(t => e.tags.includes(t)));
-  const level = params.get('level');
-  if (level) out = out.filter(e => e.level === level);
-  const size = params.get('size');
-  if (size === '1') out = out.filter(e => e.count === 1);
-  if (size === '2-5') out = out.filter(e => e.count >= 2 && e.count <= 5);
-  if (size === '6-20') out = out.filter(e => e.count >= 6 && e.count <= 20);
-  if (size === '21+') out = out.filter(e => e.count >= 21);
-  const infra = params.get('infra');
-  if (infra === 'net') out = out.filter(e => e.net_total > 0);
-  if (infra === 'mc') out = out.filter(e => e.multicast > 0);
-  const net = params.get('net');
-  if (net) out = out.filter(e => (e.net?.[net] || 0) > 0);
-  const cities = lst('city');
-  if (cities.length) out = out.filter(e => e.cities.some(c => cities.includes(`${c.city}|${c.cc || '??'}`)));
-  const perf = params.get('perf');
-  if (perf) out = out.filter(e => String(e.perf_quarter || '') === perf);
-  if (infra === 'dz') out = out.filter(e => e.dz > 0);
-  if (infra === 'bam') out = out.filter(e => e.bam > 0);
-  if (infra === 'sfdp') out = out.filter(e => e.sfdp > 0);
-  if (infra === 'none') out = out.filter(e => e.dz === 0 && e.bam === 0);
+  out = applyListFilter(out, lst('country'), e => e.countries.map(c => c.cc));
+  out = applyListFilter(out, lst('tag'), e => e.tags);
+  out = applyListFilter(out, lst('city'), e => e.cities.map(c => `${c.city}|${c.cc || '??'}`));
+  // single-value keys: a "!" prefix negates the predicate
+  const single = (key, preds) => {
+    const raw = params.get(key);
+    if (!raw) return;
+    const neg = raw.startsWith('!');
+    const val = neg ? raw.slice(1) : raw;
+    const pred = preds[val];
+    if (!pred) return;
+    out = out.filter(e => (neg ? !pred(e) : pred(e)));
+  };
+  single('level', { critical: e => e.level === 'critical', warning: e => e.level === 'warning', ok: e => e.level === 'ok' });
+  single('size', { '0': e => e.count === 0, '1': e => e.count === 1, '2-5': e => e.count >= 2 && e.count <= 5, '6-20': e => e.count >= 6 && e.count <= 20, '21+': e => e.count >= 21 });
+  single('infra', { net: e => e.net_total > 0, mc: e => e.multicast > 0, dz: e => e.dz > 0, bam: e => e.bam > 0, sfdp: e => e.sfdp > 0, none: e => e.dz === 0 && e.bam === 0 });
+  single('perf', { '1': e => e.perf_quarter === 1, '2': e => e.perf_quarter === 2, '3': e => e.perf_quarter === 3, '4': e => e.perf_quarter === 4 });
+  { const raw = params.get('net'); if (raw) { const neg = raw.startsWith('!'); const k = neg ? raw.slice(1) : raw; out = out.filter(e => { const has = (e.net?.[k] || 0) > 0; return neg ? !has : has; }); } }
   const q = (params.get('q') || '').trim().toLowerCase();
   if (q) out = out.filter(e => e.provider.toLowerCase().includes(q) || e.asns.some(a => a.asn.toLowerCase().includes(q) || (a.name || '').toLowerCase().includes(q)) || e.cities.some(c => c.city.toLowerCase().includes(q)));
   return out;

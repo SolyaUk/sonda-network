@@ -227,24 +227,73 @@ export function flagBadges(r) {
 // drawn at all, not even as dashes: a badge that never has a value is noise (principle 11.36).
 export function perfBadges(r, opts = {}) {
   const avail = opts.avail || { skip: true, slot: true, vlat: true, ibrl: true };
-  const pb = (cls, b, i, tip) => `<span class="vperf ${cls}" data-tip="${tip}"><b>${b}</b><i>${i}</i></span>`;
+  const bands = opts.bands || null;
+  const pb = (cls, b, i, tip, bandKey = null, value = null) => `<span class="vperf ${cls}${bandKey ? perfBandClass(bands, bandKey, value) : ''}" data-tip="${tip}"><b>${b}</b><i>${i}</i></span>`;
   const out = [];
   if (r._tvc_rank != null) out.push(pb('vperf-rank', `#${r._tvc_rank}`, 'TVC', `TVC rank ${r._tvc_rank} of ${r._tvc_total}: position by vote credits this epoch, ties share a rank`));
   out.push(pb('vperf-main', r.epoch_credits != null ? fmtCompact(r.epoch_credits) : '—', opts.short ? 'cr' : 'credits', `Vote credits this epoch${r.epoch_credits != null ? `: ${fmt(r.epoch_credits)}` : ''}`));
   if (!opts.short) {
-    if (avail.skip) out.push(pb('vperf-sec', r.skip_rate != null ? `${r.skip_rate.toFixed(2)}%` : '—', 'skip', 'Skip rate: leader slots skipped this epoch'));
-    if (avail.slot) out.push(pb('vperf-sec', r.slot_duration_median != null ? r.slot_duration_median.toFixed(0) : '—', 'ms', 'Median slot time'));
+    if (avail.skip) out.push(pb('vperf-sec', r.skip_rate != null ? `${r.skip_rate.toFixed(2)}%` : '—', 'skip', 'Skip rate: leader slots skipped this epoch', 'skip', r.skip_rate));
+    if (avail.slot) out.push(pb('vperf-sec', r.slot_duration_median != null ? r.slot_duration_median.toFixed(0) : '—', 'ms', 'Median slot time', 'slot', r.slot_duration_median));
     // vote performance (v3.13): credits vs the best validator, last full epoch; latencies in the tooltip
     if (avail.votes) {
       const vcr = r.vote_credits_ratio_prev;
       const lat = r.mean_vote_latency != null ? `Average vote latency ${r.mean_vote_latency.toFixed(2)} slots` : '';
-      out.push(pb('vperf-sec', vcr != null ? `${(vcr * 100).toFixed(2)}%` : '—', 'votes', `Vote credits vs the best validator, last full epoch${lat ? `\n${lat}` : ''}`));
+      out.push(pb('vperf-sec', vcr != null ? `${(vcr * 100).toFixed(2)}%` : '—', 'votes', `Vote credits vs the best validator, last full epoch${lat ? `\n${lat}` : ''}`, 'votes', vcr));
     } else if (avail.vlat) {
-      out.push(pb('vperf-sec', r.mean_vote_latency != null ? r.mean_vote_latency.toFixed(2) : (r.median_vote_latency != null ? r.median_vote_latency.toFixed(1) : '—'), 'vlat', 'Vote latency, slots'));
+      const v = r.mean_vote_latency ?? r.median_vote_latency;
+      out.push(pb('vperf-sec', r.mean_vote_latency != null ? r.mean_vote_latency.toFixed(2) : (r.median_vote_latency != null ? r.median_vote_latency.toFixed(1) : '—'), 'vlat', 'Vote latency, slots', 'vlat', v));
     }
-    if (avail.ibrl) out.push(pb('vperf-sec vperf-ibrl', r.ibrl?.ibrl_score != null ? r.ibrl.ibrl_score.toFixed(0) : '—', 'ibrl', 'IBRL score'));
+    if (avail.ibrl) out.push(pb('vperf-sec vperf-ibrl', r.ibrl?.ibrl_score != null ? r.ibrl.ibrl_score.toFixed(0) : '—', 'ibrl', 'IBRL score', 'ibrl', r.ibrl?.ibrl_score));
   }
   return out.join('');
+}
+
+/**
+ * Performance bands (2026-09-27): each secondary metric is compared with the whole
+ * cluster, thirds of the distribution. The best third gets a pale green tint, the worst
+ * third a pale rose, the middle stays neutral, so a number inside a small filtered set
+ * still reads as good or poor for the cluster.
+ */
+// [key, accessor, better direction, minimum spread between the 20th and 80th percentile for
+// the bands to mean anything: slot times 253 / 254 / 255 ms are not three verdicts]
+const PERF_METRICS = [
+  ['skip', r => r.skip_rate, 'low', 0.5],
+  ['slot', r => r.slot_duration_median, 'low', 15],
+  ['vlat', r => r.mean_vote_latency ?? r.median_vote_latency, 'low', 0.1],
+  ['votes', r => r.vote_credits_ratio_prev, 'high', 0.003],
+  ['ibrl', r => r.ibrl?.ibrl_score, 'high', 5],
+];
+/** True when epoch credits follow stake (Alpenglow): credit-based verdicts are meaningless then. */
+export function creditsFollowStake(records) {
+  const pts = (records || []).filter(r => !r.delinquent && (r.epoch_credits || 0) > 0 && (r.activated_stake_lamports || 0) > 0);
+  if (pts.length < 8) return false;
+  const xs = pts.map(r => r.activated_stake_lamports), ys = pts.map(r => r.epoch_credits);
+  const mx = xs.reduce((a, b) => a + b, 0) / xs.length, my = ys.reduce((a, b) => a + b, 0) / ys.length;
+  let sxy = 0, sxx = 0, syy = 0;
+  for (let i = 0; i < xs.length; i++) { const dx = xs[i] - mx, dy = ys[i] - my; sxy += dx * dy; sxx += dx * dx; syy += dy * dy; }
+  return sxx && syy ? sxy / Math.sqrt(sxx * syy) >= 0.9 : false;
+}
+export function computePerfBands(records) {
+  const bands = {};
+  const linked = creditsFollowStake(records);
+  for (const [key, get, better, minSpread] of PERF_METRICS) {
+    if (key === 'votes' && linked) continue;   // credits scale with stake under Alpenglow
+    const vals = (records || []).map(get).filter(v => v != null && !Number.isNaN(v)).sort((a, b) => a - b);
+    if (vals.length < 10) continue;
+    const q = p => vals[Math.min(vals.length - 1, Math.floor(p * vals.length))];
+    const lo = q(0.2), hi = q(0.8);
+    if (hi - lo < minSpread) continue;   // tight distribution: no verdicts
+    bands[key] = { lo, hi, better };
+  }
+  return bands;
+}
+export function perfBandClass(bands, key, value) {
+  const b = bands?.[key];
+  if (!b || value == null) return '';
+  if (b.hi === b.lo) return '';
+  if (b.better === 'low') return value <= b.lo ? ' is-good' : value >= b.hi ? ' is-poor' : '';
+  return value >= b.hi ? ' is-good' : value <= b.lo ? ' is-poor' : '';
 }
 
 /** Which optional columns/badges have data anywhere in the cluster. */
@@ -278,7 +327,7 @@ export function renderRow(r, ctx) {
     <td class="c-stake">${stakeMeterHtml(r, ctx.tiers)}<div class="vstake">${fmtStakeSol(r.activated_stake_lamports)} <small>SOL</small></div><div class="vbadges">${commissionBadges(r)}</div></td>
     <td class="c-loc">${locationHtml(r, ctx)}</td>
     <td class="c-conn"><div class="vbadges">${conn || '<span class="vdash">—</span>'}</div></td>
-    <td class="c-perf"><div class="vbadges">${perfBadges(r, { avail: ctx.avail })}</div></td>
+    <td class="c-perf"><div class="vbadges">${perfBadges(r, { avail: ctx.avail, bands: ctx.bands })}</div></td>
     <td class="c-flags"><div class="vbadges">${flagBadges(r)}</div></td>
   </tr>`;
 }

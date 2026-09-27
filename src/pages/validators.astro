@@ -57,7 +57,7 @@ import Footer from '../components/Footer.astro';
     <!-- Filter bar -->
     <section class="filters-bar">
       <div class="filter-search-wrap">
-        <input type="search" class="filter-search" id="filter-search" placeholder="Search name, identity or vote account…" />
+        <span class="search-wrap"><input type="search" class="filter-search" id="filter-search" placeholder="Search name, identity or vote account…" /><button type="button" class="search-clear" data-for="filter-search" aria-label="Clear search" hidden>&times;</button></span>
       </div>
       <div class="filter-chips" id="active-filters"></div>
       <button class="filter-clear" id="filter-clear" style="display:none">Clear all filters &times;</button>
@@ -260,8 +260,8 @@ import {
 } from '../lib/data.js';
 import { fmt, pct, shortenIdentity, fmtSol, clientColor, versionColor, displayClient, fmtCompact, bamRegionCode } from '../lib/formatters.js';
 import { renderDonut } from '../lib/charts.js';
-import { copyButtonHtml } from '../lib/ui.js';
-import { renderRow, renderCard, tableHeadHtml, markSortedHeader, initHeaderSort, computeStakeTiers, tableAvailability, applyAvailability, circleFlagSvg, pinFlagSvg } from '../lib/validator-table.js';
+import { copyButtonHtml, listValueState, nextListValues, initLongPress, NOT_BUTTON } from '../lib/ui.js';
+import { renderRow, renderCard, tableHeadHtml, markSortedHeader, initHeaderSort, computeStakeTiers, tableAvailability, applyAvailability, circleFlagSvg, pinFlagSvg, computePerfBands } from '../lib/validator-table.js';
 import { initSortMenu } from '../lib/sort-menu.js';
 import { startAutoRefresh, signatureMap, changedIdentities, preserveScroll } from '../lib/refresh.js';
 
@@ -309,12 +309,16 @@ function getActiveFilterChips() {
 }
 
 // Toggle one value inside a list filter (country=NL,DE); other keys combine as AND.
-function toggleFilterValue(key, value) {
+// mode: 'include' (row click) or 'exclude' (the "not" button, long press on touch)
+function toggleFilterValue(key, value, mode = 'include') {
   if (LIST_FILTERS.includes(key)) {
-    const cur = listParam(key);
-    const next = cur.includes(value) ? cur.filter(v => v !== value) : cur.concat(value);
+    const next = nextListValues(listParam(key), value, mode);
     if (next.length > 0) params.set(key, next.join(',')); else params.delete(key);
     setUrlParam(key, next.join(','));
+  } else if (mode === 'exclude') {
+    const want = `!${value}`;
+    if (params.get(key) === want) { params.delete(key); setUrlParam(key, null); }
+    else { params.set(key, want); setUrlParam(key, want); }
   } else {
     if (params.get(key) === value) { params.delete(key); setUrlParam(key, null); }
     else { params.set(key, value); setUrlParam(key, value); }
@@ -324,7 +328,7 @@ function toggleFilterValue(key, value) {
 
 function removeFilterValue(key, value) {
   if (LIST_FILTERS.includes(key)) {
-    const next = listParam(key).filter(v => v !== value);
+    const next = listParam(key).filter(v => v !== value && v !== `!${value}`);
     if (next.length > 0) params.set(key, next.join(',')); else params.delete(key);
     setUrlParam(key, next.join(','));
   } else {
@@ -349,6 +353,11 @@ function chipText(key, value) {
 function isFilterActive(key, value) {
   return LIST_FILTERS.includes(key) ? listParam(key).includes(value) : params.get(key) === value;
 }
+function filterState(key, value) {
+  if (LIST_FILTERS.includes(key)) return listValueState(listParam(key), value);
+  const cur = params.get(key);
+  return cur === value ? 'include' : cur === `!${value}` ? 'exclude' : null;
+}
 
 function clearAllFilters() {
   Object.keys(FILTER_LABELS).forEach(k => { params.delete(k); setUrlParam(k, null); });
@@ -358,9 +367,11 @@ function clearAllFilters() {
 function renderFilterChips() {
   const wrap = document.getElementById('active-filters');
   const chips = getActiveFilterChips();
-  wrap.innerHTML = chips.map(c =>
-    `<span class="filter-chip">${escapeAttr(chipText(c.key, c.value))}<span class="chip-x" data-key="${c.key}" data-value="${escapeAttr(c.value)}">&times;</span></span>`
-  ).join('');
+  wrap.innerHTML = chips.map(c => {
+    const not = c.value.startsWith('!');
+    const raw = not ? c.value.slice(1) : c.value;
+    return `<span class="filter-chip${not ? ' is-not' : ''}">${not ? '<span class="chip-not">not</span>' : ''}${escapeAttr(chipText(c.key, raw))}<span class="chip-x" data-key="${c.key}" data-value="${escapeAttr(raw)}">&times;</span></span>`;
+  }).join('');
   ['filter-clear', 'filter-clear-top'].forEach(id => {
     const b = document.getElementById(id);
     if (b) b.style.display = chips.length > 0 ? 'inline-block' : 'none';
@@ -379,9 +390,10 @@ function shortAsnName(name) {
 // Row and card renderers live in src/lib/validator-table.js (shared with /datacenter).
 let stakeTiers = null;
 let tableAvail = null;
+let perfBands = null;
 let sortMenu = null;
 function rowCtx(pos) {
-  return { cluster: getCluster(), pos, tiers: stakeTiers, summary: latestSummary, avail: tableAvail };
+  return { cluster: getCluster(), pos, tiers: stakeTiers, summary: latestSummary, avail: tableAvail, bands: perfBands };
 }
 function renderTableRow(r, pos) { return renderRow(r, rowCtx(pos)); }
 function renderMobileCard(r, pos) { return renderCard(r, rowCtx(pos)); }
@@ -574,8 +586,7 @@ const VALIDATOR_CARDS = [
         rows.push({ key: 'uni', label: 'DZ without multicast', filter: { key: 'dz', val: 'unicast' }, fill: 'neutral', count: records.filter(r => r.dz_connected && !r.dz_multicast_publisher).length });
       }
       if (has(r => r.bam_node)) rows.push({ key: 'bam', label: 'Jito BAM', filter: { key: 'bam', val: 'true' }, fill: 'cluster', count: records.filter(r => !!r.bam_node).length });
-      if (has(r => r.dz_connected)) rows.push({ key: 'nodz', label: 'Not on DoubleZero', filter: { key: 'dz', val: 'no' }, fill: 'neutral', count: records.filter(r => !r.dz_connected).length });
-      if (has(r => r.bam_node)) rows.push({ key: 'nobam', label: 'Not on BAM', filter: { key: 'bam', val: 'false' }, fill: 'neutral', count: records.filter(r => !r.bam_node).length });
+      // "not on DZ / BAM" is the exclude of the row above, no separate rows
       return rows.map(r => Object.assign(r, { delinquent: 0, stake: 0, special: true }));
     },
   },
@@ -652,13 +663,21 @@ function segmentColor(seg, i) {
 // filtered set. Entries absent from the filtered set keep zero counts and get dimmed.
 // Order is the universe order (stake, then count over ALL validators), so a card never
 // reshuffles when the reader clicks its rows; counts come from the facet set (below).
-function mergeSegments(all, filteredSegs) {
+function mergeSegments(all, filteredSegs, byCurrent = false) {
   const f = new Map(filteredSegs.map(x => [x.key, x]));
   const merged = all.map(seg => {
     const m = f.get(seg.key);
     return Object.assign({}, seg, { count: m ? m.count : 0, delinquent: m ? m.delinquent : 0, stake: m ? m.stake : 0, all_stake: seg.stake, all_count: seg.count });
   });
-  merged.sort((a, b) => (a.special === b.special ? (b.all_stake - a.all_stake || b.all_count - a.all_count) : (a.special ? 1 : -1)));
+  if (byCurrent) {
+    // donut cards (countries, cities, providers): the rows that match the other filters
+    // rise to the top, selected ones first, so a chosen country's cities are visible
+    // without "Show all" (Viktor, 2026-09-27)
+    const rank = (seg) => { const st = seg.filterKey ? filterState(seg.filterKey, seg.filterVal) : null; return st === 'include' ? 2 : st === 'exclude' ? 1 : 0; };
+    merged.sort((a, b) => (a.special === b.special ? (rank(b) - rank(a) || b.stake - a.stake || b.count - a.count || b.all_stake - a.all_stake) : (a.special ? 1 : -1)));
+  } else {
+    merged.sort((a, b) => (a.special === b.special ? (b.all_stake - a.all_stake || b.all_count - a.all_count) : (a.special ? 1 : -1)));
+  }
   return merged;
 }
 
@@ -680,7 +699,9 @@ function fattr(card, seg) {
 function rowClasses(card, seg) {
   const cls = [];
   const f = entryFilter(card, seg);
-  if (f && isFilterActive(f.key, f.val)) cls.push('is-selected');
+  const st = f ? filterState(f.key, f.val) : null;
+  if (st === 'include') cls.push('is-selected');
+  if (st === 'exclude') cls.push('is-excluded');
   else if (seg.count === 0) cls.push('is-dim');
   if (seg.special) cls.push('is-special');
   return cls.join(' ');
@@ -722,7 +743,7 @@ function renderSoftwareCard(card, segs, totals) {
       <span class="stacked-legend-dot" style="background:${i == null ? 'var(--text-muted)' : segmentColor(seg, i)};"></span>
       <span class="stacked-legend-name${status}">${escapeAttr(seg.label)}</span>
       <span class="legend-leader"></span>
-      <span class="stacked-legend-stat">${fmt(seg.count)}${delinqHtml(seg, false)}</span>
+      <span class="stacked-legend-stat">${fmt(seg.count)}${delinqHtml(seg, false)}</span>${clickable && card.fkey && LIST_FILTERS.includes(card.fkey) ? NOT_BUTTON : ''}
     </span>`;
   };
   const legend = top.map((seg, i) => item(seg, i, '', true)).join('')
@@ -762,7 +783,7 @@ function renderDonutCard(card, segs, totals) {
       ${markerHtml(seg.marker, seg.label)}
       ${name}
       <span class="vagg-count">${fmt(seg.count)}${delinqHtml(seg)}</span>
-      <span class="vagg-stake"${colorOf.has(seg.key) ? ` style="color:${colorOf.get(seg.key)}"` : ''}>${stakePct(seg).toFixed(1)}%</span>
+      <span class="vagg-stake"${colorOf.has(seg.key) ? ` style="color:${colorOf.get(seg.key)}"` : ''}>${stakePct(seg).toFixed(1)}%</span>${card.fkey && LIST_FILTERS.includes(card.fkey) ? NOT_BUTTON : ''}
     </div>`;
   }).join('');
   const more = segs.length > AGG_ROWS_VISIBLE ? `<button class="vagg-more" type="button" data-more="${segs.length}">Show all ${segs.length}</button>` : '';
@@ -777,9 +798,9 @@ function renderDonutCard(card, segs, totals) {
   </div>`;
 }
 
-function renderStatusCard(card, rowsAll, rowsFiltered, totals, facetCount) {
+function renderStatusCard(card, rowsAll, rowsFiltered, totals, facetCount, facetSize) {
   const f = new Map(rowsFiltered.map(x => [x.key, x]));
-  const denom = Math.max(1, totals.total);
+  const denomOf = (row) => Math.max(1, facetSize ? facetSize(row) : totals.total);
   // Bars are relative to the largest row, like the DZ/BAM cards on the homepage: the
   // rows compare with each other, the share of all validators is in the tooltip.
   const countOf = (row) => (facetCount ? facetCount(card, row) : (f.get(row.key)?.count ?? 0));
@@ -787,12 +808,13 @@ function renderStatusCard(card, rowsAll, rowsFiltered, totals, facetCount) {
   const rows = rowsAll.map(row => {
     const cur = countOf(row);
     const active = isFilterActive(row.filter.key, row.filter.val);
-    const cls = active ? 'is-selected' : (cur === 0 ? 'is-dim' : '');
+    const st = row.filter ? filterState(row.filter.key, row.filter.val) : null;
+    const cls = st === 'include' ? 'is-selected' : st === 'exclude' ? 'is-excluded' : (cur === 0 ? 'is-dim' : '');
     const numCls = (row.fill === 'crit' || row.fill === 'cluster') ? row.fill : '';
-    return `<div class="bar-row ${cls}" data-fkey="${row.filter.key}" data-fval="${escapeAttr(row.filter.val)}" data-tip="${row.label}: ${cur} of ${totals.total} validators in view (${((cur / denom) * 100).toFixed(1)}%)">
+    return `<div class="bar-row ${cls}" data-fkey="${row.filter.key}" data-fval="${escapeAttr(row.filter.val)}" data-tip="${row.label}: ${cur} of ${fmt(denomOf(row))} validators matching the other filters (${((cur / denomOf(row)) * 100).toFixed(1)}%)">
       <div class="bar-row-label">${row.label}</div>
       <div class="bar-row-track"><div class="bar-row-fill ${row.fill}" style="width:${cur > 0 ? Math.max(3, (cur / maxRow) * 100) : 0}%"></div></div>
-      <div class="bar-row-num ${numCls}">${fmt(cur)}</div>
+      <div class="bar-row-num ${numCls}">${fmt(cur)}</div>${NOT_BUTTON}
     </div>`;
   }).join('');
   return `<div class="story vagg-card vagg-view-status" data-card="${card.id}">
@@ -841,10 +863,15 @@ function renderAggCards(records, filteredRecords, cluster, summary) {
       if (card.view === 'status') {
         const rowsAll = card.build(records, ctx);
         if (rowsAll.length === 0) return '';   // no such data on this cluster: no card (11.36)
-        return renderStatusCard(card, rowsAll, card.build(filteredRecords, ctx), totals, facetCount);
+        return renderStatusCard(card, rowsAll, card.build(filteredRecords, ctx), totals, facetCount, (row) => facetSet(row.filter?.key).length);
       }
-      const segs = mergeSegments(card.build(records, ctx), card.build(facetSet(card.fkey), ctx));
-      return card.view === 'donut' ? renderDonutCard(card, segs, totals) : renderSoftwareCard(card, segs, totals);
+      // percentages are relative to the card's own facet set (records passing every other
+      // filter), so a row never reads "2700%" against a narrower current view
+      const fs = facetSet(card.fkey);
+      const cardTotals = { total: fs.length, totalStake: fs.reduce((s, r) => s + (r.activated_stake_lamports || 0), 0) };
+      const withKeys = (list) => list.map(seg => { const ef = entryFilter(card, seg); return ef ? Object.assign(seg, { filterKey: ef.key, filterVal: ef.val }) : seg; });
+      const segs = mergeSegments(withKeys(card.build(records, ctx)), card.build(fs, ctx), card.view === 'donut');
+      return card.view === 'donut' ? renderDonutCard(card, segs, cardTotals) : renderSoftwareCard(card, segs, cardTotals);
     }).join('');
     grid.innerHTML = html;
     grid.classList.toggle('has-4', grid.children.length === 4);
@@ -872,8 +899,11 @@ function initAggFilterClicks() {
   section.addEventListener('click', (e) => {
     const t = e.target instanceof Element ? e.target.closest('[data-fkey]') : null;
     if (!t || !section.contains(t)) return;
-    toggleFilterValue(t.dataset.fkey, t.dataset.fval);
+    const not = e.target instanceof Element && e.target.closest('.vagg-not');
+    toggleFilterValue(t.dataset.fkey, t.dataset.fval, not ? 'exclude' : 'include');
   });
+  // touch: a long press on a row excludes it
+  initLongPress(section, '[data-fkey]', (t) => toggleFilterValue(t.dataset.fkey, t.dataset.fval, 'exclude'));
 }
 
 // Block toggles (software / decentralization), remembered per block.
@@ -942,6 +972,7 @@ async function loadAndRender() {
     lastSnapshotTs = data?.meta?.timestamp || null;
     computeTvcRanks(allRecords);
     stakeTiers = computeStakeTiers(allRecords);
+    perfBands = computePerfBands(allRecords);
 
     // Cluster-aware visibility: columns/badges/sort keys with no data in this cluster are not shown
     tableAvail = tableAvailability(allRecords);
@@ -978,6 +1009,7 @@ async function refreshValidators() {
   lastSnapshotTs = ts;
   computeTvcRanks(allRecords);
   stakeTiers = computeStakeTiers(allRecords);
+  perfBands = computePerfBands(allRecords);
   tableAvail = tableAvailability(allRecords);
   applyAvailability(document.getElementById('vtable-wrap'), tableAvail);
   if (summary) latestSummary = summary;

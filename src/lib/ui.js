@@ -132,3 +132,77 @@ export function initCollapsibleSections() {
     });
   });
 }
+
+/**
+ * Include / exclude filters (F-NOT, 2026-09-25). A list param holds both kinds of values:
+ * "client=Jito,!Agave" means include Jito, exclude Agave. Includes combine with OR,
+ * excludes always remove. Single-value params accept "!value" as "everything but".
+ */
+export function splitFilterValues(values) {
+  const inc = [], exc = [];
+  for (const v of values || []) {
+    if (!v) continue;
+    if (v.startsWith('!')) exc.push(v.slice(1)); else inc.push(v);
+  }
+  return { inc, exc };
+}
+
+/** Apply an include/exclude list to an array with an accessor (record -> value). */
+export function applyListFilter(list, values, accessor, opts = {}) {
+  const { inc, exc } = splitFilterValues(values);
+  let out = list;
+  if (inc.length) out = out.filter(r => { const v = accessor(r); return Array.isArray(v) ? v.some(x => inc.includes(x)) : inc.includes(v); });
+  if (exc.length) out = out.filter(r => { const v = accessor(r); return Array.isArray(v) ? !v.some(x => exc.includes(x)) : !exc.includes(v); });
+  return out;
+}
+
+/** State of one value inside a list param: 'include' | 'exclude' | null. */
+export function listValueState(values, value) {
+  if ((values || []).includes(value)) return 'include';
+  if ((values || []).includes(`!${value}`)) return 'exclude';
+  return null;
+}
+
+/**
+ * Next list after a click on `value` in `mode` ('include' by default, 'exclude' from the
+ * "not" button or a long press): clicking the active state clears it, otherwise the
+ * value takes the clicked state (and leaves the opposite one).
+ */
+export function nextListValues(values, value, mode = 'include') {
+  const cur = listValueState(values, value);
+  const rest = (values || []).filter(v => v !== value && v !== `!${value}`);
+  if (cur === mode) return rest;
+  return rest.concat(mode === 'exclude' ? `!${value}` : value);
+}
+
+/** Long press on touch devices = exclude. Calls cb(target) after 550ms without movement. */
+export function initLongPress(root, selector, cb) {
+  let timer = null, startX = 0, startY = 0, fired = false;
+  root.addEventListener('touchstart', (e) => {
+    const t = e.target instanceof Element ? e.target.closest(selector) : null;
+    if (!t) return;
+    fired = false;
+    startX = e.touches[0].clientX; startY = e.touches[0].clientY;
+    timer = setTimeout(() => { fired = true; cb(t); }, 550);
+  }, { passive: true });
+  const cancel = () => { if (timer) clearTimeout(timer); timer = null; };
+  root.addEventListener('touchmove', (e) => { if (Math.abs(e.touches[0].clientX - startX) > 8 || Math.abs(e.touches[0].clientY - startY) > 8) cancel(); }, { passive: true });
+  root.addEventListener('touchend', cancel);
+  root.addEventListener('touchcancel', cancel);
+  // a click right after a fired long press must not toggle include as well
+  root.addEventListener('click', (e) => { if (fired) { e.stopPropagation(); e.preventDefault(); fired = false; } }, true);
+}
+
+export const NOT_BUTTON = '<button type="button" class="vagg-not" data-tip="Exclude" aria-label="Exclude"><svg viewBox="0 0 20 20" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="10" cy="10" r="7"/><path d="M5.5 5.5l9 9"/></svg></button>';
+
+/** Clear buttons for search inputs: shown when the field has text, clearing fires "input". */
+export function initSearchClear() {
+  document.querySelectorAll('.search-clear[data-for]').forEach(btn => {
+    const input = document.getElementById(btn.dataset.for);
+    if (!input) return;
+    const sync = () => { btn.hidden = !input.value; };
+    input.addEventListener('input', sync);
+    btn.addEventListener('click', () => { input.value = ''; input.dispatchEvent(new Event('input', { bubbles: true })); input.focus(); });
+    sync();
+  });
+}

@@ -1,3 +1,4 @@
+import { splitFilterValues, applyListFilter } from './ui.js';
 // src/lib/data.js
 export const R2_BASE = 'https://data.sonda.network';
 export const CLUSTERS = ['mainnet-beta', 'testnet', 'devnet', 'alpenglow-community'];
@@ -305,60 +306,44 @@ export function filterValidators(records, params) {
   if (!Array.isArray(records)) return [];
   let out = records.filter(isValidatorRecord);
 
-  const countries = (params.get('country') || '').split(',').filter(Boolean);
-  if (countries.length > 0) {
-    out = out.filter(r => countries.includes(r.geolocation?.country_code));
-  }
-
   // List params (comma separated) combine as OR inside the key; different keys are AND.
+  // A value with a "!" prefix excludes instead of including (client=Jito,!Agave).
   const list = (key) => (params.get(key) || '').split(',').map(v => v.trim()).filter(Boolean);
+  const apply = (key, accessor) => { const vals = list(key); if (vals.length) out = applyListFilter(out, vals, accessor); };
+  apply('country', r => r.geolocation?.country_code);
 
-  const asns = list('asn');
-  if (asns.length > 0) out = out.filter(r => asns.includes(r.geolocation?.asn));
+  apply('asn', r => r.geolocation?.asn);
 
-  const cities = list('city');
-  if (cities.length > 0) out = out.filter(r => cities.includes(r.geolocation?.city));
+  apply('city', r => r.geolocation?.city);
 
   // provider = the company the node is rented from (analyzer v3.11.1, R11.2); older
   // records fall back to the canonical ASN name, the same key providerOf() produces.
-  const providers = list('provider');
-  if (providers.length > 0) out = out.filter(r => providers.includes(providerOf(r)));
+  apply('provider', r => providerOf(r));
 
   // client / version apply to gossip-visible records only: nodes outside gossip carry
   // placeholder values ("Unknown" / "unknown") that are not real observations.
-  const clients = list('client');
-  if (clients.length > 0) out = out.filter(r => isInGossip(r) && clients.includes(clientLabel(r)));
+  { const vals = list('client'); if (vals.length) { const { inc } = splitFilterValues(vals); if (inc.length) out = out.filter(isInGossip); out = applyListFilter(out, vals, r => clientLabel(r)); } }
 
-  const versions = list('version');
-  if (versions.length > 0) out = out.filter(r => isInGossip(r) && versions.includes(r.version));
+  { const vals = list('version'); if (vals.length) { const { inc } = splitFilterValues(vals); if (inc.length) out = out.filter(isInGossip); out = applyListFilter(out, vals, r => r.version); } }
 
-  const gossip = params.get('gossip');
-  if (gossip === 'no') out = out.filter(r => !isInGossip(r));
-  else if (gossip === 'yes') out = out.filter(r => isInGossip(r));
-
-  const dz = params.get('dz');
-  if (dz === 'connected') out = out.filter(r => r.dz_connected);
-  else if (dz === 'multicast') out = out.filter(r => r.dz_multicast_publisher);
-  else if (dz === 'unicast') out = out.filter(r => r.dz_connected && !r.dz_multicast_publisher);
-  else if (dz === 'no') out = out.filter(r => !r.dz_connected);
-
-  const bam = params.get('bam');
-  if (bam === 'true') out = out.filter(r => !!r.bam_node);
-  else if (bam === 'false') out = out.filter(r => !r.bam_node);
-
-  const rakurai = params.get('rakurai');
-  if (rakurai === 'true') out = out.filter(r => r.is_rakurai);
-
+  // single-value keys: "!value" negates the predicate (dz=!connected = not on DoubleZero)
+  const single = (key, preds) => {
+    const raw = params.get(key);
+    if (!raw) return;
+    const neg = raw.startsWith('!');
+    const val = neg ? raw.slice(1) : raw;
+    const pred = preds[val];
+    if (!pred) return;
+    out = out.filter(r => (neg ? !pred(r) : pred(r)));
+  };
+  single('gossip', { no: r => !isInGossip(r), yes: r => isInGossip(r) });
+  single('dz', { connected: r => !!r.dz_connected, multicast: r => !!r.dz_multicast_publisher, unicast: r => r.dz_connected && !r.dz_multicast_publisher, no: r => !r.dz_connected });
+  single('bam', { true: r => !!r.bam_node, false: r => !r.bam_node });
+  single('rakurai', { true: r => !!r.is_rakurai });
   // sfdp is a list: Approved,Retired,... (any of the selected states)
-  const sfdp = list('sfdp');
-  if (sfdp.length) out = out.filter(r => sfdp.includes(r.sfdp_state));
-
-  const delinquent = params.get('delinquent');
-  if (delinquent === 'true') out = out.filter(r => r.delinquent);
-  else if (delinquent === 'false') out = out.filter(r => !r.delinquent);
-
-  const sm = params.get('superminority');
-  if (sm === 'true') out = out.filter(r => r.is_superminority);
+  apply('sfdp', r => r.sfdp_state);
+  single('delinquent', { true: r => !!r.delinquent, false: r => !r.delinquent });
+  single('superminority', { true: r => !!r.is_superminority });
 
   const q = (params.get('q') || '').trim().toLowerCase();
   if (q) {

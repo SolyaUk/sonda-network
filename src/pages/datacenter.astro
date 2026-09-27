@@ -30,7 +30,7 @@ import Footer from '../components/Footer.astro';
         <div class="dc-head-main">
           <div class="dc-logo dc-big-logo" id="dc-logo" data-initial="?"></div>
           <div class="dc-head-text">
-            <div class="dc-head-tag">Network provider</div>
+            <div class="dc-head-tag" id="dc-head-tag">Network provider</div>
             <h1 class="dc-name" id="dc-name">—</h1>
             <div class="dc-sub" id="dc-sub"></div>
             <div class="vbadges dc-tags" id="dc-tags"></div>
@@ -161,6 +161,13 @@ import Footer from '../components/Footer.astro';
   .dc-asn:hover { border-color: color-mix(in srgb, var(--cluster-accent) 60%, transparent); }
   .dc-asn.is-active { border-color: var(--cluster-accent); background: color-mix(in srgb, var(--cluster-accent) 12%, var(--bg-primary)); }
   .dc-asn.is-dim { opacity: 0.45; }
+  .dc-asn, .dc-country, .dc-city-head { position: relative; }
+  .dc-asn .vagg-not, .dc-country .vagg-not { position: static; transform: none; margin-left: 0.2rem; }
+  .dc-city-head .vagg-not { right: 0; }
+  .dc-asn:hover .vagg-not, .dc-country:hover .vagg-not, .dc-city:hover .dc-city-head .vagg-not { display: inline-flex; }
+  .dc-asn.is-excluded, .dc-country.is-excluded, .dc-city.is-excluded { border-style: dashed; border-color: color-mix(in srgb, var(--status-critical) 55%, transparent); }
+  .dc-asn.is-excluded b, .dc-country.is-excluded b, .dc-city.is-excluded .dc-city-name { text-decoration: line-through; color: var(--text-muted); }
+  .dc-asn.is-excluded .vagg-not, .dc-country.is-excluded .vagg-not, .dc-city.is-excluded .vagg-not { display: inline-flex; color: var(--status-critical); }
   .dc-asn b { color: var(--text-primary); font-weight: 600; }
   .dc-asn .muted { color: var(--text-muted); }
   .dc-asn-flags { display: inline-flex; gap: 2px; }
@@ -256,10 +263,10 @@ import Footer from '../components/Footer.astro';
 
 <script>
 import { bootstrapCluster, getCluster, fetchValidators, fetchSummary, fetchInfrastructure, computeTvcRanks, sortValidators, isValidatorRecord, providerOf } from '../lib/data.js';
-import { aggregateProviders, findProvider, networkInfraFromRecords, netTotal, providerPresence, CLUSTER_ORDER, CLUSTER_SHORT } from '../lib/providers.js';
+import { aggregateProviders, findProvider, networkInfraFromRecords, netTotal, providerPresence, networkOnlyProviders, netBadgeTip, CLUSTER_ORDER, CLUSTER_SHORT } from '../lib/providers.js';
 import { fmt, pct } from '../lib/formatters.js';
-import { copyButtonHtml } from '../lib/ui.js';
-import { renderRow, renderCard, tableHeadHtml, markSortedHeader, initHeaderSort, computeStakeTiers, tableAvailability, applyAvailability, circleFlagSvg, pinFlagSvg, fmtStakeSol, providerHref as sharedProviderHref } from '../lib/validator-table.js';
+import { copyButtonHtml, splitFilterValues, listValueState, nextListValues, initLongPress, NOT_BUTTON } from '../lib/ui.js';
+import { renderRow, renderCard, tableHeadHtml, markSortedHeader, initHeaderSort, computeStakeTiers, tableAvailability, applyAvailability, circleFlagSvg, pinFlagSvg, fmtStakeSol, providerHref as sharedProviderHref, computePerfBands } from '../lib/validator-table.js';
 import { initSortMenu } from '../lib/sort-menu.js';
 import { startAutoRefresh, preserveScroll } from '../lib/refresh.js';
 
@@ -275,6 +282,7 @@ let allProviderRecords = [];   // every validator of this provider
 let dcStakeTiers = null;
 let dcSummary = null;
 let dcAvail = null;
+let dcBands = null;
 let dcSort = { key: 'rank', dir: 'asc' };
 let dcSortMenu = null;
 let entry = null;
@@ -305,14 +313,15 @@ const NET_LABELS = [
 function cityNetBadges(c) {
   const n = cityNet.get(`${c.city}|${c.cc || '??'}`);
   if (!n) return '';
-  const out = NET_LABELS.filter(([k]) => n[k] > 0).map(([k, one, many, tip]) => `<span class="vbadge vbadge-net" data-tip="${esc(tip)}"><b>${fmt(n[k])}</b> ${n[k] === 1 ? one : many}</span>`);
+  const out = NET_LABELS.filter(([k]) => n[k] > 0).map(([k, one, many, tip]) => `<span class="vbadge vbadge-net" data-tip="${esc(netBadgeTip(n, k, tip))}"><b>${fmt(n[k])}</b> ${n[k] === 1 ? one : many}</span>`);
   return out.length ? `<div class="vbadges">${out.join('')}</div>` : '';
 }
 function renderCountries(e) {
   const host = document.getElementById('dc-countries');
   if (!host) return;
-  host.innerHTML = e.countries.map(c => `<span class="dc-country${filters.country.includes(c.cc) ? ' is-active' : ''}" data-cc="${esc(c.cc)}" data-tip="${esc(c.country)}: ${c.count} validators, ${fmtStakeSol(c.stake_lamports)} SOL\nclick to filter">${circleFlagSvg(c.cc.toLowerCase(), { size: 16 })}<b>${esc(c.cc)}</b>${fmt(c.count)}</span>`).join('');
-  host.querySelectorAll('.dc-country').forEach(el => el.addEventListener('click', () => toggleFilter('country', el.dataset.cc)));
+  host.innerHTML = e.countries.map(c => { const st = fState('country', c.cc); return `<span class="dc-country${st === 'include' ? ' is-active' : ''}${st === 'exclude' ? ' is-excluded' : ''}" data-cc="${esc(c.cc)}" data-tip="${esc(c.country)}: ${c.count} validators, ${fmtStakeSol(c.stake_lamports)} SOL\nclick to filter">${circleFlagSvg(c.cc.toLowerCase(), { size: 16 })}<b>${esc(c.cc)}</b>${fmt(c.count)}${NOT_BUTTON}</span>`; }).join('');
+  host.querySelectorAll('.dc-country').forEach(el => el.addEventListener('click', (ev) => toggleFilter('country', el.dataset.cc, ev.target instanceof Element && ev.target.closest('.vagg-not') ? 'exclude' : 'include')));
+  if (!host.dataset.lp) { host.dataset.lp = '1'; initLongPress(host, '.dc-country', (t) => toggleFilter('country', t.dataset.cc, 'exclude')); }
 }
 
 function esc(v) { return String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
@@ -334,22 +343,27 @@ function syncUrl() {
   }
   window.history.replaceState(null, '', url.toString());
 }
-function toggleFilter(k, v) {
-  const i = filters[k].indexOf(v);
-  if (i >= 0) filters[k].splice(i, 1); else filters[k].push(v);
+// mode 'include' (click) or 'exclude' (the "not" button, long press); values with a "!"
+// prefix are exclusions, same convention as the list pages
+function toggleFilter(k, v, mode = 'include') {
+  filters[k] = nextListValues(filters[k], v, mode);
   syncUrl(); renderAll();
 }
+function fState(k, v) { return listValueState(filters[k], v); }
+const incOf = (k) => splitFilterValues(filters[k]).inc;
 function clearFilters() { filters.city = []; filters.asn = []; filters.country = []; syncUrl(); renderAll(); }
 
-function selected() {
-  return allProviderRecords.filter(r => {
-    const g = r.geolocation || {};
-    if (filters.city.length && !filters.city.includes(g.city)) return false;
-    if (filters.asn.length && !filters.asn.includes(g.asn)) return false;
-    if (filters.country.length && !filters.country.includes(g.country_code)) return false;
-    return true;
-  });
+function passes(r, keys) {
+  const g = r.geolocation || {};
+  const val = { city: g.city, asn: g.asn, country: g.country_code };
+  for (const k of keys) {
+    const { inc, exc } = splitFilterValues(filters[k]);
+    if (inc.length && !inc.includes(val[k])) return false;
+    if (exc.length && exc.includes(val[k])) return false;
+  }
+  return true;
 }
+function selected() { return allProviderRecords.filter(r => passes(r, ['city', 'asn', 'country'])); }
 function scopeOf(records) {
   const clusterStake = dcClusterStake || 1;
   const nums = (fn) => records.map(fn).filter(v => v != null).sort((a, b) => a - b);
@@ -398,14 +412,19 @@ function renderHeader(e) {
   document.getElementById('dc-asns').innerHTML = e.asns.map(a => {
     const cs = [...(asnCountries.get(a.asn) || new Map()).entries()].sort((x, y) => y[1] - x[1]).slice(0, 4);
     const flags = cs.map(([cc, n]) => circleFlagSvg(cc.toLowerCase(), { size: 14, tip: `${cc}: ${n}` })).join('');
-    return `<span class="dc-asn${filters.asn.includes(a.asn) ? ' is-active' : ''}" data-asn="${esc(a.asn)}" data-tip="${esc(`${a.asn}${a.name && a.name !== e.provider ? ` (${a.name})` : ''}\n${a.count} validators, ${fmtStakeSol(a.stake_lamports)} SOL\nclick to filter the validators below`)}"><span class="dc-asn-flags">${flags}</span><b>${esc(a.asn)}</b><span class="muted">${fmt(a.count)}</span>${copyButtonHtml(a.asn, 'Copy ASN')}</span>`;
+    const st = fState('asn', a.asn);
+    return `<span class="dc-asn${st === 'include' ? ' is-active' : ''}${st === 'exclude' ? ' is-excluded' : ''}" data-asn="${esc(a.asn)}" data-tip="${esc(`${a.asn}${a.name && a.name !== e.provider ? ` (${a.name})` : ''}\n${a.count} validators, ${fmtStakeSol(a.stake_lamports)} SOL\nclick to filter the validators below`)}"><span class="dc-asn-flags">${flags}</span><b>${esc(a.asn)}</b><span class="muted">${fmt(a.count)}</span>${copyButtonHtml(a.asn, 'Copy ASN')}${NOT_BUTTON}</span>`;
   }).join('');
   document.querySelectorAll('.dc-asn').forEach(el => el.addEventListener('click', (ev) => {
     if (ev.target instanceof Element && ev.target.closest('[data-copy]')) return;
-    toggleFilter('asn', el.dataset.asn);
+    toggleFilter('asn', el.dataset.asn, ev.target instanceof Element && ev.target.closest('.vagg-not') ? 'exclude' : 'include');
   }));
+  const asnHost = document.getElementById('dc-asns');
+  if (asnHost && !asnHost.dataset.lp) { asnHost.dataset.lp = '1'; initLongPress(asnHost, '.dc-asn', (t) => toggleFilter('asn', t.dataset.asn, 'exclude')); }
   const lvl = e.level;
-  document.getElementById('dc-head-side').innerHTML = `<div class="dc-level"><span class="dc-level-badge dc-level-${lvl}">${lvl === 'critical' ? 'Critical concentration' : lvl === 'warning' ? 'Elevated concentration' : 'Healthy concentration'}</span><span class="dc-level-sub">${pct(e.stake_pct, 2)} of cluster stake · SFDP threshold 25%</span></div><div class="dc-presence" id="dc-presence"></div>`;
+  document.getElementById('dc-head-side').innerHTML = (e.net_only
+    ? `<div class="dc-level"><span class="dc-level-badge dc-level-ok" style="color:var(--text-secondary);border-color:var(--border);background:transparent">Network infrastructure only</span><span class="dc-level-sub">no validators rent here</span></div>`
+    : `<div class="dc-level"><span class="dc-level-badge dc-level-${lvl}">${lvl === 'critical' ? 'Critical concentration' : lvl === 'warning' ? 'Elevated concentration' : 'Healthy concentration'}</span><span class="dc-level-sub">${pct(e.stake_pct, 2)} of cluster stake · SFDP threshold 25%</span></div>`) + `<div class="dc-presence" id="dc-presence"></div>`;
   renderPresence(e, getCluster());
 }
 
@@ -423,6 +442,18 @@ async function renderPresence(e, cluster) {
 }
 
 function renderStats(s, total) {
+  if (entry?.net_only) {
+    const n = entry.net;
+    const cards = [
+      { l: 'Validators', v: '0', s: 'network infrastructure only' },
+      { l: 'Network nodes', v: fmt(entry.net_total), s: [n.bam_nodes ? `${n.bam_nodes} BAM` : '', n.block_engines ? `${n.block_engines} block engines` : '', n.shred_receivers ? `${n.shred_receivers} shred receivers` : '', n.harmonic ? `${n.harmonic} Harmonic` : '', n.dz_devices ? `${n.dz_devices} DZ devices` : '', n.solana ? `${n.solana} RPC` : ''].filter(Boolean).join(' · ') },
+      { l: 'Locations', v: `${fmt(entry.cities.length)}<small>cit${entry.cities.length === 1 ? 'y' : 'ies'}</small>`, s: `${fmt(entry.countries.length)} countr${entry.countries.length === 1 ? 'y' : 'ies'} · ${fmt(entry.asns.length)} ASN${entry.asns.length === 1 ? '' : 's'}` },
+    ];
+    const el = document.getElementById('dc-stats');
+    el.className = `dc-stats is-${cards.length}`;
+    el.innerHTML = cards.map(c => `<div class="dc-stat"><div class="dc-stat-l">${c.l}</div><div class="dc-stat-v">${c.v}</div><div class="dc-stat-s">${c.s}</div></div>`).join('');
+    return;
+  }
   const inView = s.count !== total.count;
   const cards = [
     { l: 'Validators', v: `${fmt(s.count)}${inView ? `<span class="dim">of ${fmt(total.count)}</span>` : ''}`, s: `${fmt(s.count - s.delinquent)} active${s.delinquent ? ` · <span class="crit">${fmt(s.delinquent)} delinquent</span>` : ''}` },
@@ -450,8 +481,7 @@ function renderCities(e) {
   const byCity = new Map();
   for (const r of allProviderRecords) {
     const g = r.geolocation || {};
-    if (filters.asn.length && !filters.asn.includes(g.asn)) continue;
-    if (filters.country.length && !filters.country.includes(g.country_code)) continue;
+    if (!passes(r, ['asn', 'country'])) continue;
     const k = `${g.city || 'Unknown'}|${g.country_code || '??'}`;
     const x = byCity.get(k) || { count: 0, delinquent: 0, stake: 0, dz: 0, mc: 0, bam: 0, sfdp: 0 };
     x.count++; if (r.delinquent) x.delinquent++; x.stake += r.activated_stake_lamports || 0; if (r.dz_connected) x.dz++; if (r.dz_multicast_publisher) x.mc++; if (r.bam_node) x.bam++; if (r.sfdp_state === 'Approved') x.sfdp++;
@@ -460,7 +490,8 @@ function renderCities(e) {
   grid.innerHTML = e.cities.map((c, i) => {
     const k = `${c.city}|${c.cc || '??'}`;
     const x = byCity.get(k) || { count: 0, delinquent: 0, stake: 0, dz: 0, mc: 0, bam: 0, sfdp: 0 };
-    const active = filters.city.includes(c.city);
+    const st = fState('city', c.city);
+    const active = st === 'include';
     const badges = [];
     if (x.dz) badges.push(`<span class="vbadge vbadge-dz" data-tip="${x.dz} validators here connected to DoubleZero">DZ ${fmt(x.dz)}</span>`);
     if (x.mc) badges.push(`<span class="vbadge vbadge-mc" data-tip="${x.mc} validators here publish DoubleZero multicast">MC ${fmt(x.mc)}</span>`);
@@ -468,9 +499,11 @@ function renderCities(e) {
     if (x.sfdp) badges.push(`<span class="vbadge vbadge-sfdp" data-tip="${x.sfdp} SFDP-approved validators here">SFDP ${fmt(x.sfdp)}</span>`);
     if (c.asns.length > 1) badges.push(`<span class="vbadge vbadge-comm" data-tip="${esc(c.asns.join(', '))}">${c.asns.length} ASNs</span>`);
     if (x.delinquent) badges.push(`<span class="vbadge vbadge-del">${fmt(x.delinquent)} delinquent</span>`);
-    return `<div class="dc-city${active ? ' is-active' : ''}${x.count === 0 ? ' is-dim' : ''}${i >= visible ? ' is-extra' : ''}" data-city="${esc(c.city)}" role="button" tabindex="0">
-      <div class="dc-city-head">${c.cc ? pinFlagSvg(c.cc.toLowerCase(), { tip: c.country }) : '<span class="vpin-none">?</span>'}<span class="dc-city-name" data-tip-ellipsis>${esc(c.city)}</span><span class="dc-city-cc">${esc(c.cc || '')}</span></div>
-      <div class="dc-city-line"><b>${fmt(x.count)}</b> validators<span class="vcard-sep"></span><b>${fmtStakeSol(x.stake)}</b> SOL<span class="vcard-sep"></span><span data-tip="${esc(e.provider)}'s validators in this city as a share of the whole cluster stake">${pct((x.stake / (dcClusterStake || 1)) * 100, 2)}</span></div>
+    return `<div class="dc-city${active ? ' is-active' : ''}${st === 'exclude' ? ' is-excluded' : ''}${x.count === 0 && !st && !e.net_only ? ' is-dim' : ''}${i >= visible ? ' is-extra' : ''}" data-city="${esc(c.city)}" role="button" tabindex="0">
+      <div class="dc-city-head">${c.cc ? pinFlagSvg(c.cc.toLowerCase(), { tip: c.country }) : '<span class="vpin-none">?</span>'}<span class="dc-city-name" data-tip-ellipsis>${esc(c.city)}</span><span class="dc-city-cc">${esc(c.cc || '')}</span>${NOT_BUTTON}</div>
+      ${e.net_only
+        ? `<div class="dc-city-line"><b>${fmt(c.nodes || 0)}</b> network node${(c.nodes || 0) === 1 ? '' : 's'}</div>`
+        : `<div class="dc-city-line"><b>${fmt(x.count)}</b> validators<span class="vcard-sep"></span><b>${fmtStakeSol(x.stake)}</b> SOL<span class="vcard-sep"></span><span data-tip="${esc(e.provider)}'s validators in this city as a share of the whole cluster stake">${pct((x.stake / (dcClusterStake || 1)) * 100, 2)}</span></div>`}
       ${badges.length ? `<div class="vbadges">${badges.join('')}</div>` : ''}${cityNetBadges(c)}
     </div>`;
   }).join('');
@@ -480,26 +513,28 @@ function renderCities(e) {
   if (e.cities.length <= visible) card.classList.remove('is-expanded');
   foot.querySelector('.vagg-more')?.addEventListener('click', () => { citiesExpanded = !citiesExpanded; renderCities(e); });
   grid.querySelectorAll('.dc-city').forEach(el => {
-    el.addEventListener('click', () => toggleFilter('city', el.dataset.city));
+    el.addEventListener('click', (ev) => toggleFilter('city', el.dataset.city, ev.target instanceof Element && ev.target.closest('.vagg-not') ? 'exclude' : 'include'));
     el.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); toggleFilter('city', el.dataset.city); } });
   });
+  if (!grid.dataset.lp) { grid.dataset.lp = '1'; initLongPress(grid, '.dc-city', (t) => toggleFilter('city', t.dataset.city, 'exclude')); }
 }
 
 function renderChips() {
   const chips = [];
-  filters.city.forEach(v => chips.push({ k: 'city', v, label: v }));
-  filters.country.forEach(v => chips.push({ k: 'country', v, label: `Country: ${v}` }));
-  filters.asn.forEach(v => chips.push({ k: 'asn', v, label: v }));
-  document.getElementById('dc-active-filters').innerHTML = chips.map(c => `<span class="filter-chip">${esc(c.label)}<span class="chip-x" data-k="${c.k}" data-v="${esc(c.v)}">&times;</span></span>`).join('');
+  const push = (k, v, label) => { const not = v.startsWith('!'); const raw = not ? v.slice(1) : v; chips.push({ k, raw, not, label: label(raw) }); };
+  filters.city.forEach(v => push('city', v, r => r));
+  filters.country.forEach(v => push('country', v, r => `Country: ${r}`));
+  filters.asn.forEach(v => push('asn', v, r => r));
+  document.getElementById('dc-active-filters').innerHTML = chips.map(c => `<span class="filter-chip${c.not ? ' is-not' : ''}">${c.not ? '<span class="chip-not">not</span>' : ''}${esc(c.label)}<span class="chip-x" data-k="${c.k}" data-v="${esc(c.raw)}">&times;</span></span>`).join('');
   document.getElementById('dc-clear').style.display = chips.length ? 'inline-block' : 'none';
-  document.querySelectorAll('#dc-active-filters .chip-x').forEach(x => x.addEventListener('click', () => toggleFilter(x.dataset.k, x.dataset.v)));
+  document.querySelectorAll('#dc-active-filters .chip-x').forEach(x => x.addEventListener('click', () => { filters[x.dataset.k] = filters[x.dataset.k].filter(v => v !== x.dataset.v && v !== `!${x.dataset.v}`); syncUrl(); renderAll(); }));
 }
 
 function renderDcTable(records) {
   const cluster = getCluster();
   const list = sortValidators(records, dcSort.key, dcSort.dir);
   const from = `provider:${entry.slug}`;
-  const ctx = (i) => ({ cluster, pos: i + 1, tiers: dcStakeTiers, summary: dcSummary, avail: dcAvail, from });
+  const ctx = (i) => ({ cluster, pos: i + 1, tiers: dcStakeTiers, summary: dcSummary, avail: dcAvail, from, bands: dcBands });
   const tbody = document.getElementById('dc-vals-body');
   const cards = document.getElementById('dc-vcards');
   tbody.innerHTML = list.map((r, i) => renderRow(r, ctx(i))).join('');
@@ -520,12 +555,13 @@ function renderDcTable(records) {
 
 function renderScope() {
   const el = document.getElementById('dc-scope');
-  if (!filters.country.length) { el.style.display = 'none'; el.innerHTML = ''; return; }
-  const names = filters.country.map(cc => entry.countries.find(c => c.cc === cc)?.country || cc);
-  const inCountry = allProviderRecords.filter(r => filters.country.includes(r.geolocation?.country_code));
+  const incC = incOf('country');
+  if (!incC.length) { el.style.display = 'none'; el.innerHTML = ''; return; }
+  const names = incC.map(cc => entry.countries.find(c => c.cc === cc)?.country || cc);
+  const inCountry = allProviderRecords.filter(r => incC.includes(r.geolocation?.country_code));
   const cities = new Set(inCountry.map(r => r.geolocation?.city)).size;
   el.style.display = 'flex';
-  el.innerHTML = `${filters.country.map(cc => circleFlagSvg(cc.toLowerCase(), { size: 20 })).join('')}<span>Showing <b>${esc(entry.provider)}</b> in <b>${esc(names.join(', '))}</b><span class="muted">: ${fmt(inCountry.length)} validator${inCountry.length === 1 ? '' : 's'} in ${fmt(cities)} cit${cities === 1 ? 'y' : 'ies'}</span></span><button type="button" class="filter-clear" id="dc-scope-clear">Show all countries &times;</button>`;
+  el.innerHTML = `${incC.map(cc => circleFlagSvg(cc.toLowerCase(), { size: 20 })).join('')}<span>Showing <b>${esc(entry.provider)}</b> in <b>${esc(names.join(', '))}</b><span class="muted">: ${fmt(inCountry.length)} validator${inCountry.length === 1 ? '' : 's'} in ${fmt(cities)} cit${cities === 1 ? 'y' : 'ies'}</span></span><button type="button" class="filter-clear" id="dc-scope-clear">Show all countries &times;</button>`;
   el.querySelector('#dc-scope-clear').addEventListener('click', () => { filters.country = []; syncUrl(); renderAll(); });
 }
 
@@ -537,15 +573,12 @@ function renderAll() {
   renderCities(entry);
   renderChips();
   // ASN chips: active when selected, dimmed when the other filters leave no validator on that ASN
-  const asnAlive = new Set(allProviderRecords.filter(r => {
-    const g = r.geolocation || {};
-    if (filters.city.length && !filters.city.includes(g.city)) return false;
-    if (filters.country.length && !filters.country.includes(g.country_code)) return false;
-    return true;
-  }).map(r => r.geolocation?.asn));
+  const asnAlive = new Set(allProviderRecords.filter(r => passes(r, ['city', 'country'])).map(r => r.geolocation?.asn));
   document.querySelectorAll('.dc-asn').forEach(el => {
-    el.classList.toggle('is-active', filters.asn.includes(el.dataset.asn));
-    el.classList.toggle('is-dim', !asnAlive.has(el.dataset.asn) && !filters.asn.includes(el.dataset.asn));
+    const st = fState('asn', el.dataset.asn);
+    el.classList.toggle('is-active', st === 'include');
+    el.classList.toggle('is-excluded', st === 'exclude');
+    el.classList.toggle('is-dim', !asnAlive.has(el.dataset.asn) && !st);
   });
   renderDcTable(sel);
 }
@@ -579,12 +612,23 @@ async function loadAndRender() {
     const records = (data?.records || []).filter(isValidatorRecord);
     computeTvcRanks(records);
     dcStakeTiers = computeStakeTiers(records);
+    dcBands = computePerfBands(records);
     dcAvail = tableAvailability(records);
     dcClusterStake = records.reduce((s, r) => s + (r.activated_stake_lamports || 0), 0);
     applyAvailability(document.getElementById('dc-vtable-wrap'), dcAvail);
     if (dcSortMenu) dcSortMenu.update(dcAvail);
-    const providers = aggregateProviders(records, summary);
+    let providers = aggregateProviders(records, summary);
     entry = findProvider(providers, providerParam);
+    if (!entry) {
+      // maybe a carrier with network nodes but no validators (Cogent, Zayo, Tata)
+      try {
+        const infra = await fetchInfrastructure(cluster);
+        const asnToProvider = new Map();
+        for (const e of providers) for (const a of e.asns) asnToProvider.set(a.asn, e.provider);
+        providers = providers.concat(networkOnlyProviders(providers, infra?.records || [], summary, asnToProvider));
+        entry = findProvider(providers, providerParam);
+      } catch (e) { /* no infrastructure file: fall through to not-found */ }
+    }
     if (!entry) {
       // Same state as the validator page: the provider is not in this cluster; list the
       // clusters where it is (canonical order, cluster colours), one click to go there.
@@ -616,7 +660,10 @@ async function loadAndRender() {
     if (!params.get('provider') && params.get('asn') && !filters.asn.includes(params.get('asn'))) filters.asn.push(params.get('asn'));
     const url = new URL(window.location.href); url.searchParams.set('provider', entry.slug); window.history.replaceState(null, '', url.toString());
     allProviderRecords = records.filter(r => r.geolocation && providerOf(r) === entry.provider);
-    if (entry.net_total > 0) await loadCityNet(cluster, entry.provider, entry.asns.map(a => a.asn));
+    if (entry.net_only) cityNet = entry.net_cities || new Map();
+    else if (entry.net_total > 0) await loadCityNet(cluster, entry.provider, entry.asns.map(a => a.asn));
+    document.querySelector('.dc-vals').style.display = entry.net_only ? 'none' : '';
+    document.getElementById('dc-head-tag').textContent = entry.net_only ? 'Network infrastructure host' : 'Network provider';
     renderHeader(entry);
     initDcTableHead();
     renderAll();
