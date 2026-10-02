@@ -218,6 +218,7 @@ import Footer from '../components/Footer.astro';
   .dc-city.is-active { border-color: var(--cluster-accent); background: color-mix(in srgb, var(--cluster-accent) 10%, var(--bg-primary)); }
   .dc-city.is-dim { opacity: 0.45; }
   .dc-city.is-extra { display: none; }
+  .dc-city.is-net-only { border-style: dashed; }
   .dc-cities-card.is-expanded .dc-city.is-extra { display: block; }
   .dc-city-head { display: flex; align-items: center; gap: 0.45rem; min-width: 0; }
   .dc-city-name { font-family: var(--font-display); font-size: 0.95rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
@@ -472,10 +473,27 @@ function renderStats(s, total) {
 }
 
 const CITIES_VISIBLE = () => (window.innerWidth <= 640 ? 6 : 12);
+// Cities of the provider: the ones with validators, then the ones where it only runs
+// network nodes (a BAM node in Hong Kong without a single validator there), so nothing
+// the provider hosts is hidden (Viktor, 2026-09-28).
+function cityList(e) {
+  const out = e.cities.slice();
+  const seen = new Set(out.map(c => `${c.city}|${c.cc || '??'}`));
+  for (const [k, net] of cityNet) {
+    if (seen.has(k)) continue;
+    const [city, cc] = k.split('|');
+    out.push({ city, cc: cc === '??' ? null : cc, country: cc, count: 0, delinquent: 0, stake_lamports: 0, stake_pct: 0, dz: 0, bam: 0, asns: [], nodes: netTotal(net), net_only_city: true });
+  }
+  return out;
+}
 function renderCities(e) {
   const grid = document.getElementById('dc-cities-grid');
   const card = document.getElementById('dc-cities-card');
-  document.getElementById('dc-cities-title').textContent = `${fmt(e.cities.length)} cit${e.cities.length === 1 ? 'y' : 'ies'} where ${e.provider} hosts validators`;
+  const cities = cityList(e);
+  const netOnlyCities = cities.filter(c => c.net_only_city).length;
+  document.getElementById('dc-cities-title').textContent = e.net_only
+    ? `${fmt(cities.length)} cit${cities.length === 1 ? 'y' : 'ies'} with ${e.provider} network nodes`
+    : `${fmt(cities.length)} cit${cities.length === 1 ? 'y' : 'ies'} where ${e.provider} hosts validators${netOnlyCities ? ` (${fmt(netOnlyCities)} with network nodes only)` : ''}`;
   const visible = CITIES_VISIBLE();
   // counts inside a city follow the other filters (asn, country), not the city selection
   const byCity = new Map();
@@ -487,7 +505,7 @@ function renderCities(e) {
     x.count++; if (r.delinquent) x.delinquent++; x.stake += r.activated_stake_lamports || 0; if (r.dz_connected) x.dz++; if (r.dz_multicast_publisher) x.mc++; if (r.bam_node) x.bam++; if (r.sfdp_state === 'Approved') x.sfdp++;
     byCity.set(k, x);
   }
-  grid.innerHTML = e.cities.map((c, i) => {
+  grid.innerHTML = cities.map((c, i) => {
     const k = `${c.city}|${c.cc || '??'}`;
     const x = byCity.get(k) || { count: 0, delinquent: 0, stake: 0, dz: 0, mc: 0, bam: 0, sfdp: 0 };
     const st = fState('city', c.city);
@@ -499,18 +517,18 @@ function renderCities(e) {
     if (x.sfdp) badges.push(`<span class="vbadge vbadge-sfdp" data-tip="${x.sfdp} SFDP-approved validators here">SFDP ${fmt(x.sfdp)}</span>`);
     if (c.asns.length > 1) badges.push(`<span class="vbadge vbadge-comm" data-tip="${esc(c.asns.join(', '))}">${c.asns.length} ASNs</span>`);
     if (x.delinquent) badges.push(`<span class="vbadge vbadge-del">${fmt(x.delinquent)} delinquent</span>`);
-    return `<div class="dc-city${active ? ' is-active' : ''}${st === 'exclude' ? ' is-excluded' : ''}${x.count === 0 && !st && !e.net_only ? ' is-dim' : ''}${i >= visible ? ' is-extra' : ''}" data-city="${esc(c.city)}" role="button" tabindex="0">
+    return `<div class="dc-city${active ? ' is-active' : ''}${st === 'exclude' ? ' is-excluded' : ''}${x.count === 0 && !st && !e.net_only && !c.net_only_city ? ' is-dim' : ''}${c.net_only_city ? ' is-net-only' : ''}${i >= visible ? ' is-extra' : ''}" data-city="${esc(c.city)}" role="button" tabindex="0">
       <div class="dc-city-head">${c.cc ? pinFlagSvg(c.cc.toLowerCase(), { tip: c.country }) : '<span class="vpin-none">?</span>'}<span class="dc-city-name" data-tip-ellipsis>${esc(c.city)}</span><span class="dc-city-cc">${esc(c.cc || '')}</span>${NOT_BUTTON}</div>
-      ${e.net_only
-        ? `<div class="dc-city-line"><b>${fmt(c.nodes || 0)}</b> network node${(c.nodes || 0) === 1 ? '' : 's'}</div>`
+      ${e.net_only || c.net_only_city
+        ? `<div class="dc-city-line"><b>${fmt(c.nodes || 0)}</b> network node${(c.nodes || 0) === 1 ? '' : 's'}${c.net_only_city ? '<span class="vcard-sep"></span>no validators' : ''}</div>`
         : `<div class="dc-city-line"><b>${fmt(x.count)}</b> validators<span class="vcard-sep"></span><b>${fmtStakeSol(x.stake)}</b> SOL<span class="vcard-sep"></span><span data-tip="${esc(e.provider)}'s validators in this city as a share of the whole cluster stake">${pct((x.stake / (dcClusterStake || 1)) * 100, 2)}</span></div>`}
       ${badges.length ? `<div class="vbadges">${badges.join('')}</div>` : ''}${cityNetBadges(c)}
     </div>`;
   }).join('');
   card.classList.toggle('is-expanded', citiesExpanded);
   const foot = document.getElementById('dc-cities-foot');
-  foot.innerHTML = e.cities.length > visible ? `<button class="vagg-more" type="button">${citiesExpanded ? 'Show less' : `Show all ${e.cities.length} cities`}</button>` : '';
-  if (e.cities.length <= visible) card.classList.remove('is-expanded');
+  foot.innerHTML = cities.length > visible ? `<button class="vagg-more" type="button">${citiesExpanded ? 'Show less' : `Show all ${cities.length} cities`}</button>` : '';
+  if (cities.length <= visible) card.classList.remove('is-expanded');
   foot.querySelector('.vagg-more')?.addEventListener('click', () => { citiesExpanded = !citiesExpanded; renderCities(e); });
   grid.querySelectorAll('.dc-city').forEach(el => {
     el.addEventListener('click', (ev) => toggleFilter('city', el.dataset.city, ev.target instanceof Element && ev.target.closest('.vagg-not') ? 'exclude' : 'include'));

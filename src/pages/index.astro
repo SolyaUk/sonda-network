@@ -781,7 +781,7 @@ import ClusterBanner from '../components/ClusterBanner.astro';
 
 /* Performance card */
 .perf-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 0.5rem; }
-@media (max-width: 480px) { .perf-grid { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 640px) { .perf-grid { grid-template-columns: 1fr 1fr; } .perf-tile.is-wide { grid-column: 1 / -1; } }
 .perf-tile { background: var(--bg-secondary); border-radius: 6px; padding: 0.55rem 0.65rem; display: flex; flex-direction: column; gap: 0.15rem; }
 .perf-tile-num { font-family: var(--font-mono); font-size: 1.25rem; font-weight: 700; line-height: 1; }
 .perf-tile-num.good { color: var(--status-good); }
@@ -2116,7 +2116,7 @@ function renderTestnetDevnetStories(records: any[], d: any, cluster: 'testnet' |
         <div class="perf-tile"><div class="perf-tile-num good">${fmt(perf.top)}</div><div class="perf-tile-label">top performers</div></div>
         <div class="perf-tile"><div class="perf-tile-num neutral">${fmt(perf.mid)}</div><div class="perf-tile-label">mid</div></div>
         <div class="perf-tile"><div class="perf-tile-num crit">${fmt(perf.lagging)}</div><div class="perf-tile-label">lagging</div></div>
-        <div class="perf-tile"><div class="perf-tile-num muted">${fmt(perf.delinq)}</div><div class="perf-tile-label">delinquent</div></div>${perf.mode === 'skip' && perf.noSlots ? `<div class="perf-tile" data-tip="Active validators that had no leader slot yet this epoch, so no skip rate to judge"><div class="perf-tile-num muted">${fmt(perf.noSlots)}</div><div class="perf-tile-label">no slots yet</div></div>` : ''}
+        <div class="perf-tile"><div class="perf-tile-num muted">${fmt(perf.delinq)}</div><div class="perf-tile-label">delinquent</div></div>${perf.mode === 'skip' && perf.noSlots ? `<div class="perf-tile is-wide" data-tip="Active validators that had no leader slot yet this epoch, so no skip rate to judge"><div class="perf-tile-num muted">${fmt(perf.noSlots)}</div><div class="perf-tile-label">no slots yet</div></div>` : ''}
       </div>
       <div class="perf-bar">
         <div class="perf-bar-seg good" style="width:${perfTopW}%"></div>
