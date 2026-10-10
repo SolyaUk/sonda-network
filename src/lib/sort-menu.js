@@ -1,5 +1,5 @@
 /**
- * Sort menu for validator tables: one trigger button ("Sort: TVC rank, best first") and a
+ * Sort menu for validator tables: one trigger button ("Sort: IBRL, high to low") and a
  * grouped dropdown. Each sort key appears once; the item's default direction is used on
  * first pick and a click on the active item flips it. Keys that no validator in the
  * cluster has (slot time on alpenglow, SFDP on devnet) are not shown at all.
@@ -14,27 +14,35 @@ const ICONS = {
   validator: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>',
   location: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s7-6.5 7-12a7 7 0 1 0-14 0c0 5.5 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/></svg>',
   status: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4"/><path d="M5 4h12l-2 4 2 4H5"/></svg>',
+  pools: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v6c0 1.7 3.1 3 7 3s7-1.3 7-3V6"/><path d="M5 12v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6"/></svg>',
 };
 
 // dirs: [defaultDir, label(default), label(flipped)]
 export const SORT_GROUPS = [
   { id: 'performance', label: 'Performance', items: [
-    { key: 'rank', label: 'TVC rank', dir: 'asc', labels: { asc: 'best first', desc: 'worst first' } },
-    { key: 'credits', label: 'Credits', dir: 'desc', labels: { desc: 'high to low', asc: 'low to high' } },
+    { key: 'ibrl', label: 'IBRL', dir: 'desc', labels: { desc: 'high to low', asc: 'low to high' }, needs: 'ibrl' },
     { key: 'skip', label: 'Skip rate', dir: 'asc', labels: { asc: 'low to high', desc: 'high to low' }, needs: 'skip' },
     { key: 'slot', label: 'Slot time', dir: 'asc', labels: { asc: 'fast to slow', desc: 'slow to fast' }, needs: 'slot' },
     { key: 'votes', label: 'Vote performance', dir: 'desc', labels: { desc: 'best first', asc: 'worst first' }, needs: 'votes' },
     { key: 'vlat', label: 'Vote latency', dir: 'asc', labels: { asc: 'low to high', desc: 'high to low' }, needs: 'vlat' },
-    { key: 'ibrl', label: 'IBRL', dir: 'desc', labels: { desc: 'high to low', asc: 'low to high' }, needs: 'ibrl' },
+    { key: 'credits', label: 'Credits', dir: 'desc', labels: { desc: 'high to low', asc: 'low to high' } },
   ] },
   { id: 'stake', label: 'Stake', items: [
     { key: 'stake', label: 'Stake', dir: 'desc', labels: { desc: 'high to low', asc: 'low to high' } },
     { key: 'commission', label: 'Commission', dir: 'asc', labels: { asc: 'low to high', desc: 'high to low' } },
   ] },
+  // rank in a stake pool, 1 = best (keys are the pool ids of src/lib/pools.js); mainnet only
+  { id: 'pools', label: 'Stake pools', items: [
+    { key: 'jito', label: 'Jito rank', dir: 'asc', labels: { asc: 'best first', desc: 'worst first' }, needs: 'pool_jito' },
+    { key: 'xshin', label: 'xSHIN rank', dir: 'asc', labels: { asc: 'best first', desc: 'worst first' }, needs: 'pool_xshin' },
+    { key: 'solstrategies', label: 'SOL Strategies rank', dir: 'asc', labels: { asc: 'best first', desc: 'worst first' }, needs: 'pool_solstrategies' },
+    { key: 'jpool', label: 'JPool rank', dir: 'asc', labels: { asc: 'best first', desc: 'worst first' }, needs: 'pool_jpool' },
+  ] },
   { id: 'validator', label: 'Validator', items: [
     { key: 'name', label: 'Name', dir: 'asc', labels: { asc: 'A to Z', desc: 'Z to A' } },
     { key: 'client', label: 'Client', dir: 'asc', labels: { asc: 'A to Z', desc: 'Z to A' } },
     { key: 'version', label: 'Version', dir: 'desc', labels: { desc: 'newest first', asc: 'oldest first' } },
+    { key: 'age', label: 'Age', dir: 'desc', labels: { desc: 'oldest first', asc: 'newest first' }, needs: 'age' },
   ] },
   { id: 'location', label: 'Location', items: [
     { key: 'country', label: 'Country', dir: 'asc', labels: { asc: 'A to Z', desc: 'Z to A' } },
@@ -65,6 +73,8 @@ export const PROVIDER_SORT_GROUPS = [
     { key: 'asns', label: 'Networks (ASNs)', dir: 'desc', labels: { desc: 'most first', asc: 'fewest first' } },
     { key: 'countries', label: 'Countries', dir: 'desc', labels: { desc: 'most first', asc: 'fewest first' } },
     { key: 'cities', label: 'Cities', dir: 'desc', labels: { desc: 'most first', asc: 'fewest first' } },
+    // StakeWiz location penalty, median of the provider's validators (mainnet); 0 is the best
+    { key: 'penalty', label: 'Location penalty', dir: 'desc', labels: { desc: 'smallest first', asc: 'largest first' }, needs: 'penalty' },
   ] },
   { id: 'status', label: 'Infrastructure', items: [
     { key: 'dz', label: 'DoubleZero', dir: 'desc', labels: { desc: 'most connected first', asc: 'fewest first' }, needs: 'connections' },
@@ -73,27 +83,18 @@ export const PROVIDER_SORT_GROUPS = [
     { key: 'net', label: 'Network infrastructure', dir: 'desc', labels: { desc: 'most hosted first', asc: 'fewest first' }, needs: 'net' },
   ] },
   { id: 'performance', label: 'Performance', items: [
-    { key: 'rank', label: 'Median TVC rank', dir: 'asc', labels: { asc: 'best first', desc: 'worst first' } },
-    { key: 'skip', label: 'Average skip', dir: 'asc', labels: { asc: 'low to high', desc: 'high to low' }, needs: 'skip' },
     { key: 'ibrl', label: 'Median IBRL', dir: 'desc', labels: { desc: 'high to low', asc: 'low to high' }, needs: 'ibrl' },
+    { key: 'skip', label: 'Average skip', dir: 'asc', labels: { asc: 'low to high', desc: 'high to low' }, needs: 'skip' },
     { key: 'slot', label: 'Median slot time', dir: 'asc', labels: { asc: 'fast to slow', desc: 'slow to fast' }, needs: 'slot' },
     { key: 'votes', label: 'Vote performance', dir: 'desc', labels: { desc: 'best first', asc: 'worst first' }, needs: 'votes' },
     { key: 'vlat', label: 'Vote latency', dir: 'asc', labels: { asc: 'low to high', desc: 'high to low' }, needs: 'vlat' },
   ] },
 ];
 
-/** Which optional metrics exist anywhere in the cluster. */
-export function sortAvailability(records) {
-  const rs = records || [];
-  return {
-    skip: rs.some(r => r.skip_rate != null),
-    slot: rs.some(r => r.slot_duration_median != null),
-    vlat: rs.some(r => r.mean_vote_latency != null || r.median_vote_latency != null),
-    votes: rs.some(r => r.vote_credits_ratio_prev != null),
-    ibrl: rs.some(r => r.ibrl?.ibrl_score != null),
-    sfdp: rs.some(r => r.sfdp_state),
-    connections: rs.some(r => r.dz_connected || r.bam_node || r.dz_multicast_publisher || r.rakurai),
-  };
+/** True for a "<key>-<asc|desc>" value whose key exists in the groups (URL values are untrusted and may be legacy). */
+export function isKnownSort(value, groups = SORT_GROUPS) {
+  const m = /^([a-z]+)-(asc|desc)$/.exec(String(value || ''));
+  return !!m && !!findItem(m[1], groups);
 }
 
 export function sortLabel(key, dir, groups = SORT_GROUPS) {
@@ -105,8 +106,9 @@ export function sortLabel(key, dir, groups = SORT_GROUPS) {
 /**
  * Mount the menu into `host`. `select` is the hidden native select that holds the state.
  */
-export function initSortMenu(host, select, { avail = {}, groups = SORT_GROUPS, defaultValue = 'rank-asc' } = {}) {
+export function initSortMenu(host, select, { avail = {}, groups = SORT_GROUPS, defaultValue = 'stake-desc' } = {}) {
   let availability = avail;
+  let fallback = defaultValue;
   host.classList.add('sort-menu');
   host.innerHTML = `
     <button type="button" class="sort-trigger" aria-haspopup="listbox" aria-expanded="false">
@@ -120,7 +122,7 @@ export function initSortMenu(host, select, { avail = {}, groups = SORT_GROUPS, d
   const panel = host.querySelector('.sort-panel');
 
   const current = () => {
-    const [key, dir] = (select.value || defaultValue).split('-');
+    const [key, dir] = (select.value || fallback).split('-');
     return { key, dir };
   };
   const ensureOption = (value) => {
@@ -195,13 +197,24 @@ export function initSortMenu(host, select, { avail = {}, groups = SORT_GROUPS, d
 
   render();
   return {
-    update(nextAvail) {
+    /**
+     * New availability (data arrived, cluster switched). `next.defaultValue` replaces the
+     * fallback sort and `next.value` sets the current one; both are applied silently, without
+     * a "change" event, so a cluster default is never written to the URL as a user choice.
+     * A current key that is unknown or has no data in this cluster falls back to the default;
+     * the return value tells the page (`fellBack`) so it can drop its own stored choice.
+     */
+    update(nextAvail, next = {}) {
       availability = nextAvail || {};
-      // fall back if the current key is no longer available on this cluster
+      if (next.defaultValue) fallback = next.defaultValue;
+      const setSilent = (value) => { ensureOption(value); select.value = value; };
+      if (next.value) setSilent(next.value);
       const cur = current();
       const f = findItem(cur.key, groups);
-      const [dk, dd] = defaultValue.split('-');
-      if (f && f.item.needs && !availability[f.item.needs]) setSort(dk, dd); else render();
+      const fellBack = !f || !!(f.item.needs && !availability[f.item.needs]);
+      if (fellBack) setSilent(fallback);
+      render();
+      return { fellBack, value: select.value };
     },
     set: setSort,
     current,

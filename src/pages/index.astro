@@ -489,7 +489,7 @@ import ClusterBanner from '../components/ClusterBanner.astro';
                     <div class="phase-block-bar-fill" style="width:100%; background: var(--status-good);"></div>
                   </div>
                   <div class="phase-block-desc">
-                    <strong>sonda.network launched.</strong> Live homepage on all three clusters. Cluster switching, decentralization metrics, live infrastructure status, geographic distribution, Path to better decentralization, About + Roadmap. Twitter @SondaNetwork. Hosted on sonda.network.
+                    <strong>sonda.network launched.</strong> Live homepage on four clusters. Cluster switching, decentralization metrics, live infrastructure status, geographic distribution, Path to better decentralization, About + Roadmap. Twitter @SondaNetwork. Hosted on sonda.network.
                   </div>
                 </div>
 
@@ -505,7 +505,7 @@ import ClusterBanner from '../components/ClusterBanner.astro';
                     <div class="phase-block-bar-fill" style="width:70%; background: var(--accent-blue);"></div>
                   </div>
                   <div class="phase-block-desc">
-                    <strong>Per-page deep dives.</strong> Done: validators table with filters, sorting and live refresh; validator profiles; datacenters by provider with locations, infrastructure and performance; cluster status and chain vitals. In progress: validator age and stake pool ranks, include/exclude filters. Next: validator profile redesign, endpoints monitor, methodology page.
+                    <strong>Per-page deep dives.</strong> Done: validators table with include and exclude filters, sorting and live refresh; validator profiles; validator age; stake pool ranks; datacenters by provider with locations, infrastructure and performance; cluster status and chain vitals. Next: range and region filters, validator profile redesign, methodology page.
                   </div>
                 </div>
 
@@ -519,7 +519,7 @@ import ClusterBanner from '../components/ClusterBanner.astro';
                   </div>
                   <div class="phase-block-bar"><div class="phase-block-bar-fill" style="width:0%;"></div></div>
                   <div class="phase-block-desc">
-                    <strong>Historical analytics.</strong> Location history since 2021, per-epoch performance charts for validators and datacenters, decentralization trends over time, network events archive.
+                    <strong>Historical analytics.</strong> Location history since 2021, per-epoch performance charts for validators and datacenters, decentralization trends over time, endpoints monitor with availability history, network events archive.
                   </div>
                 </div>
 
@@ -587,7 +587,7 @@ import ClusterBanner from '../components/ClusterBanner.astro';
           <span data-tip="JSON-RPC and CLI: gossip nodes, vote accounts and credits, epoch info, feature gates, validator-info. RPC chain: Helius, public RPC, Solya's own nodes">on-chain and RPC</span>
         </span>
         <span class="src-group"><span class="src-group-l">External</span>
-          <span data-tip="Primary geolocation">DB-IP</span><span data-tip="Geolocation cross-check">IPInfo</span><span data-tip="Geolocation cross-check">GeoJS</span><span data-tip="Geolocation cross-check">ip-api</span><span data-tip="Kobe API: validator history, MEV data, steward events; BAM explorer: BAM nodes, connected validators, IBRL scores">Jito</span><span data-tip="Malbec API (devices, users, links), network health, multicast groups">DoubleZero</span><span data-tip="Rakurai validator list">Rakurai</span><span data-tip="api.solana.org: historical datacenter locations for the location history">SFDP</span><span data-tip="Epoch dates for history pages; rank and score components">StakeWiz</span><span data-tip="Vote latency, slot duration, MEV commission, SFDP status, name and icon fallback">Trillium</span><span data-tip="ASN holder names and network types for the provider registry (manual verification), bgp.tools for ASN research">RIPE Stat, PeeringDB</span><span data-tip="Client id registry (client_ids.rs) and feature gate catalog">Anza agave</span>
+          <span data-tip="Primary geolocation">DB-IP</span><span data-tip="Geolocation cross-check">IPInfo</span><span data-tip="Geolocation cross-check">GeoJS</span><span data-tip="Geolocation cross-check">ip-api</span><span data-tip="Kobe API: validator history, MEV data, steward events; steward: stake pool ranks and eligibility; BAM explorer: BAM nodes, connected validators, IBRL scores">Jito</span><span data-tip="Malbec API (devices, users, links), network health, multicast groups">DoubleZero</span><span data-tip="Rakurai validator list">Rakurai</span><span data-tip="api.solana.org: historical datacenter locations for the location history">SFDP</span><span data-tip="Epoch dates for history pages; rank, score and location penalty (the score SOL Strategies delegates by)">StakeWiz</span><span data-tip="xSHIN stake pool: validator ranks, scores and pool membership">Shinobi</span><span data-tip="JPool performance ranks; vote history of testnet validators for their age">svt.one</span><span data-tip="Vote latency, slot duration, MEV commission, SFDP status, name and icon fallback">Trillium</span><span data-tip="ASN holder names and network types for the provider registry (manual verification), bgp.tools for ASN research">RIPE Stat, PeeringDB</span><span data-tip="Client id registry (client_ids.rs) and feature gate catalog">Anza agave</span>
         </span>
         </div>
       </div>
@@ -646,6 +646,28 @@ import ClusterBanner from '../components/ClusterBanner.astro';
 .vitals-alert strong { color: var(--text-primary); }
 .vitals-alert.is-bad { border-color: color-mix(in srgb, var(--status-critical) 50%, transparent); background: color-mix(in srgb, var(--status-critical) 10%, var(--bg-card)); }
 .vitals-alert.is-warn { border-color: color-mix(in srgb, var(--accent-amber) 50%, transparent); background: color-mix(in srgb, var(--accent-amber) 10%, var(--bg-card)); }
+/* Cluster restart progress inside the halted alert: share of active stake back in gossip,
+   with a mark at the share a restart needs (RESTART_STAKE_PCT in the script). */
+.vitals-alert.has-restart { padding: 0.9rem 1.15rem 0.95rem; font-size: 0.82rem; }
+.restart { margin: 0.7rem 0 0.75rem; }
+.restart-figure { display: flex; align-items: baseline; flex-wrap: wrap; gap: 0.15rem 0.7rem; }
+.restart-pct { font-family: var(--font-mono); font-size: 2.9rem; font-weight: 700; line-height: 1; letter-spacing: -0.03em; color: var(--accent-amber); }
+.restart-pct small { font-size: 0.5em; font-weight: 600; margin-left: 0.08em; opacity: 0.85; }
+.restart-cap { font-size: 1rem; color: var(--text-primary); }
+.restart-bar { position: relative; height: 18px; margin-top: 0.75rem; border-radius: 999px; background: color-mix(in srgb, var(--text-muted) 18%, var(--bg-primary)); border: 1px solid var(--border); }
+.restart-fill { position: relative; overflow: hidden; height: 100%; min-width: 8px; border-radius: 999px; background: linear-gradient(90deg, color-mix(in srgb, var(--accent-amber) 55%, var(--bg-primary)), var(--accent-amber)); box-shadow: 0 0 16px color-mix(in srgb, var(--accent-amber) 40%, transparent); }
+.restart-fill::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent); transform: translateX(-100%); animation: restart-sheen 2.6s ease-in-out infinite; }
+@keyframes restart-sheen { to { transform: translateX(100%); } }
+.restart-mark { position: absolute; top: -5px; bottom: -5px; width: 2px; margin-left: -1px; border-radius: 1px; background: var(--text-primary); cursor: help; }
+.restart-scale { position: relative; height: 1.1rem; margin-top: 0.45rem; font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-secondary); }
+.restart-mark-label { position: absolute; top: 0; transform: translateX(-50%); white-space: nowrap; }
+.restart.is-reached .restart-pct { color: var(--status-good); }
+.restart.is-reached .restart-fill { background: linear-gradient(90deg, color-mix(in srgb, var(--status-good) 55%, var(--bg-primary)), var(--status-good)); box-shadow: 0 0 16px color-mix(in srgb, var(--status-good) 40%, transparent); }
+.restart.is-reached .restart-fill::after { display: none; }
+.restart-note a { color: var(--cluster-accent); text-decoration: none; white-space: nowrap; }
+.restart-note a:hover { text-decoration: underline; }
+@media (prefers-reduced-motion: reduce) { .restart-fill::after { display: none; } }
+@media (max-width: 600px) { .restart-pct { font-size: 2.4rem; } .restart-cap { font-size: 0.92rem; } }
 .vital { padding: 1rem 1.15rem 0.95rem; min-width: 0; border-right: 1px solid color-mix(in srgb, var(--cluster-accent) 22%, var(--border)); }
 .vital:last-child { border-right: 0; }
 .vital-head { display: flex; align-items: center; gap: 0.45rem; margin-bottom: 0.45rem; }
@@ -1076,16 +1098,21 @@ import ClusterBanner from '../components/ClusterBanner.astro';
 .geo-count { font-size: 0.78rem; color: var(--text-primary); text-align: right; font-family: var(--font-mono); }
 .geo-stake { font-size: 0.72rem; color: var(--text-muted); text-align: right; font-family: var(--font-mono); }
 @media (max-width: 480px) {
-  .geo-row { grid-template-columns: 60px 1fr 45px; }
+  /* name | bar | count; the id rules above would otherwise keep four fixed columns that
+     are wider than a 360px phone */
+  .geo-row, #geo-asns .geo-row, #geo-countries .geo-row { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) 44px; }
   .geo-stake { display: none; }
 }
 
 /* ACADEMIC METRICS — 5 cards. HHI gets more width (its "BY COUNTRY" / "BY ASN"
    labels were wrapping). Nakamoto trimmed slightly to compensate. */
 .academic-grid { display: grid; grid-template-columns: 1.3fr 1fr 1fr 1.4fr 1.5fr; gap: 0.75rem; align-items: stretch; }
-@media (max-width: 1100px) { .academic-grid { grid-template-columns: 1fr 1fr 1fr; } }
-@media (max-width: 700px) { .academic-grid { grid-template-columns: 1fr 1fr; } }
-@media (max-width: 480px) { .academic-grid { grid-template-columns: 1fr; } }
+/* Breakpoints follow the narrowest the cards can get (the Nakamoto card with its four
+   rings needs about 336px): five in a row need about 1150px of page, three need 805px,
+   two need 630px. With the old 1100 / 700 / 480 the page scrolled sideways in between. */
+@media (max-width: 1159px) { .academic-grid { grid-template-columns: 1fr 1fr 1fr; } }
+@media (max-width: 819px) { .academic-grid { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 639px) { .academic-grid { grid-template-columns: minmax(0, 1fr); } }
 
 .academic-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
 .academic-label { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.07em; display: flex; align-items: center; gap: 0.3rem; }
@@ -1127,6 +1154,9 @@ import ClusterBanner from '../components/ClusterBanner.astro';
 .nak-tile-text { display: flex; flex-direction: column; gap: 0.2rem; min-width: 0; }
 .nak-donut { width: 60px; height: 60px; flex-shrink: 0; }
 .nak-donut svg { width: 100%; height: 100%; display: block; }
+/* small phones: the card is the page width, so the rings give way */
+@media (max-width: 400px) { .nak-donut { width: 44px; height: 44px; } }
+@media (max-width: 345px) { .nak-donut { width: 34px; height: 34px; } .nak-tile { padding: 0.5rem 0.4rem; gap: 0.35rem; } }
 
 /* Superminority */
 .sm-stack { display: flex; flex-direction: column; gap: 0.5rem; flex: 1; }
@@ -1345,8 +1375,8 @@ import ClusterBanner from '../components/ClusterBanner.astro';
 
 
 <script>
-import { fetchSummary, fetchValidators, fetchValidatorsCached, fetchMainnetSummaryCached, bootstrapCluster, aggregateByAsn, aggregateByProvider, isValidatorRecord, providerLogoUrl, providerTagsText, getCluster } from '../lib/data.js';
-import { circleFlagSvg, slugOf } from '../lib/validator-table.js';
+import { fetchSummary, fetchValidators, fetchValidatorsCached, fetchMainnetSummaryCached, bootstrapCluster, aggregateByAsn, aggregateByProvider, isValidatorRecord, isInGossip, providerLogoUrl, providerTagsText, getCluster } from '../lib/data.js';
+import { circleFlagSvg, slugOf, creditsFollowStake } from '../lib/validator-table.js';
 import { fmt, pct, flag, fmtTimestamp, fmtCompact, hhiRating, giniRating, nakRating, smRating, shannonRating, versionColor, clientColor } from '../lib/formatters.js';
 import { renderDonut, PIE_PALETTE } from '../lib/charts.js';
 import { savePreviousFetch } from '../lib/compare.js';
@@ -1506,13 +1536,67 @@ function fmtMs(ms: number): string {
 // different nodes (testnet 2026-09-11: 115150 slots). Treat as no data.
 const FINALITY_LAG_SANE = 5000;
 
+// Slot time verdict: compared with what is usual for the cluster, not with a fixed number,
+// because clusters keep changing their slot time (mainnet went from 400 to 250 ms at epoch
+// 1043 and to 200 ms in October 2026). The baseline is metrics.chain.slot_time_ms_typical
+// (analyzer v3.13 step 5): the median of the backend's own slot time samples over the last
+// 24 hours, on every cluster, null until it has enough samples. Snapshots without that field
+// fall back to the median of the validators' own median slot durations (mainnet only).
+// A cluster average more than 25% above the baseline reads as slow; no baseline means no
+// verdict (neutral dot) instead of a guessed threshold.
+const SLOT_SLOW_FACTOR = 1.25;
+function slotBaseline(chain: any, vals: any[]): { ms: number, tip: string } | null {
+  const typical = chain?.slot_time_ms_typical;
+  if (typeof typical === 'number' && typical > 0) {
+    const h = chain.slot_time_ms_typical_window_h;
+    const span = typeof h === 'number' && h > 0 ? `the last ${h} hours` : 'the last day';
+    return { ms: typical, tip: `Usual for this cluster over ${span}: ${Math.round(typical)} ms per slot` };
+  }
+  const xs = vals.map(r => r.slot_duration_median).filter((x: any) => typeof x === 'number' && x > 0).sort((a: number, b: number) => a - b);
+  if (xs.length < 20) return null;
+  const ms = xs[Math.floor(xs.length / 2)];
+  return { ms, tip: `Validators in this cluster usually take ${Math.round(ms)} ms per slot` };
+}
+
+// Cluster restart progress (Viktor 2026-10-09). While a cluster is halted, the share of
+// active stake back in gossip is the progress of the restart: restarted validators wait
+// until validators holding 80% of stake see each other in gossip before they produce
+// blocks again (agave --wait-for-supermajority). The threshold is a constant of the
+// validator client, it is not in our data, hence the constant here.
+const RESTART_STAKE_PCT = 80;
+function haltedFor(since: string | null | undefined): string {
+  const ms = since ? Date.now() - new Date(since).getTime() : NaN;
+  if (!(ms >= 60000)) return '';
+  const min = Math.floor(ms / 60000);
+  const days = Math.floor(min / 1440), hours = Math.floor((min % 1440) / 60), mins = min % 60;
+  if (days > 0) return hours > 0 ? `${days} d ${hours} h` : `${days} d`;
+  if (hours > 0) return mins > 0 ? `${hours} h ${mins} min` : `${hours} h`;
+  return `${mins} min`;
+}
+function restartBarHtml(stakePct: any): string {
+  const p = Number(stakePct);
+  if (stakePct == null || !Number.isFinite(p)) return '';
+  const v = Math.max(0, Math.min(100, p));
+  const reached = v >= RESTART_STAKE_PCT;
+  // rounded down, so the figure never says the mark is reached before it is
+  const shown = v >= 100 ? '100' : (Math.floor(v * 10) / 10).toFixed(1);
+  const markTip = `A restarted cluster produces blocks again once validators holding ${RESTART_STAKE_PCT}% of stake see each other in gossip`;
+  return `<div class="restart${reached ? ' is-reached' : ''}">
+    <div class="restart-figure"><span class="restart-pct">${shown}<small>%</small></span><span class="restart-cap">of active stake is back in gossip</span></div>
+    <div class="restart-bar" role="progressbar" aria-label="Active stake back in gossip" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${shown}">
+      <div class="restart-fill" style="width:${v.toFixed(2)}%"></div>
+      <div class="restart-mark" style="left:${RESTART_STAKE_PCT}%" data-tip="${markTip}"></div>
+    </div>
+    <div class="restart-scale"><span class="restart-mark-label" style="left:${RESTART_STAKE_PCT}%">${RESTART_STAKE_PCT}% to restart</span></div>
+  </div>`;
+}
+
 function renderVitals(d: any, records: any[], cluster: string) {
   const m = d?.metrics || {};
   const v = m.validators || {};
   const ch = m.cluster_health || {};
   const dz = m.doublezero;
   const chain = m.chain && typeof m.chain === 'object' ? m.chain : null;
-  const isAlp = cluster === 'alpenglow-community';
 
   const vals = records.filter(isValidatorRecord);
   const vc = votingCounts(d);
@@ -1535,7 +1619,9 @@ function renderVitals(d: any, records: any[], cluster: string) {
 
   const slotMs = chain?.slot_time_ms;
   const slotOk = !halted && slotMs != null && slotMs > 0;
-  const slotStatus = !slotOk ? 'neutral' : (slotMs <= (isAlp ? 250 : 450) ? 'ok' : 'warn');
+  const slotBase = slotBaseline(chain, vals);
+  const slotStatus = !slotOk || slotBase == null ? 'neutral' : (slotMs <= slotBase.ms * SLOT_SLOW_FACTOR ? 'ok' : 'warn');
+  const slotTip = slotBase != null ? `Average time per slot\n${slotBase.tip}` : 'Average time per slot';
   const windowTxt = !chain ? 'this cycle' : chain.source === 'delta' ? 'avg since last cycle' : (chain.window_s ? `avg over ${chain.window_s} s` : 'avg');
 
   // tps 0 together with a missing slot time means the samples were empty, not an idle chain
@@ -1568,12 +1654,18 @@ function renderVitals(d: any, records: any[], cluster: string) {
       main: consensus ? `<span class="${consensus === 'Alpenglow' ? 'vital-alpenglow' : ''}">${consensus === 'Alpenglow' ? '<svg class="consensus-ico" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M3 20L10 7l4 7 2-3 5 9z"/></svg>' : ''}${escapeHtml(consensus)}</span>` : 'no data',
       textMain: true, sub: finalityTxt, status: consensus ? finalityStatus : 'neutral',
     },
-    { name: 'Slot time', main: slotOk ? `${Math.round(slotMs)}<span class="vital-unit">ms</span>` : 'no data', sub: slotOk ? windowTxt : (halted ? 'cluster halted' : 'this cycle'), status: halted ? 'bad' : slotStatus },
+    { name: 'Slot time', tip: slotTip, main: slotOk ? `${Math.round(slotMs)}<span class="vital-unit">ms</span>` : 'no data', sub: slotOk ? windowTxt : (halted ? 'cluster halted' : 'this cycle'), status: halted ? 'bad' : slotStatus },
     { name: 'Throughput', tip: 'Transactions per second including vote transactions; non-vote throughput is shown underneath', main: tpsOk ? `${fmtCompact(chain.tps)}<span class="vital-unit">tps</span>` : 'no data', sub: tpsOk ? tpsSub : (halted ? 'cluster halted' : 'this cycle'), status: halted ? 'bad' : tpsOk ? 'ok' : 'neutral' },
     {
-      name: 'Validators', main: `${fmt(activeCount)}<span class="vital-unit">active</span>`,
+      // A halted cluster has nobody voting, so "active" would read 0 for everyone. What
+      // moves during a restart is the number of validators back in gossip, waiting for the
+      // stake threshold: that count leads the tile while the cluster is halted.
+      name: 'Validators',
+      main: halted && vals.length > 0
+        ? `${fmt(vals.filter(isInGossip).length)}<span class="vital-unit">in gossip</span>`
+        : `${fmt(activeCount)}<span class="vital-unit">active</span>`,
       sub: halted && chain.stake_in_gossip_pct != null
-        ? `${pct(chain.stake_in_gossip_pct, 0)} of stake back in gossip · ${fmt(totalCount)} total`
+        ? `${pct(chain.stake_in_gossip_pct, 0)} of stake${vals.length > 0 ? '' : ' in gossip'} \u00b7 ${fmt(totalCount)} total`
         : `${delinqCount != null ? `${fmt(delinqCount)} delinquent · ` : ''}${fmt(totalCount)} total`,
       status: halted ? 'neutral' : delinqCount == null ? 'neutral' : (totalCount > 0 && delinqCount / totalCount >= 0.1 ? 'warn' : 'ok'),
     },
@@ -1584,9 +1676,16 @@ function renderVitals(d: any, records: any[], cluster: string) {
   if (alertEl) {
     if (halted) {
       const since = chain.halted_since ? ` since ${new Date(chain.halted_since).toISOString().slice(0, 16).replace('T', ' ')} UTC` : '';
-      const back = chain.stake_in_gossip_pct != null ? ` · ${pct(chain.stake_in_gossip_pct, 0)} of active stake back in gossip` : '';
-      alertEl.innerHTML = `<strong>Cluster halted</strong>${escapeHtml(since)}: slots are not advancing as seen from our RPC. Validators are not at fault while the cluster restarts${escapeHtml(back)}.`;
-      alertEl.className = 'vitals-alert is-bad';
+      const bar = restartBarHtml(chain.stake_in_gossip_pct);
+      if (bar) {
+        const dur = haltedFor(chain.halted_since);
+        const away = vals.filter(r => !isInGossip(r)).length;
+        const who = away > 0 ? ` <a href="/validators?cluster=${encodeURIComponent(cluster)}&gossip=no&sort=stake-desc">See the ${fmt(away)} validator${away === 1 ? '' : 's'} not back yet</a>` : '';
+        alertEl.innerHTML = `<div class="restart-head"><strong>Cluster halted</strong>${escapeHtml(since)}${dur ? ` (for ${dur})` : ''}</div>${bar}<div class="restart-note">Slots are not advancing as seen from our RPC. Validators are not at fault while the cluster restarts.${who}</div>`;
+      } else {
+        alertEl.innerHTML = `<strong>Cluster halted</strong>${escapeHtml(since)}: slots are not advancing as seen from our RPC. Validators are not at fault while the cluster restarts.`;
+      }
+      alertEl.className = `vitals-alert is-bad${bar ? ' has-restart' : ''}`;
       alertEl.hidden = false;
     } else if (status === 'degraded') {
       alertEl.innerHTML = `<strong>Cluster degraded</strong>: slots advance but delinquent stake is above a third or finality lag keeps growing.`;
@@ -1941,14 +2040,8 @@ function versionRowsFromRecords(records: any[]) {
 // correlated): validators are then bracketed by credits per unit of stake against the
 // cluster's 90th percentile. Tower BFT clusters keep the plain credits comparison.
 function creditsStakeLinked(active: any[]): boolean {
-  const pts = active.filter(r => (r.epoch_credits || 0) > 0 && (r.activated_stake_lamports || 0) > 0);
-  if (pts.length < 8) return false;
-  const xs = pts.map(r => r.activated_stake_lamports), ys = pts.map(r => r.epoch_credits);
-  const mx = xs.reduce((a, b) => a + b, 0) / xs.length, my = ys.reduce((a, b) => a + b, 0) / ys.length;
-  let sxy = 0, sxx = 0, syy = 0;
-  for (let i = 0; i < xs.length; i++) { const dx = xs[i] - mx, dy = ys[i] - my; sxy += dx * dy; sxx += dx * dx; syy += dy * dy; }
-  const r = sxx && syy ? sxy / Math.sqrt(sxx * syy) : 0;
-  return r >= 0.9;
+  // one detector for the whole site (validator-table.js): current or previous epoch
+  return creditsFollowStake(active);
 }
 // Under Alpenglow credits follow stake, so no credits-based verdict works (a 303-SOL node
 // that votes perfectly would still look poor). The card then brackets block production
@@ -1986,7 +2079,10 @@ function computePerformanceBrackets(recordsAll: any[]) {
 function renderTestnetDevnetStories(records: any[], d: any, cluster: 'testnet' | 'devnet', sfdpPlaceholder: boolean): string {
   const overall = d?.metrics?.overall || {};
   const totalNodes = (overall.total ?? 0) - (d?.record_counts?.['unknown-node'] ?? 0);
-  const activeValidators = records.filter(r => isValidatorRecord(r) && !r.delinquent).length || (d?.metrics?.validators?.total ?? 0);
+  // the summary count stands in only until validators.json has arrived: on a halted cluster
+  // the records are there and none of them votes, which is 0, not the gossip count
+  const hasRecords = records.some(isValidatorRecord);
+  const activeValidators = hasRecords ? records.filter(r => isValidatorRecord(r) && !r.delinquent).length : (d?.metrics?.validators?.total ?? 0);
   const activeRpcs = d?.metrics?.rpc?.total ?? 0;
 
   const perf = computePerformanceBrackets(records);
@@ -2154,7 +2250,9 @@ function renderTestnetDevnetStories(records: any[], d: any, cluster: 'testnet' |
 function renderAlpenglowStories(records: any[], d: any): string {
   const m = d?.metrics || {};
   const v = m.validators || {};
-  const activeValidators = records.filter(r => isValidatorRecord(r) && !r.delinquent).length || (v.total ?? 0);
+  // same rule as on testnet and devnet: the summary count only until the records arrive
+  const hasRecords = records.some(isValidatorRecord);
+  const activeValidators = hasRecords ? records.filter(r => isValidatorRecord(r) && !r.delinquent).length : (v.total ?? 0);
   const activeRpcs = m.rpc?.total ?? 0;
   const epochPct = d?.epoch_completed_percent ?? 0;
   const consensus = detectConsensus(d);
@@ -2249,7 +2347,7 @@ function renderAlpenglowStories(records: any[], d: any): string {
       </div>
       <div class="story-title">Experimental community cluster</div>
       <p class="whatis-text">
-        Public testbed for Anza's new consensus algorithm (SIMD-0326), designed to replace Tower BFT on Solana. The new design targets sub-150ms block finalization through a two-stage voting model (Votor + Rotor) and BLS aggregate signatures. Validators here help stress-test the implementation before rollout to devnet, testnet, and eventually mainnet.
+        Public testbed for Anza's new consensus algorithm (SIMD-0326), designed to replace Tower BFT on Solana. The new design targets sub-150ms block finalization through a two-stage voting model (Votor + Rotor) and BLS aggregate signatures. Validators stress-test the implementation here before it reaches the other clusters.
       </p>
       <div class="whatis-stat-row">
         <div class="whatis-stat"><div class="whatis-stat-num mono">${fmt(activeValidators)}</div><div class="whatis-stat-label">active validators</div></div>

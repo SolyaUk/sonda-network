@@ -8,8 +8,13 @@
  * scrollbar). A position:fixed element measured against the anchor rect has none of
  * these problems: above by default, below when there is no room, clamped horizontally.
  *
+ * Rich tooltips: an anchor with data-tip-rich may open a line of its data-tip with a tone,
+ * {head}, {good}, {bad}, {warn}, {dim} or {sub}; the line is drawn in that tone. Plain
+ * anchors show their text as it is, braces included.
+ *
  * Touch: tap on a [data-tip] or a .tooltip-icon toggles the tooltip, tap elsewhere or a
- * scroll of more than a few pixels hides it. Keyboard: focus on .tooltip-icon shows the box.
+ * scroll of more than a few pixels hides it; a tap on a control (TAP_CONTROLS) acts instead.
+ * Keyboard: focus on .tooltip-icon shows the box.
  */
 
 const MARGIN = 8;   // min distance from the viewport edge
@@ -72,11 +77,28 @@ function tipText(target) {
   return '';
 }
 
+// Lines of a rich tooltip. Every line becomes a text node (inside a span when it has a
+// tone), never parsed as HTML: whatever a tooltip holds, it stays text.
+const TONE_RE = /^\{(head|good|bad|warn|dim|sub)\}/;
+function fillTip(el, text, rich) {
+  if (!rich) { el.textContent = text; return; }
+  el.textContent = '';
+  text.split('\n').forEach((line, i) => {
+    if (i) el.appendChild(document.createTextNode('\n'));
+    const m = TONE_RE.exec(line);
+    if (!m) { el.appendChild(document.createTextNode(line)); return; }
+    const span = document.createElement('span');
+    span.className = `tip-${m[1]}`;
+    span.textContent = line.slice(m[0].length);
+    el.appendChild(span);
+  });
+}
+
 function showTip(target) {
   const text = tipText(target);
   if (!text) return;
   const el = ensureEl();
-  el.textContent = text;
+  fillTip(el, text, target.hasAttribute('data-tip-rich') && target.hasAttribute('data-tip'));
   anchor = target;
   el.classList.add('is-visible');
   fitWidth(el);
@@ -110,6 +132,11 @@ function isTouch() {
   return window.matchMedia && window.matchMedia('(hover: none)').matches;
 }
 
+// Elements whose tap does something: links, buttons, filter rows (data-fkey), copy buttons,
+// sortable table headers, form fields. Whole table rows and validator cards are not listed
+// on purpose: a tap on a badge inside them still opens the badge's tooltip.
+const TAP_CONTROLS = 'a[href], button, [role="button"], [data-fkey], [data-more], [data-copy], th.th-sort, summary, label, input, select, textarea';
+
 export function initTooltips() {
   if (typeof document === 'undefined' || document.body.dataset.sondaTooltips) return;
   document.body.dataset.sondaTooltips = '1';
@@ -133,11 +160,14 @@ export function initTooltips() {
     if (anchor && t.closest('[data-tip], [data-tip-ellipsis]') === anchor && (!rel || !anchor.contains(rel))) hideTip();
   });
 
-  // Keyboard focus on the (i) icons.
+  // Keyboard focus on the (i) icons. A tap focuses the icon as well, right before its click:
+  // the time of the opening is kept so that click does not close what the focus just opened
+  // (on phones the first tap on an icon used to open and close the box in one go).
+  let boxOpenedByFocusAt = 0;
   document.addEventListener('focusin', (e) => {
     const t = e.target instanceof Element ? e.target : null;
     const wrap = t && t.closest('.tooltip-wrap');
-    if (wrap) showBox(wrap);
+    if (wrap) { showBox(wrap); boxOpenedByFocusAt = Date.now(); }
   });
   document.addEventListener('focusout', (e) => {
     const t = e.target instanceof Element ? e.target : null;
@@ -152,12 +182,17 @@ export function initTooltips() {
     if (wrap) {
       e.preventDefault();
       e.stopPropagation();
-      if (boxWrap === wrap) hideBox(); else showBox(wrap);
+      const justOpened = boxWrap === wrap && Date.now() - boxOpenedByFocusAt < 700;
+      if (boxWrap === wrap && !justOpened) hideBox(); else showBox(wrap);
       hideTip();
       return;
     }
     const el = t && t.closest('[data-tip], [data-tip-ellipsis]');
-    if (el) {
+    // A tap on a control is an action and goes through: the tooltip used to swallow it, so
+    // on phones the arrow of a validator card, filter rows with a tooltip, sortable headers
+    // and linked rows did nothing but show their hint. The same for an anchor with nothing
+    // to show (a name that is not cut off). Plain text and badges keep tap = tooltip.
+    if (el && !t.closest(TAP_CONTROLS) && tipText(el)) {
       e.preventDefault();
       e.stopPropagation();
       hideBox();

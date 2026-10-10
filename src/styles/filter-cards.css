@@ -62,8 +62,14 @@
 .vagg-card [data-fkey].is-selected { background: color-mix(in srgb, var(--cluster-accent) 14%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cluster-accent) 45%, transparent); }
 .vagg-card [data-fkey].is-dim { opacity: 0.38; }
 .vagg-card [data-fkey].is-dim:hover { opacity: 0.7; }
-.vagg-card .stacked-legend-item[data-fkey] { padding: 0.1rem 0.3rem; margin: 0 -0.3rem; }
-.vagg-card .vagg-row[data-fkey] { padding: 0.15rem 0.3rem; margin: 0 -0.3rem; }
+/* Every row of a card has the same box, clickable or not ("Other (N)", special rows), so
+   the numbers of all rows end on one line. */
+.vagg-card .stacked-legend-item { padding: 0.1rem 0.3rem; margin: 0 -0.3rem; gap: 0.4rem; }
+.vagg-card .vagg-row { padding: 0.15rem 0.3rem; margin: 0 -0.3rem; }
+/* The delinquent slot (.vagg-delinq) takes width in every row, so the cards give some back
+   to the names: a shorter minimum dot leader and a narrower gap between legend columns.
+   The leader still leaves room for the exclude button between a name and its number. */
+.vagg-card .legend-leader { flex-basis: 8px; min-width: 8px; }
 
 .vagg-card { gap: 0.4rem; padding: 1rem 1.05rem 0.9rem; }
 .vagg-card .story-title { font-size: 0.9rem; }
@@ -90,14 +96,19 @@
 /* Donut view: bigger and thicker than the homepage donuts, rows to the right */
 /* align-items: start keeps the donut in place when "Show all" grows the row list */
 .vagg-donut { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 0.9rem; align-items: start; margin-top: 0.35rem; }
-.vagg-donut .donut-svg { margin-top: 0.4rem; }
-.vagg-donut .donut-svg { width: 150px; height: 150px; }
+.vagg-donut .donut-svg { width: 100%; max-width: 150px; height: auto; aspect-ratio: 1; margin-top: 0.4rem; }
+/* .is-fluid (the /validators cards): in a narrow card the donut gives way to the names, 38%
+   of the card and never under 124px. Not on /datacenters yet: with four cards in a row its
+   donut cards are too narrow for any name, and a smaller donut would only expose single
+   letters; that layout needs its own fix (backlog). Phones (the 480px rule below) stack
+   the donut above the rows, so the fluid width starts above that. */
+@media (min-width: 481px) { .vagg-donut.is-fluid { grid-template-columns: clamp(124px, 38%, 150px) minmax(0, 1fr); } }
 .vagg-donut .vagg-rows { margin-top: 0; }
 .vagg-donut .vagg-row { grid-template-columns: 18px minmax(0, 1fr) auto auto; gap: 0.4rem; }
-@media (max-width: 480px) { .vagg-donut { grid-template-columns: 1fr; } .vagg-donut .donut-svg { margin: 0 auto; } }
+@media (max-width: 480px) { .vagg-donut { grid-template-columns: 1fr; } .vagg-donut .donut-svg { width: 150px; margin: 0 auto; } }
 /* City marker: map-pin shape with the country flag inside (circle is the country marker) */
 /* Software cards reuse the homepage legend; version status colours the name (as in the table) */
-.vagg-card .stacked-legend { margin-top: 0.6rem; }
+.vagg-card .stacked-legend { margin-top: 0.6rem; column-gap: 1.2rem; }
 .vagg-card .stacked-legend-item.is-extra { display: none; }
 .vagg-card.is-expanded .stacked-legend-item.is-extra { display: flex; }
 .vagg-card.is-expanded .vagg-other { display: none; }
@@ -108,13 +119,16 @@
 .vagg-card .stacked-legend-name.ver-outdated { color: var(--accent-amber); }
 .vagg-card .stacked-legend-name.ver-ancient { color: var(--status-critical); }
 .vagg-card .stacked-legend-item.is-special .stacked-legend-name { color: var(--text-muted); font-style: italic; font-weight: 400; }
-.vagg-card .stacked-legend-stat .vagg-delinq { margin-right: 0.35rem; }
 .vagg-row.is-special .vagg-name { color: var(--text-muted); font-style: italic; }
 .vagg-name { color: var(--text-primary); font-weight: 500; min-width: 0; display: flex; align-items: center; gap: 0.35rem; }
 .vagg-name > span:first-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 0 1 auto; }
 .vagg-count { font-family: var(--font-mono); font-size: 0.74rem; color: var(--text-secondary); text-align: right; white-space: nowrap; display: inline-flex; align-items: baseline; justify-content: flex-end; }
-/* Delinquent part of a count: thin red divider instead of a dot (35 | 3 reads as two numbers, 35.3 read as a decimal) */
-.vagg-delinq { color: var(--status-critical); font-size: 0.66rem; margin-left: 0.3rem; padding-left: 0.3rem; border-left: 1px solid color-mix(in srgb, var(--status-critical) 55%, transparent); line-height: 1; cursor: help; }
+/* Delinquent part of a count: thin red divider instead of a dot (35 | 3 reads as two numbers, 35.3 read as a decimal).
+   It is a slot of fixed width: the page sets --dq (digits of the largest delinquent count in
+   the card) on the list and renders an empty slot (.is-none) in rows without delinquents,
+   so the counts of all rows stay in one column and the red numbers in another. */
+.vagg-delinq { display: inline-block; box-sizing: content-box; min-width: calc(var(--dq, 0) * 1ch); text-align: left; color: var(--status-critical); font-size: 0.66rem; margin-left: 0.3rem; padding-left: 0.3rem; border-left: 1px solid color-mix(in srgb, var(--status-critical) 55%, transparent); line-height: 1; cursor: help; }
+.vagg-delinq.is-none { border-left-color: transparent; cursor: inherit; }
 .vagg-stake { font-family: var(--font-mono); font-size: 0.74rem; color: var(--text-primary); font-weight: 600; text-align: right; min-width: 3.4em; }
 
 /* Row markers: colour dot, round flag, round provider logo with initial as fallback */
@@ -126,7 +140,7 @@
 .vagg-flag img { width: 100%; height: 100%; object-fit: cover; display: block; position: relative; z-index: 1; }
 /* provider logo slot: .dc-logo from cards.css */
 .vagg-marker-muted { width: 18px; height: 18px; border-radius: 50%; border: 1px dashed var(--border); }
-.vagg-empty { display: flex; align-items: center; justify-content: center; width: 150px; height: 150px; border-radius: 50%; border: 1px dashed var(--border); color: var(--text-muted); font-size: 0.72rem; }
+.vagg-empty { display: flex; align-items: center; justify-content: center; width: 100%; aspect-ratio: 1; border-radius: 50%; border: 1px dashed var(--border); color: var(--text-muted); font-size: 0.72rem; }
 .vagg-more {
   padding: 0; background: none; border: 0; color: var(--cluster-accent); font-size: 0.74rem;
   cursor: pointer; font-family: inherit;
@@ -155,12 +169,17 @@
 
 /* include / exclude: a small "not" button appears on row hover (long press on touch);
    excluded rows are struck through with a dashed outline; chips read "not X" */
-.vagg-row, .bar-row, .stacked-legend-item { position: relative; }
 .vagg-not { position: absolute; right: 2px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; border-radius: 50%; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-muted); line-height: 0; display: none; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
-/* rows keep a small right gutter for the button, so its appearance never widens the row or
-   scrolls the list sideways */
-.vagg-row, .bar-row, .stacked-legend-item { padding-right: 22px; box-sizing: border-box; }
-.vagg-rows, .bar-rows-wrap, .stacked-legend { overflow-x: hidden; }
+/* In the cards the button is rendered inside the row's number cell and placed just left of
+   the number: over the dot leader in legends and donut rows, over the tail of the bar in bar
+   rows. It never covers a name or a number and reserves no space, so rows with and without
+   it line up. (Round 6 reserved a right gutter on the rows instead; rules with higher
+   specificity cancelled it on clickable rows only, which pushed the numbers of the other
+   rows aside, and being global it also reached the homepage cards.) */
+.vagg-card .vagg-count, .vagg-card .stacked-legend-stat, .vagg-card .bar-row-num { position: relative; }
+.vagg-card .vagg-count > .vagg-not, .vagg-card .stacked-legend-stat > .vagg-not, .vagg-card .bar-row-num > .vagg-not { right: calc(100% + 4px); }
+/* expanded lists scroll vertically only */
+.vagg-card.is-expanded .vagg-rows, .vagg-card.is-expanded .stacked-legend { overflow-x: hidden; }
 .vagg-not svg { display: block; }
 .vagg-row:hover .vagg-not, .bar-row:hover .vagg-not, .stacked-legend-item:hover .vagg-not { display: inline-flex; }
 .vagg-not:hover { color: var(--status-critical); border-color: var(--status-critical); }

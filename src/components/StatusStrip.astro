@@ -15,9 +15,9 @@
     </div>
     <div class="strip-right">
       <span class="strip-cluster mono" id="strip-cluster">mainnet-beta</span>
-      <span class="strip-live">
+      <span class="strip-live" id="strip-live" data-state="live">
         <span class="strip-live-dot"></span>
-        LIVE
+        <span id="strip-live-txt">LIVE</span>
       </span>
       <span class="strip-ago mono" id="strip-ago">--</span>
     </div>
@@ -68,6 +68,11 @@
 .strip-live { display: flex; align-items: center; gap: 0.3rem; color: var(--status-good); font-size: 0.65rem; font-weight: 600; letter-spacing: 0.08em; }
 .strip-live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--status-good); box-shadow: 0 0 8px var(--status-good); animation: live-pulse 2s infinite; }
 @keyframes live-pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(0.85); } }
+/* The label follows metrics.chain.status: a halted cluster must not read LIVE in green */
+.strip-live[data-state="halted"] { color: var(--status-critical); cursor: help; }
+.strip-live[data-state="halted"] .strip-live-dot { background: var(--status-critical); box-shadow: 0 0 8px var(--status-critical); animation: none; }
+.strip-live[data-state="degraded"] { color: var(--status-warning); cursor: help; }
+.strip-live[data-state="degraded"] .strip-live-dot { background: var(--status-warning); box-shadow: 0 0 8px var(--status-warning); }
 
 .strip-ago { color: var(--text-muted); font-size: 0.68rem; }
 
@@ -144,6 +149,18 @@ function updateFooterTsFromTimestamp(timestamp: string) {
   if (pctEl) pctEl.textContent = `${(data.epoch_completed_percent || 0).toFixed(1)}%`;
   if (barEl) (barEl as HTMLElement).style.width = `${data.epoch_completed_percent || 0}%`;
   if (clusterEl) clusterEl.textContent = data.cluster;
+  // LIVE / DEGRADED / HALTED from metrics.chain.status (analyzer v3.12); anything else reads LIVE
+  const liveEl = document.getElementById('strip-live');
+  const liveTxt = document.getElementById('strip-live-txt');
+  if (liveEl && liveTxt) {
+    const status = data?.metrics?.chain?.status;
+    const state = status === 'halted' ? 'halted' : status === 'degraded' ? 'degraded' : 'live';
+    liveEl.dataset.state = state;
+    liveTxt.textContent = state.toUpperCase();
+    if (state === 'halted') liveEl.setAttribute('data-tip', 'Cluster halted: slots are not advancing as seen from our RPC');
+    else if (state === 'degraded') liveEl.setAttribute('data-tip', 'Cluster degraded: slots advance, but delinquent stake is above a third or finality lag keeps growing');
+    else liveEl.removeAttribute('data-tip');
+  }
   stripLastUpdate = new Date(data.timestamp).getTime();
   updateStripAgo();
   // Also feed the header updated-pill so both stay in sync from the same source

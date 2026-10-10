@@ -188,13 +188,14 @@ import Footer from '../components/Footer.astro';
 </style>
 
 <script>
-import { bootstrapCluster, getCluster, fetchValidators, fetchSummary, fetchInfrastructure, computeTvcRanks, isValidatorRecord } from '../lib/data.js';
-import { aggregateProviders, sortProviders, filterProviders, networkInfraFromRecords, applyNetworkInfra, networkOnlyProviders, netBadgeTip } from '../lib/providers.js';
+import { bootstrapCluster, getCluster, fetchValidators, fetchSummary, fetchInfrastructure, isValidatorRecord } from '../lib/data.js';
+import { aggregateProviders, sortProviders, filterProviders, networkInfraFromRecords, applyNetworkInfra, networkOnlyProviders, netBadgeTip, providerPerfBasis, PROVIDER_PERF } from '../lib/providers.js';
+import { penaltyBadgeHtml } from '../lib/pools.js';
 import { fmt, pct } from '../lib/formatters.js';
 import { copyButtonHtml, listValueState, nextListValues, initLongPress, NOT_BUTTON } from '../lib/ui.js';
 import { renderDonut } from '../lib/charts.js';
-import { circleFlagSvg, pinFlagSvg, fmtStakeSol, slugOf, logoHtml as vLogoHtml, validatorHref, creditsFollowStake } from '../lib/validator-table.js';
-import { initSortMenu, PROVIDER_SORT_GROUPS } from '../lib/sort-menu.js';
+import { circleFlagSvg, pinFlagSvg, fmtStakeSol, slugOf, logoHtml as vLogoHtml, validatorHref, creditsFollowStake, computePerfBands, perfBandClass } from '../lib/validator-table.js';
+import { initSortMenu, PROVIDER_SORT_GROUPS, isKnownSort } from '../lib/sort-menu.js';
 import { startAutoRefresh, preserveScroll } from '../lib/refresh.js';
 
 const params = new URLSearchParams(window.location.search);
@@ -204,7 +205,7 @@ let latestSummary = null;
 let lastSnapshotTs = null;
 let sortMenu = null;
 const expandedProviders = new Set();
-let availability = { connections: false, sfdp: false, skip: false, ibrl: false, slot: false, vlat: false, votes: false, net: false };
+let availability = { connections: false, sfdp: false, skip: false, ibrl: false, slot: false, vlat: false, votes: false, net: false, penalty: false };
 
 function esc(v) { return String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 function setUrlParam(key, value) {
@@ -343,6 +344,7 @@ function facesHtml(e) {
 }
 // bands across providers (thirds), pale tints like the validator table
 let providerBands = null;
+let validatorBands = null;   // bands across the cluster's validators, for per-location figures
 function computeProviderBands(list) {
   const defs = [['skip', e => e.skip_avg, 'low'], ['ibrl', e => e.ibrl_median, 'high'], ['slot', e => e.slot_median, 'low'], ['votes', e => e.votes_mean, 'high'], ['vlat', e => e.vlat_mean, 'low']];
   const out = {};
@@ -365,17 +367,28 @@ function bandCls(k, v) {
   if (b.better === 'low') return v <= b.lo ? ' is-good' : v >= b.hi ? ' is-poor' : '';
   return v >= b.hi ? ' is-good' : v <= b.lo ? ' is-poor' : '';
 }
+// IBRL leads where the cluster has it, then skip rate; the rest hide on the mobile card.
 function perfBadgesP(e, opts = {}) {
   const out = [];
-  if (e.rank_median != null) out.push(`<span class="vperf vperf-rank" data-tip="Median TVC rank of this provider's validators\nbest validator here: #${e.rank_best}"><b>#${fmt(Math.round(e.rank_median))}</b><i>median TVC</i></span>`);
+  if (availability.ibrl && e.ibrl_median != null) out.push(`<span class="vperf vperf-lead${bandCls('ibrl', e.ibrl_median)}" data-tip="Median IBRL score of the validators here"><b>${e.ibrl_median.toFixed(0)}</b><i>ibrl</i></span>`);
   if (availability.skip && e.skip_avg != null) out.push(`<span class="vperf${bandCls('skip', e.skip_avg)}" data-tip="Average skip rate across the provider's validators"><b>${e.skip_avg.toFixed(2)}%</b><i>skip</i></span>`);
   if (!opts.short) {
-    if (availability.ibrl && e.ibrl_median != null) out.push(`<span class="vperf${bandCls('ibrl', e.ibrl_median)}" data-tip="Median IBRL score of the validators here"><b>${e.ibrl_median.toFixed(0)}</b><i>ibrl</i></span>`);
     if (availability.slot && e.slot_median != null) out.push(`<span class="vperf${bandCls('slot', e.slot_median)}" data-tip="Median slot time of the validators here"><b>${e.slot_median.toFixed(0)}</b><i>ms</i></span>`);
     if (availability.votes && e.votes_mean != null) out.push(`<span class="vperf${bandCls('votes', e.votes_mean)}" data-tip="Average vote credits of the validators here vs the best validator, last full epoch${availability.vlat && e.vlat_mean != null ? `\nAverage vote latency ${e.vlat_mean.toFixed(2)} slots` : ''}"><b>${(e.votes_mean * 100).toFixed(2)}%</b><i>votes</i></span>`);
     else if (availability.vlat && e.vlat_mean != null) out.push(`<span class="vperf${bandCls('vlat', e.vlat_mean)}" data-tip="Average vote latency of the validators here, slots"><b>${e.vlat_mean.toFixed(2)}</b><i>vlat</i></span>`);
   }
   return out.join('');
+}
+// StakeWiz location penalty (mainnet pool data): median over the provider's validators, shown
+// with the locations. Its tint compares with all validators of the cluster, the same scale as
+// the city badges on the provider page.
+function penaltySpan(e) {
+  if (!availability.penalty || e.loc_penalty == null) return '';
+  return penaltyBadgeHtml(e.loc_penalty, e.loc_penalty_n, perfBandClass(validatorBands, 'penalty', e.loc_penalty));
+}
+function penaltyBadge(e) {
+  const badge = penaltySpan(e);
+  return badge ? `<div class="p-pen">${badge}</div>` : '';
 }
 function asnChip(a, e, cls = '') {
   return `<a class="p-asn-chip ${cls}" href="${esc(providerHref(e))}&asn=${esc(a.asn)}" data-tip="${esc(`${a.asn}${a.name && a.name !== e.provider ? ` (${a.name})` : ''}\n${a.count} validators, ${fmtStakeSol(a.stake_lamports)} SOL`)}"><b>${esc(a.asn)}</b><span class="n">${fmt(a.count)}</span></a>`;
@@ -412,7 +425,7 @@ function renderRowP(e, pos, maxCount) {
       ? `<span class="vbadge vbadge-net" data-tip="No validators rent here; the provider hosts network infrastructure only">network only</span>`
       : `<span class="p-count">${fmt(e.count)}${e.delinquent ? `<span class="vagg-delinq" data-tip="${e.delinquent} of ${e.count} delinquent">${e.delinquent}</span>` : ''}</span><div class="p-share" data-tip="Share of validators among providers in this list"><i style="width:${Math.max(2, (e.count / maxCount) * 100)}%"></i></div>${facesHtml(e)}${e.sfdp ? `<div class="vbadges p-sfdp">${sfdpBadge(e)}</div>` : ''}`}</td>
     <td class="p-stake-cell">${e.net_only ? '<span class="vdash">—</span>' : `${stakeMeterP(e)}<div class="vstake">${fmtStakeSol(e.stake_lamports)} <small>SOL</small></div><div class="p-stake-pct is-${e.level}" data-tip="${e.level === 'critical' ? 'Above the 25% SFDP threshold' : e.level === 'warning' ? 'Between 15% and 25% of cluster stake' : 'Share of all cluster stake hosted here'}">${pct(e.stake_pct, 1)} of cluster</div>`}</td>
-    <td>${flagsRow(e)}<div class="p-cities">${fmt(e.cities.length)} cit${e.cities.length === 1 ? 'y' : 'ies'} · ${fmt(e.countries.length)} countr${e.countries.length === 1 ? 'y' : 'ies'}</div></td>
+    <td>${flagsRow(e)}<div class="p-cities">${fmt(e.cities.length)} cit${e.cities.length === 1 ? 'y' : 'ies'} \u00b7 ${fmt(e.countries.length)} countr${e.countries.length === 1 ? 'y' : 'ies'}</div>${penaltyBadge(e)}</td>
     <td class="p-infra">${infraBadges(e) || '<span class="vdash">—</span>'}</td>
     <td class="p-perf"><div class="vbadges">${e.net_only ? '<span class="vdash">—</span>' : perfBadgesP(e)}</div></td>
   </tr>${exp ? `<tr class="p-sub"><td colspan="8"><div class="p-sub-chips">${e.asns.map(a => asnChip(a, e)).join('')}</div></td></tr>` : ''}`;
@@ -424,7 +437,7 @@ function renderCardP(e, pos) {
     <div class="pcard-main">
       <div class="p-name-row"><a class="p-name" href="${esc(providerHref(e))}">${esc(e.provider)}</a></div>
       <div class="pcard-line">${e.net_only ? '<span class="vbadge vbadge-net">network only</span>' : `<span class="p-count">${fmt(e.count)}${e.delinquent ? `<span class="vagg-delinq">${e.delinquent}</span>` : ''}</span><span>validators</span><span class="vcard-sep"></span><span class="vstake">${fmtStakeSol(e.stake_lamports)} <small>SOL</small></span><span>${pct(e.stake_pct, 1)}</span>`}</div>
-      <div class="pcard-line">${flagsRow(e, 6)}<span>${fmt(e.cities.length)} cities · ${fmt(e.asns.length)} ASN${e.asns.length === 1 ? '' : 's'}</span></div>
+      <div class="pcard-line">${flagsRow(e, 6)}<span>${fmt(e.cities.length)} cities · ${fmt(e.asns.length)} ASN${e.asns.length === 1 ? '' : 's'}</span>${penaltySpan(e)}</div>
       <div class="vbadges">${levelBadge(e)}${tagBadges(e)}${infraBadges(e, { flat: true })}${sfdpBadge(e)}${perfBadgesP(e, { short: true })}</div>
     </div>
   </div>`;
@@ -461,8 +474,8 @@ function renderCards(all, filtered) {
   const stCls = (key, val, count) => { const st = filterState(key, val); return st === 'include' ? 'is-selected' : st === 'exclude' ? 'is-excluded' : (count === 0 ? 'is-dim' : ''); };
   const countryRows = rows.map((x, i) => `<div class="vagg-row ${stCls('country', x.cc, x.count)}${i >= 6 ? ' is-extra' : ''}" data-fkey="country" data-fval="${x.cc}">
       ${circleFlagSvg(x.cc.toLowerCase(), { tip: x.country })}<span class="vagg-name"><span data-tip-ellipsis>${esc(x.country)}</span><span class="legend-leader"></span></span>
-      <span class="vagg-count">${fmt(x.providers)}<span class="p-more">prov</span></span>
-      <span class="vagg-stake"${colorOf.has(x.cc) ? ` style="color:${colorOf.get(x.cc)}"` : ''}>${totalStake ? ((x.stake / totalStake) * 100).toFixed(1) : '0.0'}%</span>${NOT_BUTTON}
+      <span class="vagg-count">${NOT_BUTTON}${fmt(x.providers)}<span class="p-more">prov</span></span>
+      <span class="vagg-stake"${colorOf.has(x.cc) ? ` style="color:${colorOf.get(x.cc)}"` : ''}>${totalStake ? ((x.stake / totalStake) * 100).toFixed(1) : '0.0'}%</span>
     </div>`).join('');
   const countriesCard = `<div class="story vagg-card vagg-view-donut${expandedCards.has('countries') ? ' is-expanded' : ''}" data-card="countries">
     <div class="story-header"><span class="story-tag cluster-tag">Countries</span><span class="vagg-meta">${rows.length} entries</span></div>
@@ -490,8 +503,8 @@ function renderCards(all, filtered) {
   const cityColorOf = new Map(cityTop.map((x, i) => [x.key, SEQ[i % SEQ.length]]));
   const cityRowsHtml = cityRowsAll.map((x, i) => `<div class="vagg-row ${stCls('city', x.key, x.count)}${i >= 6 ? ' is-extra' : ''}" data-fkey="city" data-fval="${esc(x.key)}">
       ${x.cc && x.cc !== '??' ? pinFlagSvg(x.cc.toLowerCase(), { extraClass: 'is-marker', tip: `${x.city}, ${x.cc}` }) : '<span class="vpin-none">?</span>'}<span class="vagg-name"><span data-tip-ellipsis>${esc(x.city)}</span><span class="legend-leader"></span></span>
-      <span class="vagg-count">${fmt(x.providers)}<span class="p-more">prov</span></span>
-      <span class="vagg-stake"${cityColorOf.has(x.key) ? ` style="color:${cityColorOf.get(x.key)}"` : ''}>${cityStake ? ((x.stake / cityStake) * 100).toFixed(1) : '0.0'}%</span>${NOT_BUTTON}
+      <span class="vagg-count">${NOT_BUTTON}${fmt(x.providers)}<span class="p-more">prov</span></span>
+      <span class="vagg-stake"${cityColorOf.has(x.key) ? ` style="color:${cityColorOf.get(x.key)}"` : ''}>${cityStake ? ((x.stake / cityStake) * 100).toFixed(1) : '0.0'}%</span>
     </div>`).join('');
   const citiesCard = `<div class="story vagg-card vagg-view-donut${expandedCards.has('cities') ? ' is-expanded' : ''}" data-card="cities">
     <div class="story-header"><span class="story-tag cluster-tag">Cities</span><span class="vagg-meta">${cityRowsAll.length} entries</span></div>
@@ -507,7 +520,7 @@ function renderCards(all, filtered) {
   const barRows = (rowsDef) => {
     const max = Math.max(1, ...rowsDef.map(r => r.cur));
     return rowsDef.map(r => `<div class="bar-row ${stCls(r.key, r.val, r.cur)}" data-fkey="${r.key}" data-fval="${r.val}" data-tip="${esc(r.tip)}">
-      <div class="bar-row-label">${r.label}</div><div class="bar-row-track"><div class="bar-row-fill ${r.fill}" style="width:${r.cur > 0 ? Math.max(3, (r.cur / max) * 100) : 0}%"></div></div><div class="bar-row-num ${r.fill === 'crit' ? 'crit' : r.fill === 'cluster' ? 'cluster' : ''}">${fmt(r.cur)}</div>${NOT_BUTTON}
+      <div class="bar-row-label">${r.label}</div><div class="bar-row-track"><div class="bar-row-fill ${r.fill}" style="width:${r.cur > 0 ? Math.max(3, (r.cur / max) * 100) : 0}%"></div></div><div class="bar-row-num ${r.fill === 'crit' ? 'crit' : r.fill === 'cluster' ? 'cluster' : ''}">${NOT_BUTTON}${fmt(r.cur)}</div>
     </div>`).join('');
   };
   const concRows = [
@@ -522,20 +535,30 @@ function renderCards(all, filtered) {
     { key: 'size', val: '1', label: 'Single validator', fill: 'neutral', cur: cntIn(fSize, e => e.count === 1), tip: 'One validator only: medians here are one node\'s numbers' },
   ];
   if (all.some(e => e.net_only)) sizeRows.push({ key: 'size', val: '0', label: 'Network nodes only', fill: 'neutral', cur: cntIn(fSize, e => e.count === 0), tip: 'Carriers and hosts with DoubleZero devices, BAM nodes or endpoints but no validators' });
-  // Performance: providers by quarter of median TVC rank (1 = best quarter)
-  const perfRows = [
-    { key: 'perf', val: '1', label: 'Best performers', fill: 'cluster', cur: cntIn(fPerf, e => e.perf_quarter === 1), tip: 'Providers with the best median TVC rank' },
-    { key: 'perf', val: '2', label: 'Good', fill: 'cluster', cur: cntIn(fPerf, e => e.perf_quarter === 2), tip: 'Median TVC rank above the middle of all providers' },
-    { key: 'perf', val: '3', label: 'Average', fill: 'neutral', cur: cntIn(fPerf, e => e.perf_quarter === 3), tip: 'Median TVC rank below the middle of all providers' },
-    { key: 'perf', val: '4', label: 'Weakest', fill: 'neutral', cur: cntIn(fPerf, e => e.perf_quarter === 4), tip: 'Providers with the worst median TVC rank' },
-  ];
-  const bestProv = [...fPerf].filter(e => e.rank_median != null && e.count >= 2).sort((a, b) => a.rank_median - b.rank_median)[0];
-  const perfCard = `<div class="story vagg-card vagg-view-status" data-card="perf">
+  // Performance: providers by quarter of the cluster's performance measure (1 = best quarter):
+  // median IBRL where the cluster has IBRL, otherwise average skip rate (providerPerfBasis).
+  const basis = providerPerfBasis(all);
+  const PERF_TEXT = {
+    ibrl: { title: 'Median IBRL by provider', sub: 'best median', show: v => v.toFixed(0),
+      tips: ['Providers with the highest median IBRL', 'Median IBRL above the middle of all providers', 'Median IBRL below the middle of all providers', 'Providers with the lowest median IBRL'] },
+    skip: { title: 'Average skip rate by provider', sub: 'lowest average', show: v => `${v.toFixed(2)}%`,
+      tips: ['Providers with the lowest average skip rate', 'Average skip rate better than the middle of all providers', 'Average skip rate worse than the middle of all providers', 'Providers with the highest average skip rate'] },
+  };
+  let perfCard = '';
+  if (basis) {
+    const pt = PERF_TEXT[basis];
+    const val = PROVIDER_PERF[basis].value;
+    const perfRows = ['Best performers', 'Good', 'Average', 'Weakest'].map((label, i) => (
+      { key: 'perf', val: String(i + 1), label, fill: i < 2 ? 'cluster' : 'neutral', cur: cntIn(fPerf, e => e.perf_quarter === i + 1), tip: pt.tips[i] }));
+    const bestProv = [...fPerf].filter(e => val(e) != null && e.count >= 2)
+      .sort((a, b) => (PROVIDER_PERF[basis].better === 'high' ? val(b) - val(a) : val(a) - val(b)) || b.count - a.count)[0];
+    perfCard = `<div class="story vagg-card vagg-view-status" data-card="perf">
     <div class="story-header"><span class="story-tag cluster-tag">Performance</span></div>
-    <div class="story-title">Median TVC rank by provider</div>
-    <div class="vagg-status-head"><span class="story-big mono">${bestProv ? `#${fmt(Math.round(bestProv.rank_median))}` : '—'}</span><span class="story-sub">${bestProv ? `best median, ${esc(bestProv.provider)} (${fmt(bestProv.count)} validators)` : 'no ranked providers in view'}</span></div>
+    <div class="story-title">${pt.title}</div>
+    <div class="vagg-status-head"><span class="story-big mono">${bestProv ? pt.show(val(bestProv)) : '\u2014'}</span><span class="story-sub">${bestProv ? `${pt.sub}, ${esc(bestProv.provider)} (${fmt(bestProv.count)} validators)` : 'no providers with two or more validators in view'}</span></div>
     <div class="bar-rows-wrap with-divider">${barRows(perfRows)}</div>
   </div>`;
+  }
   const sizeCard = `<div class="story vagg-card vagg-view-status" data-card="size">
     <div class="story-header"><span class="story-tag cluster-tag">Size</span></div>
     <div class="story-title">Validators per provider</div>
@@ -661,13 +684,13 @@ const HEAD = [
   { cls: 'p-stake', label: 'Stake', sort: 'stake', dir: 'desc' },
   { cls: 'p-locations', label: 'Locations', sort: 'cities', dir: 'desc' },
   { cls: 'p-infra', label: 'Infrastructure', sort: 'net', dir: 'desc' },
-  { cls: 'p-perf', label: 'Performance', sort: 'rank', dir: 'asc' },
+  { cls: 'p-perf', label: 'Performance', perf: true },   // sort key follows the cluster (syncPerfHead)
 ];
 function initHead() {
   const table = document.getElementById('dcs-table');
   table.insertAdjacentHTML('afterbegin', `<colgroup>${HEAD.map(c => `<col class="${c.cls}">`).join('')}</colgroup><thead><tr>${HEAD.map(c => c.sort
     ? `<th class="${c.cls} th-sort" data-sort="${c.sort}" data-dir="${c.dir}">${c.label}<span class="th-arrow" aria-hidden="true"></span>${c.hint ? `<span class="th-hint">${c.hint}</span>` : ''}</th>`
-    : `<th class="${c.cls}">${c.label}</th>`).join('')}</tr></thead>`);
+    : `<th class="${c.cls}">${c.label}${c.perf ? '<span class="th-arrow" aria-hidden="true"></span>' : ''}</th>`).join('')}</tr></thead>`);
   table.addEventListener('click', (e) => {
     const th = e.target instanceof Element ? e.target.closest('th.th-sort') : null;
     if (!th) return;
@@ -677,12 +700,25 @@ function initHead() {
   });
 }
 
+// The Performance column sorts by the cluster's performance measure (median IBRL or
+// average skip rate); without one the header is not clickable.
+function syncPerfHead() {
+  const th = document.querySelector('#dcs-table th.p-perf');
+  if (!th) return;
+  const basis = providerPerfBasis(providers);
+  const ps = basis ? PROVIDER_PERF[basis] : null;
+  th.classList.toggle('th-sort', !!ps);
+  if (ps) { th.dataset.sort = ps.sort; th.dataset.dir = ps.dir; }
+  else { delete th.dataset.sort; delete th.dataset.dir; th.classList.remove('is-active'); const arrow = th.querySelector('.th-arrow'); if (arrow) arrow.textContent = ''; }
+}
+
 function initSort() {
   const select = document.getElementById('dcs-sort-select');
+  // unknown or retired keys from old links (sort=rank-asc) fall back to the default
   const fromUrl = params.get('sort');
-  if (fromUrl && /^[a-z]+-(asc|desc)$/.test(fromUrl)) {
+  if (isKnownSort(fromUrl, PROVIDER_SORT_GROUPS)) {
     const opt = document.createElement('option'); opt.value = fromUrl; opt.textContent = fromUrl; select.appendChild(opt); select.value = fromUrl;
-  }
+  } else if (fromUrl) setUrlParam('sort', null);
   sortMenu = initSortMenu(document.getElementById('dcs-sort-menu'), select, { groups: PROVIDER_SORT_GROUPS, defaultValue: 'stake-desc', avail: availability });
   select.addEventListener('change', () => { setUrlParam('sort', select.value); applyAndRender(); });
 }
@@ -708,10 +744,10 @@ function initToggles() {
 let infraRecords = null;   // infrastructure.json records, when the file is available
 function ingest(data, summary) {
   allRecords = (data?.records || []).filter(isValidatorRecord);
-  computeTvcRanks(allRecords);
   latestSummary = summary;
   providers = aggregateProviders(allRecords, summary);
   providerBands = computeProviderBands(providers);
+  validatorBands = computePerfBands(allRecords);
   if (infraRecords) {
     const asnToProvider = new Map();
     for (const e of providers) for (const a of e.asns) asnToProvider.set(a.asn, e.provider);
@@ -726,10 +762,13 @@ function ingest(data, summary) {
     ibrl: allRecords.some(r => r.ibrl?.ibrl_score != null),
     slot: allRecords.some(r => r.slot_duration_median != null),
     vlat: allRecords.some(r => r.mean_vote_latency != null || r.median_vote_latency != null),
-    votes: allRecords.some(r => r.vote_credits_ratio_prev != null),
+    // under Alpenglow credits are stake-weighted rewards, so "credits vs the best" is not shown
+    votes: !creditsFollowStake(allRecords) && allRecords.some(r => r.vote_credits_ratio_prev != null),
     net: providers.some(e => e.net_total > 0),
+    penalty: providers.some(e => e.loc_penalty != null),
   };
-  if (sortMenu) sortMenu.update(availability);
+  if (sortMenu && sortMenu.update(availability).fellBack) setUrlParam('sort', null);
+  syncPerfHead();
   // the Infrastructure column stays whenever there is anything to show: validator
   // connections or network nodes hosted (SFDP lives in the Validators column)
   document.getElementById('dcs-table-wrap').classList.toggle('hide-infra', !availability.connections && !availability.net);

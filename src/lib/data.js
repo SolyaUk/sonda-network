@@ -1,4 +1,5 @@
 import { splitFilterValues, applyListFilter } from './ui.js';
+import { poolIdsOf, poolRankById, poolById } from './pools.js';
 // src/lib/data.js
 export const R2_BASE = 'https://data.sonda.network';
 export const CLUSTERS = ['mainnet-beta', 'testnet', 'devnet', 'alpenglow-community'];
@@ -309,7 +310,7 @@ export function filterValidators(records, params) {
   // List params (comma separated) combine as OR inside the key; different keys are AND.
   // A value with a "!" prefix excludes instead of including (client=Jito,!Agave).
   const list = (key) => (params.get(key) || '').split(',').map(v => v.trim()).filter(Boolean);
-  const apply = (key, accessor) => { const vals = list(key); if (vals.length) out = applyListFilter(out, vals, accessor); };
+  const apply = (key, accessor, opts) => { const vals = list(key); if (vals.length) out = applyListFilter(out, vals, accessor, opts); };
   apply('country', r => r.geolocation?.country_code);
 
   apply('asn', r => r.geolocation?.asn);
@@ -344,6 +345,10 @@ export function filterValidators(records, params) {
   apply('sfdp', r => r.sfdp_state);
   single('delinquent', { true: r => !!r.delinquent, false: r => !r.delinquent });
   single('superminority', { true: r => !!r.is_superminority });
+  // pool is a list over the stake pools a validator holds a place in (pool=jito,!xshin).
+  // A validator can be in several pools at once, so several included pools narrow the list
+  // to those with a place in every one of them (the other list keys hold one value per record).
+  apply('pool', r => poolIdsOf(r), { all: true });
 
   const q = (params.get('q') || '').trim().toLowerCase();
   if (q) {
@@ -358,37 +363,21 @@ export function filterValidators(records, params) {
 }
 
 /**
- * Competition ranking by epoch_credits (TVC rank): equal credits share a rank,
- * the next distinct value gets 1 + number of validators ranked above it
- * (1, 1, 1, 4, 5 ...). Records without credits get no rank. Writes _tvc_rank and
- * _tvc_total on each record (client-side only fields) and returns the ranked count.
+ * Apply sort to validators. Null metrics sink to the bottom in both directions. Ties: IBRL
+ * (best first) where the records have it, then larger stake, then identity, so grouping
+ * sorts (client, version, SFDP, delinquent) read as the default table, grouped, and the
+ * order is stable between renders. There is no rank by vote credits: under Alpenglow
+ * credits are stake-weighted rewards.
  */
-export function computeTvcRanks(records) {
-  const ranked = records.filter(r => r && r.epoch_credits != null);
-  const sorted = [...ranked].sort((a, b) => b.epoch_credits - a.epoch_credits);
-  let rank = 0;
-  let prev = null;
-  sorted.forEach((r, i) => {
-    if (prev === null || r.epoch_credits !== prev) rank = i + 1;
-    prev = r.epoch_credits;
-    r._tvc_rank = rank;
-    r._tvc_total = sorted.length;
-  });
-  records.forEach(r => { if (r && r.epoch_credits == null) { r._tvc_rank = null; r._tvc_total = sorted.length; } });
-  return sorted.length;
-}
-
-/** Apply sort to validators. Default: TVC rank (best first). Ties fall back to stake desc. */
-export function sortValidators(records, sort = 'rank', dir = 'asc') {
+export function sortValidators(records, sort = 'stake', dir = 'desc') {
   const out = [...records];
   const m = dir === 'asc' ? 1 : -1;
-  // Null metrics sink to the bottom in both directions.
   const NULL_LO = -Infinity;
   const NULL_HI = Infinity;
   const nullSink = () => (dir === 'asc' ? NULL_HI : NULL_LO);
+  const stakeOf = r => r.activated_stake_lamports || 0;
   const accessor = {
-    rank: r => r._tvc_rank ?? nullSink(),
-    stake: r => r.activated_stake_lamports || 0,
+    stake: stakeOf,
     name: r => (r.name || '').toLowerCase(),
     city: r => (r.geolocation?.city || '').toLowerCase(),
     skip: r => r.skip_rate ?? nullSink(),
@@ -397,6 +386,8 @@ export function sortValidators(records, sort = 'rank', dir = 'asc') {
     vlat: r => r.mean_vote_latency ?? r.median_vote_latency ?? nullSink(),
     votes: r => r.vote_credits_ratio_prev ?? nullSink(),
     ibrl: r => r.ibrl?.ibrl_score ?? nullSink(),
+    // validator age in epochs; records without an age method sink like other nulls
+    age: r => (r.age_method != null && r.age_epochs != null ? r.age_epochs : nullSink()),
     commission: r => r.commission ?? -1,
     country: r => r.geolocation?.country_code || '',
     asn: r => r.geolocation?.asn || '',
@@ -406,18 +397,16 @@ export function sortValidators(records, sort = 'rank', dir = 'asc') {
     sfdp: r => (r.sfdp_state === 'Approved' ? 0 : r.sfdp_state ? 1 : 2),
     // Delinquent first when desc
     delinquent: r => (r.delinquent ? 1 : 0),
-  }[sort] || (r => r._tvc_rank ?? nullSink());
-  const stakeOf = r => r.activated_stake_lamports || 0;
+    // rank in a stake pool (1 = best); validators the pool does not rank sink like nulls
+  }[sort] || (poolById(sort) ? (r => poolRankById(r, sort) ?? nullSink()) : stakeOf);
+  const ibrlOf = r => r.ibrl?.ibrl_score ?? null;
   out.sort((a, b) => {
     const va = accessor(a), vb = accessor(b);
     if (va < vb) return -1 * m;
     if (va > vb) return 1 * m;
-    // Tie-break: TVC rank (best first) for every sort except rank itself, then larger
-    // stake first, then identity for a stable order. Grouping sorts (client, version,
-    // SFDP, delinquent) therefore read as "the TVC table, grouped".
-    if (sort !== 'rank') {
-      const ra = a._tvc_rank ?? Infinity, rb = b._tvc_rank ?? Infinity;
-      if (ra !== rb) return ra - rb;
+    if (sort !== 'ibrl') {
+      const ia = ibrlOf(a), ib = ibrlOf(b);
+      if (ia !== ib) { if (ia == null) return 1; if (ib == null) return -1; return ib - ia; }
     }
     const sa = stakeOf(a), sb = stakeOf(b);
     if (sa !== sb) return sb - sa;

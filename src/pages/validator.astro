@@ -81,7 +81,12 @@ import Footer from '../components/Footer.astro';
         <div class="qs-card">
           <div class="qs-label">CREDITS</div>
           <div class="qs-val mono" id="qs-credits">—</div>
-          <div class="qs-sub" id="qs-credits-rank">current epoch</div>
+          <div class="qs-sub" id="qs-credits-sub">current epoch</div>
+        </div>
+        <div class="qs-card" id="qs-age-card" hidden>
+          <div class="qs-label" id="qs-age-label">AGE</div>
+          <div class="qs-val mono" id="qs-age"></div>
+          <div class="qs-sub" id="qs-age-sub"></div>
         </div>
       </section>
 
@@ -108,25 +113,14 @@ import Footer from '../components/Footer.astro';
           <h2 class="v-card-title">Linked nodes on other clusters</h2>
           <div id="v-related-body"></div>
         </div>
+        <!-- Stake pools (mainnet): one tile per pool that ranks this validator or stakes to it -->
+        <div class="v-card span-4" id="v-pools-card" style="display:none">
+          <div class="v-card-tag">STAKE POOLS</div>
+          <h2 class="v-card-title">How stake pools rank this validator</h2>
+          <div class="v-pools-grid" id="v-pools-grid"></div>
+        </div>
       </section>
 
-      <section class="v-placeholder-section">
-        <div class="ph-card">
-          <div class="ph-card-tag">COMING SOON</div>
-          <h3 class="ph-card-title">Location history timeline</h3>
-          <p class="ph-card-text">All IP changes since 2021 with country, ASN, and city. Includes Jito Kobe and SFDP archives.</p>
-        </div>
-        <div class="ph-card">
-          <div class="ph-card-tag">COMING SOON</div>
-          <h3 class="ph-card-title">Performance over epochs</h3>
-          <p class="ph-card-text">Charts of stake, skip rate, credits, and version across recent epochs.</p>
-        </div>
-        <div class="ph-card">
-          <div class="ph-card-tag">COMING SOON</div>
-          <h3 class="ph-card-title">Recent changes</h3>
-          <p class="ph-card-text">7-day and 30-day event count and delinquency duration. Version, commission, IP changes.</p>
-        </div>
-      </section>
     </div>
   </main>
   <Footer />
@@ -221,10 +215,11 @@ import Footer from '../components/Footer.astro';
   .v-website { color: var(--cluster-accent); text-decoration: none; font-size: 0.82rem; }
   .v-website:hover { text-decoration: underline; }
 
-  .v-quick-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.85rem; margin-bottom: 1.3rem; }
+  .v-quick-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 0.85rem; margin-bottom: 1.3rem; }
   .qs-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 0.9rem 1.1rem 1rem; }
   .qs-label { font-size: 0.6rem; letter-spacing: 0.1em; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.45rem; }
   .qs-val { font-family: var(--font-display); font-size: 1.5rem; font-weight: 700; color: var(--text-primary); line-height: 1; }
+  .qs-val[data-tip], .qs-sub[data-tip], .v-perf-cell-val[data-tip] { cursor: help; }
   .qs-sub { font-size: 0.72rem; color: var(--text-muted); margin-top: 0.3rem; }
 
   .v-cards-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.9rem; margin-bottom: 1.3rem; }
@@ -285,14 +280,42 @@ import Footer from '../components/Footer.astro';
   .v-perf-cell-val { font-family: var(--font-mono); font-size: 1.1rem; color: var(--text-primary); font-weight: 600; }
   .v-perf-cell-sub { font-size: 0.7rem; color: var(--text-muted); margin-top: 0.2rem; }
 
+  /* Stake pools card: full width, one tile per pool */
+  .v-card.span-4 { grid-column: 1 / -1; }
+  .v-pools-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 0.8rem; }
+  .v-pool { background: var(--bg-card-hover); border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem 0.9rem 0.85rem; display: flex; flex-direction: column; gap: 0.45rem; min-width: 0; }
+  .v-pool-head { display: flex; align-items: center; gap: 0.5rem; min-height: 22px; }
+  .v-pool-name { display: inline-flex; align-items: center; gap: 0.45rem; font-weight: 600; font-size: 0.9rem; color: var(--text-primary); text-decoration: none; }
+  .v-pool-name:hover { color: var(--cluster-accent); }
+  .v-pool-name .plogo { width: 20px; height: 20px; }
+  .v-pool-name .plogo.plogo-wide { width: auto; height: 14px; margin: 0; }
+  .v-pool-kind { font-size: 0.68rem; color: var(--text-muted); margin-left: auto; text-align: right; }
+  .v-pool-rank { display: flex; align-items: baseline; gap: 0.4rem; font-family: var(--font-mono); }
+  .v-pool-rank b { font-size: 1.35rem; font-weight: 700; color: var(--text-primary); line-height: 1.1; }
+  .v-pool-rank span { font-size: 0.75rem; color: var(--text-muted); }
+  .v-pool-pill { align-self: flex-start; font-size: 0.64rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; padding: 0.12rem 0.45rem; border-radius: 4px; border: 1px dashed var(--border); color: var(--text-muted); }
+  .v-pool.is-in .v-pool-pill { border-style: solid; color: var(--status-good); border-color: color-mix(in srgb, var(--status-good) 40%, transparent); background: color-mix(in srgb, var(--status-good) 10%, transparent); }
+  .v-pool-stake { font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-primary); }
+  .v-pool-stake small { font-family: var(--font-body); font-size: 0.72rem; color: var(--text-muted); }
+  /* numbers of a pool tile: a zone of "label ... value" rows under the stake */
+  .v-pool-rows { display: flex; flex-direction: column; gap: 0.28rem; margin-top: 0.2rem; padding-top: 0.55rem; border-top: 1px solid var(--border); }
+  .v-pool-kv { display: flex; justify-content: space-between; align-items: baseline; gap: 0.75rem; font-size: 0.74rem; color: var(--text-secondary); line-height: 1.4; }
+  .v-pool-kv b { font-family: var(--font-mono); font-weight: 600; color: var(--text-primary); white-space: nowrap; }
+  .v-pool-kv[data-tip] { cursor: help; }
+  .v-pool-kv.is-sub { padding-left: 0.75rem; font-size: 0.7rem; color: var(--text-muted); }
+  .v-pool-kv.is-sub b { font-weight: 500; color: var(--text-secondary); }
+  .v-pool-note { font-size: 0.72rem; color: var(--text-muted); line-height: 1.45; }
+  .v-pool-note.is-right { text-align: right; margin-top: -0.2rem; }
+  .v-pool-note.is-bad { color: var(--status-critical); }
+  .v-pool-note.is-good { color: var(--status-good); }
+  .v-pool-note.is-warn { color: var(--status-warning); }
+  .v-pool.is-out .plogo { filter: grayscale(1); opacity: 0.6; }
+  .v-pool.is-out .v-pool-rank b, .v-pool.is-staked .v-pool-rank b { color: var(--text-secondary); }
+  .v-pool.is-stale { opacity: 0.6; }
+
   .v-related-link { display: inline-flex; align-items: center; gap: 0.4rem; color: var(--cluster-accent); text-decoration: none; padding: 0.55rem 0.85rem; background: var(--bg-card-hover); border: 1px solid var(--border); border-radius: 8px; font-size: 0.88rem; margin-right: 0.5rem; margin-bottom: 0.5rem; }
   .v-related-link:hover { border-color: var(--cluster-accent); }
 
-  .v-placeholder-section { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 0.85rem; margin-top: 0.5rem; }
-  .ph-card { background: var(--bg-card); border: 1px dashed var(--border); border-radius: 12px; padding: 1rem 1.15rem 1.15rem; opacity: 0.85; }
-  .ph-card-tag { display: inline-block; font-size: 0.6rem; color: var(--text-muted); background: var(--bg-card-hover); border-radius: 4px; padding: 0.15rem 0.5rem; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem; }
-  .ph-card-title { font-family: var(--font-display); font-size: 0.95rem; font-weight: 600; color: var(--text-secondary); margin: 0 0 0.4rem; }
-  .ph-card-text { font-size: 0.82rem; color: var(--text-muted); line-height: 1.5; margin: 0; }
 
   @media (max-width: 900px) {
     .v-quick-stats { grid-template-columns: repeat(2, 1fr); }
@@ -302,23 +325,59 @@ import Footer from '../components/Footer.astro';
   @media (max-width: 600px) {
     .page-main { padding: 0.85rem 1rem 3rem; }
     .v-header-card { padding: 1rem; }
-    .v-head-side { align-items: flex-start; }
+    /* Phone header: face, name and status in one row; badges and keys below on the full
+       card width, so every key stays on one line (label, value, copy). */
+    .v-head-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; column-gap: 0.75rem; row-gap: 0.7rem; align-items: center; }
+    .v-head-main { display: contents; }
+    .v-icon-wrap { grid-column: 1; grid-row: 1; }
+    .v-icon-wrap span.v-icon-large { width: 52px; height: 52px; }
+    .v-icon-wrap span.v-icon-large > span { font-size: 1.4rem !important; }
+    .v-name { grid-column: 2; grid-row: 1; margin: 0; font-size: 1.25rem; line-height: 1.2; }
+    .v-head-side { grid-column: 3; grid-row: 1; align-items: flex-end; gap: 0.35rem; }
+    .v-name-badges { grid-column: 1 / -1; grid-row: 2; margin: 0; }
+    .v-name-badges:empty { display: none; }
+    .v-keys-block { grid-column: 1 / -1; grid-row: 3; gap: 0.4rem; }
+    .v-key-row { flex-wrap: nowrap; }
+    .v-key-label { min-width: 58px; }
+    /* Unnamed validator: the identity stays on one line and is cut at the end to whatever
+       the name column allows (a wide status pill leaves less room than a narrow one). Its
+       copy button is dropped here, the identity row right below has one for the same key. */
+    .v-name-id { display: block; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .v-name-id-full { display: inline; }
+    .v-name-id-short { display: none; }
+    .v-name-id ~ .copy-btn { display: none; }
   }
 </style>
 
 <script>
 import { bootstrapCluster, getCluster, fetchValidators, fetchSummary, fmtStakeShort, isValidatorRecord, isInGossip } from '../lib/data.js';
 import { startAutoRefresh, preserveScroll, rowSignature } from '../lib/refresh.js';
-import { pinFlagSvg, circleFlagSvg } from '../lib/validator-table.js';
+import { pinFlagSvg, circleFlagSvg, ageInfo, creditsFollowStake } from '../lib/validator-table.js';
+import { POOLS, POOLS_ENABLED, poolInfo, poolTileHtml } from '../lib/pools.js';
+import { esc, safeUrl } from '../lib/ui.js';
 
 let lastSnapshotTs = null;
 let lastRecordSig = null;
-import { fmt, shortenIdentity, clientColor, bamRegionCode, displayClient } from '../lib/formatters.js';
+import { fmt, fmtCompact, shortenIdentity, clientColor, bamRegionCode, displayClient } from '../lib/formatters.js';
 
 const params = new URLSearchParams(window.location.search);
 const validatorId = params.get('id');
 
 let allRecordsForRank = [];
+// The summary (metrics.pools totals) arrives on its own; the pools card is drawn with the
+// record and drawn again when the summary lands.
+let latestSummary = null;
+let currentRecord = null;
+
+// Stake pools card: only for records that carry pool_ranks entries (mainnet).
+function renderPoolsCard(r) {
+  const card = document.getElementById('v-pools-card');
+  const grid = document.getElementById('v-pools-grid');
+  if (!card || !grid) return;
+  const tiles = POOLS_ENABLED ? POOLS.map(p => poolInfo(r, p, latestSummary)).filter(Boolean).map(poolTileHtml) : [];
+  card.style.display = tiles.length ? 'block' : 'none';
+  grid.innerHTML = tiles.join('');
+}
 
 async function loadValidator() {
   const cluster = getCluster();
@@ -337,7 +396,9 @@ async function loadValidator() {
 
   fetchSummary(cluster).then(s => {
     if (!s) return;
+    latestSummary = s;
     if (window.sondaUpdateStrip) window.sondaUpdateStrip(s);
+    if (currentRecord && getCluster() === cluster) renderPoolsCard(currentRecord);
   }).catch(() => {});
 
   if (!validatorId) {
@@ -367,7 +428,7 @@ async function loadValidator() {
       showNotFoundPage(validatorId, cluster,
         'This node is not running in the selected cluster',
         linked.length > 0
-          ? 'It is active on the cluster(s) listed below — click to view it there'
+          ? 'It is active on the cluster(s) listed below, click one to open it there'
           : 'It does not appear in any current snapshot. The validator may have changed identity or be offline across all clusters',
         linked);
       return;
@@ -389,20 +450,20 @@ function showNotFoundPage(id, cluster, title, message, linkedClusters) {
     linksHtml = '<div class="nf-linked">' + linkedClusters.map(({ cluster: oc, record }) => {
       const ocName = oc.replace('-beta', '').replace('-community', '');
       const ocClass = `nf-linked-card cluster-${oc.replace(/-beta|-community/g, '')}`;
-      const href = `/validator?id=${record.vote_account || record.identity_pubkey}&cluster=${oc}`;
+      const href = `/validator?id=${encodeURIComponent(record.vote_account || record.identity_pubkey)}&cluster=${oc}`;
       const name = record.name || 'Unnamed validator';
       return `<a class="${ocClass}" href="${href}">
           <div class="nf-linked-cluster">${ocName}</div>
-          <div class="nf-linked-name">${name}</div>
-          <div class="nf-linked-arrow">→</div>
+          <div class="nf-linked-name">${esc(name)}</div>
+          <div class="nf-linked-arrow">\u2192</div>
         </a>`;
     }).join('') + '</div>';
   }
   errEl.innerHTML = `
     <div class="nf-block">
-      <div class="nf-title">${title}</div>
-      ${id ? `<div class="nf-id"><code>${id}</code></div>` : ''}
-      <p class="nf-message">${message}</p>
+      <div class="nf-title">${esc(title)}</div>
+      ${id ? `<div class="nf-id"><code>${esc(id)}</code></div>` : ''}
+      <p class="nf-message">${esc(message)}</p>
       ${linksHtml}
       <div class="nf-actions">
         <a href="/validators?cluster=${cluster}" class="nf-btn">Back to validators in ${clusterName}</a>
@@ -416,11 +477,11 @@ function showNotFoundPage(id, cluster, title, message, linkedClusters) {
 function sfdpStatePill(state) {
   if (!state) return '<span class="vsfdp vsfdp-never">Never in SFDP</span>';
   const lower = state.toLowerCase();
-  if (lower === 'approved') return `<span class="vsfdp vsfdp-approved">${state}</span>`;
-  if (lower.includes('review') || lower.includes('pending')) return `<span class="vsfdp vsfdp-review">${state}</span>`;
-  if (lower.includes('reject')) return `<span class="vsfdp vsfdp-reject">${state}</span>`;
-  if (lower.includes('retire') || lower.includes('expired')) return `<span class="vsfdp vsfdp-retired">${state}</span>`;
-  return `<span class="vsfdp vsfdp-other">${state}</span>`;
+  if (lower === 'approved') return `<span class="vsfdp vsfdp-approved">${esc(state)}</span>`;
+  if (lower.includes('review') || lower.includes('pending')) return `<span class="vsfdp vsfdp-review">${esc(state)}</span>`;
+  if (lower.includes('reject')) return `<span class="vsfdp vsfdp-reject">${esc(state)}</span>`;
+  if (lower.includes('retire') || lower.includes('expired')) return `<span class="vsfdp vsfdp-retired">${esc(state)}</span>`;
+  return `<span class="vsfdp vsfdp-other">${esc(state)}</span>`;
 }
 
 /** Whether a given infrastructure field is meaningful in the current cluster — based on whether
@@ -447,19 +508,20 @@ function renderValidator(r, cluster, opts = {}) {
   const seedHash = (s) => { let h=0; for (let i=0;i<s.length;i++) h=((h<<5)-h+s.charCodeAt(i))|0; return Math.abs(h); };
   const h = seedHash(r.identity_pubkey || r.name || 'unknown');
   const hue = h % 360, sat = 35 + ((h >> 8) % 20);
+  const iconUrl = safeUrl(r.icon_url);
   document.getElementById('v-icon').innerHTML = `
     <span class="v-icon-large" style="background:hsl(${hue},${sat}%,45%)">
-      ${r.icon_url ? `<img src="${r.icon_url}" width="72" height="72" loading="eager" referrerpolicy="no-referrer" style="width:100%;height:100%;object-fit:cover;display:block" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/>` : ''}
-      <span style="${r.icon_url ? 'display:none;' : 'display:flex;'}width:100%;height:100%;align-items:center;justify-content:center;color:white;font-weight:600;font-size:2rem;font-family:var(--font-display);position:absolute;top:0;left:0">${initial.toUpperCase()}</span>
+      ${iconUrl ? `<img src="${esc(iconUrl)}" width="72" height="72" loading="eager" referrerpolicy="no-referrer" style="width:100%;height:100%;object-fit:cover;display:block" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/>` : ''}
+      <span style="${iconUrl ? 'display:none;' : 'display:flex;'}width:100%;height:100%;align-items:center;justify-content:center;color:white;font-weight:600;font-size:2rem;font-family:var(--font-display);position:absolute;top:0;left:0">${esc(initial.toUpperCase())}</span>
     </span>`;
 
   const nameEl = document.getElementById('v-name');
-  const nameCopy = `<button type="button" class="copy-btn" data-copy="${(r.name || r.identity_pubkey || '').replace(/"/g, '&quot;')}" data-tip="${r.name ? 'Copy name' : 'Copy identity'}" aria-label="Copy"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>`;
+  const nameCopy = `<button type="button" class="copy-btn" data-copy="${esc(r.name || r.identity_pubkey || '')}" data-tip="${r.name ? 'Copy name' : 'Copy identity'}" aria-label="Copy"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>`;
   if (r.name) {
-    nameEl.innerHTML = `${r.name.replace(/&/g, '&amp;').replace(/</g, '&lt;')}${nameCopy}`;
+    nameEl.innerHTML = `${esc(r.name)}${nameCopy}`;
   } else {
     // No name registered on-chain: show the identity pubkey instead of a placeholder word.
-    nameEl.innerHTML = `<span class="v-name-id" data-tip="Identity pubkey (no name registered)"><span class="v-name-id-full">${r.identity_pubkey}</span><span class="v-name-id-short">${shortenIdentity(r.identity_pubkey, 8, 8)}</span></span>${nameCopy}`;
+    nameEl.innerHTML = `<span class="v-name-id" data-tip="Identity pubkey (no name registered)"><span class="v-name-id-full">${esc(r.identity_pubkey)}</span><span class="v-name-id-short">${shortenIdentity(r.identity_pubkey, 8, 8)}</span></span>${nameCopy}`;
   }
   document.getElementById('v-identity').textContent = shortenIdentity(r.identity_pubkey, 6, 6);
   document.getElementById('v-identity-full').textContent = r.identity_pubkey;
@@ -489,7 +551,8 @@ function renderValidator(r, cluster, opts = {}) {
   const statusPill = r.delinquent
     ? '<span class="v-status-pill v-status-delinquent" data-tip="Delinquent right now: the last vote is more than 128 slots (about a minute) behind the tip in this snapshot">Delinquent</span>'
     : '<span class="v-status-pill v-status-active">Active</span>';
-  const website = r.website ? `<a class="v-website" href="${r.website}" target="_blank" rel="noopener">Website ↗</a>` : '';
+  const siteUrl = safeUrl(r.website);
+  const website = siteUrl ? `<a class="v-website" href="${esc(siteUrl)}" target="_blank" rel="noopener noreferrer">Website \u2197</a>` : '';
   document.getElementById('v-head-side').innerHTML = statusPill + website;
 
   document.getElementById('qs-stake').textContent = `${fmtStakeShort(r.activated_stake_lamports)} SOL`;
@@ -497,17 +560,35 @@ function renderValidator(r, cluster, opts = {}) {
   document.getElementById('qs-commission').textContent = r.commission != null ? `${r.commission}%` : '—';
   document.getElementById('qs-mev').textContent = r.mev_commission != null ? `${(r.mev_commission / 100).toFixed(2)}%` : '—';
   document.getElementById('qs-skip').textContent = r.skip_rate != null ? `${r.skip_rate.toFixed(2)}%` : '—';
-  document.getElementById('qs-credits').textContent = r.epoch_credits != null ? fmt(r.epoch_credits) : '—';
+  // Under Alpenglow epoch credits scale with stake (creditsFollowStake) and run into the
+  // trillions: the page then shows the compact figure (full number in the tooltip) and says
+  // that credits do not compare validators, instead of ranking the validator by them.
+  const creditsByStake = creditsFollowStake(allRecordsForRank);
+  const CREDITS_BY_STAKE_TIP = 'On this cluster credits scale with stake, so they do not compare validators';
+  const creditsFull = r.epoch_credits != null ? fmt(r.epoch_credits) : '';
+  const creditsText = r.epoch_credits == null ? '\u2014' : (creditsByStake ? fmtCompact(r.epoch_credits) : creditsFull);
+  const creditsEl = document.getElementById('qs-credits');
+  creditsEl.textContent = creditsText;
+  if (creditsByStake && creditsFull) creditsEl.setAttribute('data-tip', creditsFull); else creditsEl.removeAttribute('data-tip');
+  const creditsSub = document.getElementById('qs-credits-sub');
+  creditsSub.textContent = creditsByStake ? 'current epoch \u00b7 scale with stake' : 'current epoch';
+  if (creditsByStake) creditsSub.setAttribute('data-tip', CREDITS_BY_STAKE_TIP); else creditsSub.removeAttribute('data-tip');
 
-  // TVC rank by epoch_credits (current snapshot), competition ranking: equal credits
-  // share a rank, the next distinct value gets 1 + number ranked above (1, 1, 1, 4 ...).
-  if (r.epoch_credits != null && allRecordsForRank.length > 0) {
-    const ranked = allRecordsForRank.filter(x => x.epoch_credits != null);
-    const above = ranked.filter(x => x.epoch_credits > r.epoch_credits).length;
-    const ties = ranked.filter(x => x.epoch_credits === r.epoch_credits).length - 1;
-    const rank = above + 1;
-    document.getElementById('qs-credits-rank').textContent =
-      `current epoch · TVC rank #${rank} of ${ranked.length}${ties > 0 ? ` (shared with ${ties})` : ''}`;
+  // Validator age (analyzer v3.13): exact for the methods in EXACT_AGE_METHODS, a lower
+  // bound ("66+") otherwise; the card is hidden when the backend has no age for this vote account.
+  const age = ageInfo(r);
+  const ageCard = document.getElementById('qs-age-card');
+  if (ageCard) {
+    ageCard.hidden = !age;
+    if (age) {
+      document.getElementById('qs-age').textContent = age.value;
+      document.getElementById('qs-age-sub').textContent = age.never
+        ? 'epochs voted, no vote credits yet'
+        : age.exact
+          ? `epochs voted${age.first != null ? `, first in epoch ${age.first}` : ''}`
+          : 'epochs or more, earlier history not available';
+      document.getElementById('qs-age-label').setAttribute('data-tip', age.tip);
+    }
   }
 
   const geo = r.geolocation || {};
@@ -519,8 +600,8 @@ function renderValidator(r, cluster, opts = {}) {
       ${flagOk ? pinFlagSvg(cc, { extraClass: 'is-big', tip: geo.country || cc.toUpperCase() }) : '<span style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:var(--text-muted)">?</span>'}
     </span>
     <div class="v-loc-text">
-      <div class="v-loc-city">${inGossip ? (geo.city || 'Unknown city') : 'Not in gossip'}</div>
-      <div class="v-loc-country">${inGossip ? `${geo.region ? geo.region + ', ' : ''}${geo.country || geo.country_code || 'Unknown'}` : 'No IP is visible for this node this cycle'}</div>
+      <div class="v-loc-city">${esc(inGossip ? (geo.city || 'Unknown city') : 'Not in gossip')}</div>
+      <div class="v-loc-country">${esc(inGossip ? `${geo.region ? geo.region + ', ' : ''}${geo.country || geo.country_code || 'Unknown'}` : 'No IP is visible for this node this cycle')}</div>
     </div>`;
 
   // Geo Confidence is a string ("high"/"medium"/"low"), not a number. Render as-is with color.
@@ -528,16 +609,16 @@ function renderValidator(r, cluster, opts = {}) {
   if (geo.confidence) {
     const lvl = String(geo.confidence).toLowerCase();
     const cls = lvl === 'high' ? 'gc-high' : lvl === 'medium' ? 'gc-medium' : lvl === 'low' ? 'gc-low' : 'gc-other';
-    confidenceHtml = `<div class="v-loc-meta-item"><span class="v-loc-meta-label">Geo Confidence</span><span class="v-loc-meta-val"><span class="gc-pill ${cls}">${geo.confidence}</span>${geo.discrepancy ? ' <span class="gc-disc" data-tip="Geo sources disagree, see alternatives below">discrepancy flagged</span>' : ''}</span></div>`;
+    confidenceHtml = `<div class="v-loc-meta-item"><span class="v-loc-meta-label">Geo Confidence</span><span class="v-loc-meta-val"><span class="gc-pill ${cls}">${esc(geo.confidence)}</span>${geo.discrepancy ? ' <span class="gc-disc" data-tip="Geo sources disagree, see alternatives below">discrepancy flagged</span>' : ''}</span></div>`;
   }
 
   document.getElementById('v-loc-meta').innerHTML = `
-    <div class="v-loc-meta-item"><span class="v-loc-meta-label">IP Address</span><span class="v-loc-meta-val" style="font-family:var(--font-mono)">${r.ip_address || '—'}</span></div>
-    <div class="v-loc-meta-item"><span class="v-loc-meta-label">Network Provider</span><span class="v-loc-meta-val">${geo.asn_name || '—'}</span></div>
-    <div class="v-loc-meta-item"><span class="v-loc-meta-label">ASN</span><span class="v-loc-meta-val" style="font-family:var(--font-mono)">${geo.asn ? `<a href="/datacenter?provider=${encodeURIComponent(geo.provider || geo.asn_name || geo.asn)}&cluster=${getCluster()}" style="color:var(--cluster-accent);text-decoration:none" data-tip="Open this provider on SONDA">${geo.asn}</a>` : '—'}</span></div>
+    <div class="v-loc-meta-item"><span class="v-loc-meta-label">IP Address</span><span class="v-loc-meta-val" style="font-family:var(--font-mono)">${esc(r.ip_address || '—')}</span></div>
+    <div class="v-loc-meta-item"><span class="v-loc-meta-label">Network Provider</span><span class="v-loc-meta-val">${esc(geo.asn_name || '—')}</span></div>
+    <div class="v-loc-meta-item"><span class="v-loc-meta-label">ASN</span><span class="v-loc-meta-val" style="font-family:var(--font-mono)">${geo.asn ? `<a href="/datacenter?provider=${encodeURIComponent(geo.provider || geo.asn_name || geo.asn)}&cluster=${getCluster()}" style="color:var(--cluster-accent);text-decoration:none" data-tip="Open this provider on SONDA">${esc(geo.asn)}</a>` : '—'}</span></div>
     <div class="v-loc-meta-item"><span class="v-loc-meta-label">Coordinates</span><span class="v-loc-meta-val" style="font-family:var(--font-mono);font-size:0.78rem">${(geo.latitude != null && geo.longitude != null) ? geo.latitude.toFixed(2) + ', ' + geo.longitude.toFixed(2) : '—'}</span></div>
     ${confidenceHtml}
-    ${geo.primary_source ? `<div class="v-loc-meta-item"><span class="v-loc-meta-label">Primary Source</span><span class="v-loc-meta-val">${geo.primary_source}</span></div>` : ''}`;
+    ${geo.primary_source ? `<div class="v-loc-meta-item"><span class="v-loc-meta-label">Primary Source</span><span class="v-loc-meta-val">${esc(geo.primary_source)}</span></div>` : ''}`;
 
   // Discrepancy alternatives — render after main location card when sources disagree
   renderGeoAlternatives(geo);
@@ -547,15 +628,15 @@ function renderValidator(r, cluster, opts = {}) {
   if (clusterHas('dz')) {
     const dzVal = r.dz_connected ? '<span class="yes">Yes</span>' : '<span class="no">No</span>';
     const dzSub = r.dz_connected ? [r.dz_device_name, r.dz_connection_type].filter(Boolean).join(' · ') : '';
-    cells.push(`<div class="v-infra-cell"><div class="v-infra-cell-label" data-tip="DoubleZero — private low-latency network underlay for validators">DoubleZero</div><div class="v-infra-cell-val">${dzVal}</div>${dzSub ? `<div class="v-infra-cell-sub">${dzSub}</div>` : ''}</div>`);
+    cells.push(`<div class="v-infra-cell"><div class="v-infra-cell-label" data-tip="DoubleZero: private low-latency network underlay for validators">DoubleZero</div><div class="v-infra-cell-val">${dzVal}</div>${dzSub ? `<div class="v-infra-cell-sub">${esc(dzSub)}</div>` : ''}</div>`);
   }
   if (clusterHas('mc')) {
     const mcVal = r.dz_multicast_publisher ? '<span class="yes">Yes</span>' : '<span class="no">No</span>';
     cells.push(`<div class="v-infra-cell"><div class="v-infra-cell-label" data-tip="Publishes shreds via DZ multicast group">DZ Multicast</div><div class="v-infra-cell-val">${mcVal}</div></div>`);
   }
   if (clusterHas('bam')) {
-    const bamVal = r.bam_node ? `<span class="yes" data-tip="Jito BAM node: ${r.bam_node}">${bamRegionCode(r.bam_region || r.bam_node) || r.bam_node}</span>` : '<span class="no">No</span>';
-    cells.push(`<div class="v-infra-cell"><div class="v-infra-cell-label" data-tip="Jito BAM (Block Assembly Marketplace) — decentralized block production">Jito BAM</div><div class="v-infra-cell-val">${bamVal}</div></div>`);
+    const bamVal = r.bam_node ? `<span class="yes" data-tip="Jito BAM node: ${esc(r.bam_node)}">${esc(bamRegionCode(r.bam_region || r.bam_node) || r.bam_node)}</span>` : '<span class="no">No</span>';
+    cells.push(`<div class="v-infra-cell"><div class="v-infra-cell-label" data-tip="Jito BAM (Block Assembly Marketplace): decentralized block production">Jito BAM</div><div class="v-infra-cell-val">${bamVal}</div></div>`);
   }
   // Note: 'Rakurai' is intentionally NOT shown as a separate Yes/No cell — the Version
   // cell below already displays r.client_type colored, which carries the same information.
@@ -564,9 +645,9 @@ function renderValidator(r, cluster, opts = {}) {
   }
   const cColor = clientColor(r.client_type);
   const clientInfo = inGossip ? displayClient(r.client_type, r.client_id_raw) : { label: '', tip: null };
-  cells.push(`<div class="v-infra-cell"><div class="v-infra-cell-label">Version</div><div class="v-infra-cell-val">${inGossip ? (r.version || '—') : '—'}</div>${clientInfo.label ? `<div class="v-infra-cell-sub" style="color:${cColor};font-weight:600"${clientInfo.tip ? ` data-tip="${clientInfo.tip}"` : ''}>${clientInfo.label}</div>` : ''}</div>`);
+  cells.push(`<div class="v-infra-cell"><div class="v-infra-cell-label">Version</div><div class="v-infra-cell-val">${esc(inGossip ? (r.version || '—') : '—')}</div>${clientInfo.label ? `<div class="v-infra-cell-sub" style="color:${cColor};font-weight:600"${clientInfo.tip ? ` data-tip="${esc(clientInfo.tip)}"` : ''}>${esc(clientInfo.label)}</div>` : ''}</div>`);
   if (r.bls_pubkey) {
-    cells.push('<div class="v-infra-cell"><div class="v-infra-cell-label" data-tip="BLS pubkey — required for Alpenglow consensus participation">BLS Pubkey</div><div class="v-infra-cell-val"><span class="yes">Registered</span></div></div>');
+    cells.push('<div class="v-infra-cell"><div class="v-infra-cell-label" data-tip="BLS pubkey: required for Alpenglow consensus participation">BLS Pubkey</div><div class="v-infra-cell-val"><span class="yes">Registered</span></div></div>');
   }
   document.getElementById('v-infra-grid').innerHTML = cells.join('');
 
@@ -575,16 +656,20 @@ function renderValidator(r, cluster, opts = {}) {
   const hasVlat = allRecordsForRank.some(x => x.median_vote_latency != null);
   const perfCells = [];
   perfCells.push(`<div class="v-perf-cell"><div class="v-perf-cell-label" data-tip="Percentage of leader slots skipped in the current epoch. Lower is better">Skip Rate</div><div class="v-perf-cell-val">${r.skip_rate != null ? r.skip_rate.toFixed(2) + '%' : '—'}</div></div>`);
-  perfCells.push(`<div class="v-perf-cell"><div class="v-perf-cell-label" data-tip="Vote credits earned in the current epoch. Higher is better">Epoch Credits</div><div class="v-perf-cell-val">${r.epoch_credits != null ? fmt(r.epoch_credits) : '—'}</div></div>`);
+  perfCells.push(`<div class="v-perf-cell"><div class="v-perf-cell-label" data-tip="Vote credits earned in the current epoch. ${creditsByStake ? CREDITS_BY_STAKE_TIP : 'Higher is better'}">Epoch Credits</div><div class="v-perf-cell-val"${creditsByStake && creditsFull ? ` data-tip="${creditsFull}"` : ''}>${creditsText}</div></div>`);
   if (hasSlot) perfCells.push(`<div class="v-perf-cell"><div class="v-perf-cell-label" data-tip="Median slot duration in milliseconds">Slot Duration</div><div class="v-perf-cell-val">${r.slot_duration_median != null ? r.slot_duration_median.toFixed(0) + 'ms' : '—'}</div><div class="v-perf-cell-sub">median</div></div>`);
   if (hasVlat) perfCells.push(`<div class="v-perf-cell"><div class="v-perf-cell-label" data-tip="Median vote latency in slots. Lower is better">Vote Latency</div><div class="v-perf-cell-val">${r.median_vote_latency != null ? r.median_vote_latency.toFixed(2) : '—'}</div><div class="v-perf-cell-sub">median (slots)</div></div>`);
   if (clusterHas('ibrl') && r.ibrl?.ibrl_score != null) {
-    perfCells.push(`<div class="v-perf-cell"><div class="v-perf-cell-label" data-tip="IBRL — overall block production quality score (0-100). Higher is better">IBRL Overall</div><div class="v-perf-cell-val">${r.ibrl.ibrl_score.toFixed(0)}</div></div>`);
-    perfCells.push(`<div class="v-perf-cell"><div class="v-perf-cell-label" data-tip="IBRL sub-score for block build time efficiency">IBRL Build Time</div><div class="v-perf-cell-val">${r.ibrl.build_time_score != null ? r.ibrl.build_time_score.toFixed(0) : '—'}</div></div>`);
-    perfCells.push(`<div class="v-perf-cell"><div class="v-perf-cell-label" data-tip="IBRL sub-score for how many votes per block">IBRL Vote Packing</div><div class="v-perf-cell-val">${r.ibrl.vote_packing_score != null ? r.ibrl.vote_packing_score.toFixed(0) : '—'}</div></div>`);
+    perfCells.push(`<div class="v-perf-cell"><div class="v-perf-cell-label" data-tip="IBRL score by Jito: how the validator builds blocks as leader. Higher is better">IBRL Overall</div><div class="v-perf-cell-val">${r.ibrl.ibrl_score.toFixed(0)}</div></div>`);
+    perfCells.push(`<div class="v-perf-cell"><div class="v-perf-cell-label" data-tip="Slot time score, 40% of IBRL: blocks built within the time allowance">IBRL Slot Time</div><div class="v-perf-cell-val">${r.ibrl.build_time_score != null ? r.ibrl.build_time_score.toFixed(0) : '—'}</div></div>`);
+    perfCells.push(`<div class="v-perf-cell"><div class="v-perf-cell-label" data-tip="Non-vote packing score, 45% of IBRL: transactions spread evenly through the block, not packed late or in bursts">IBRL Tx Packing</div><div class="v-perf-cell-val">${r.ibrl.non_vote_packing_score != null ? r.ibrl.non_vote_packing_score.toFixed(0) : '—'}</div></div>`);
+    perfCells.push(`<div class="v-perf-cell"><div class="v-perf-cell-label" data-tip="Vote packing score, 15% of IBRL: votes processed early in the block">IBRL Vote Packing</div><div class="v-perf-cell-val">${r.ibrl.vote_packing_score != null ? r.ibrl.vote_packing_score.toFixed(0) : '—'}</div></div>`);
     perfCells.push(`<div class="v-perf-cell"><div class="v-perf-cell-label" data-tip="Median block build time in milliseconds">Block Build (ms)</div><div class="v-perf-cell-val">${r.ibrl.median_block_build_ms != null ? r.ibrl.median_block_build_ms.toFixed(0) : '—'}</div></div>`);
   }
   document.getElementById('v-perf-grid').innerHTML = perfCells.join('');
+
+  currentRecord = r;
+  renderPoolsCard(r);
 
   // Cross-cluster: search for this validator's identity/vote/testnet_pubkey across all
   // other clusters and surface every match. This works in both directions (mainnet→testnet
@@ -614,8 +699,8 @@ function renderGeoAlternatives(geo) {
     return `<div class="v-loc-alt">
       ${flag}
       <div>
-        <div class="v-loc-alt-main">${city}${region ? region : ''}${country ? `, ${country}` : ''}</div>
-        <div class="v-loc-alt-source">${source}${asn ? ' · ' + asn : ''}</div>
+        <div class="v-loc-alt-main">${esc(city)}${esc(region)}${country ? `, ${esc(country)}` : ''}</div>
+        <div class="v-loc-alt-source">${esc(source)}${asn ? ' · ' + esc(asn) : ''}</div>
       </div>
     </div>`;
   }).join('');
@@ -644,8 +729,8 @@ async function populateCrossCluster(r, currentCluster) {
   document.getElementById('v-related-body').innerHTML = matches.map(({ cluster: oc, record }) => {
     const ocName = oc.replace('-beta', '').replace('-community', '');
     const id = record.vote_account || record.identity_pubkey;
-    return `<a class="v-related-link" href="/validator?id=${id}&cluster=${oc}">
-      <span class="v-related-cluster">${ocName}</span> node: ${shortenIdentity(id, 6, 6)} →
+    return `<a class="v-related-link" href="/validator?id=${encodeURIComponent(id)}&cluster=${oc}">
+      <span class="v-related-cluster">${ocName}</span> node: ${shortenIdentity(id, 6, 6)} \u2192
     </a>`;
   }).join('');
 }
@@ -657,6 +742,7 @@ async function refreshValidator() {
   if (!validatorId) return;
   const [data, summary] = await Promise.all([fetchValidators(cluster), fetchSummary(cluster).catch(() => null)]);
   if (summary && window.sondaUpdateStrip) window.sondaUpdateStrip(summary);
+  if (summary) latestSummary = summary;
   const ts = data?.meta?.timestamp || null;
   if (!data?.records || (ts && ts === lastSnapshotTs) || getCluster() !== cluster) return;
   lastSnapshotTs = ts;

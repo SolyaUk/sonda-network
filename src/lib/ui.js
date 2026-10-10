@@ -11,6 +11,21 @@
 const COPY_ICON = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
 const CHEVRON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>';
 
+/** Escape a value for HTML text or a quoted attribute. */
+export function esc(s) {
+  return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+/**
+ * The URL when it is a plain http(s) link, otherwise null (javascript:, data:, relative
+ * paths, anything with quotes or spaces). Validator-info fields (name, website, icon_url,
+ * details) are written on-chain by the validator, so they are untrusted input.
+ */
+export function safeUrl(u) {
+  const s = String(u ?? '').trim();
+  return /^https?:\/\/[^\s"'<>`]+$/i.test(s) ? s : null;
+}
+
 /** HTML for a copy button. value = what gets copied, tip = tooltip text. */
 export function copyButtonHtml(value, tip = 'Copy', label = '') {
   const v = String(value ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
@@ -147,11 +162,15 @@ export function splitFilterValues(values) {
   return { inc, exc };
 }
 
-/** Apply an include/exclude list to an array with an accessor (record -> value). */
+/**
+ * Apply an include/exclude list to an array with an accessor (record -> value). The accessor
+ * may return an array when a record has several values at once: includes then match a record
+ * that has any of them, or, with opts.all, only a record that has every one of them.
+ */
 export function applyListFilter(list, values, accessor, opts = {}) {
   const { inc, exc } = splitFilterValues(values);
   let out = list;
-  if (inc.length) out = out.filter(r => { const v = accessor(r); return Array.isArray(v) ? v.some(x => inc.includes(x)) : inc.includes(v); });
+  if (inc.length) out = out.filter(r => { const v = accessor(r); return Array.isArray(v) ? (opts.all ? inc.every(x => v.includes(x)) : v.some(x => inc.includes(x))) : inc.includes(v); });
   if (exc.length) out = out.filter(r => { const v = accessor(r); return Array.isArray(v) ? !v.some(x => exc.includes(x)) : !exc.includes(v); });
   return out;
 }

@@ -6,17 +6,17 @@
  * Columns (table-layout: fixed, widths in vtable.css): logo+pos | Identity | Version |
  * Stake | Location | Connections | Performance | Flags. Below 1200px Connections and the
  * secondary performance badges hide; below 1000px the page shows mobile cards instead.
+ *
+ * Row context (ctx): cluster, pos, tiers, summary, avail, bands, from, and sortKey (the
+ * active sort key: a pool-rank sort shows that pool's chip on every ranked row).
  */
 import { fmt, fmtCompact, shortenIdentity, clientColor, displayClient } from './formatters.js';
 import { isInGossip, providerOf, providerLogoUrl, providerTagsText } from './data.js';
-import { copyButtonHtml } from './ui.js';
+import { copyButtonHtml, esc, safeUrl } from './ui.js';
 import { identiconSvg } from './charts.js';
+import { poolAvailability, poolChips, locationPenaltyOf } from './pools.js';
 
 export const SITE_ORIGIN = 'https://sonda.network';
-
-function esc(s) {
-  return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
 
 // ---------- stake tiers: relative to the cluster (p25 / p75 / p90 of validator stake) ----------
 export function computeStakeTiers(records) {
@@ -81,11 +81,50 @@ export function providerHref(name, cluster, absolute = false, city = null) {
   return `${absolute ? SITE_ORIGIN : ''}/datacenter?provider=${slugOf(name)}${city ? `&city=${encodeURIComponent(city)}` : ''}&cluster=${cluster}`;
 }
 
+// ---------- validator age (analyzer v3.13 step 2) ----------
+// age_epochs counts epochs with vote credits (the JIP-25 validator age). Only some methods
+// are exact; the others are lower bounds and read as "N+". Records the backend has not
+// aged carry age_method null and show nothing, whatever the other age fields say.
+// "history" (testnet, from svt.one) is exact since the backend patch of 2026-10: accounts
+// older than the source are marked lower_bound there instead (checked on 2026-10-08 data).
+export const EXACT_AGE_METHODS = ['jip25', 'history'];
+
+export function ageInfo(r) {
+  if (!r || r.age_method == null || r.age_epochs == null) return null;
+  // A vote account that exists but has never earned vote credits (analyzer v3.13 step 5:
+  // age_epochs 0, method lower_bound, no first epoch). A plain zero: "0+" would say nothing.
+  if (r.age_epochs === 0) {
+    return { exact: true, never: true, value: '0', label: '0 epochs', first: null, tip: 'No vote credits yet: this vote account has not voted in any epoch' };
+  }
+  const exact = EXACT_AGE_METHODS.includes(r.age_method);
+  const n = fmt(r.age_epochs);
+  const unit = exact && r.age_epochs === 1 ? 'epoch' : 'epochs';
+  const first = r.first_seen_epoch ?? null;
+  const tip = exact
+    ? `Voted in ${n} ${unit}${r.age_method === 'jip25' ? ', the JIP-25 validator age' : ''}${first != null ? `\nFirst vote in epoch ${first}` : ''}`
+    : `Voted in at least ${n} epochs: earlier history of this vote account is not available${first != null ? `\nFirst seen voting in epoch ${first}` : ''}`;
+  const value = exact ? n : `${n}+`;
+  return { exact, value, label: `${value} ${unit}`, first, tip };
+}
+
+/**
+ * Age goes into tables and sorting only where the cluster's method is exact for most
+ * records (decision 2026-10-04): mainnet and testnet today. Elsewhere it lives on the
+ * validator page as "N+".
+ */
+export function ageIsExact(records) {
+  const rs = records || [];
+  if (rs.length === 0) return false;
+  const exact = rs.filter(r => r.age_epochs != null && EXACT_AGE_METHODS.includes(r.age_method)).length;
+  return exact / rs.length >= 0.5;
+}
+
 // ---------- pieces ----------
 export function logoHtml(r, size = 48, extraClass = '') {
   const seed = r.identity_pubkey || r.vote_account || r.name || 'sonda';
-  if (r.icon_url) {
-    return `<span class="vlogo-wrap ${extraClass}" style="width:${size}px;height:${size}px"><img class="vlogo" src="${esc(r.icon_url)}" alt="" width="${size}" height="${size}" loading="lazy" referrerpolicy="no-referrer" data-seed="${esc(seed)}" onerror="this.replaceWith(window.sondaIdenticon ? window.sondaIdenticon(this.dataset.seed, ${size}) : document.createTextNode(''))"></span>`;
+  const icon = safeUrl(r.icon_url);
+  if (icon) {
+    return `<span class="vlogo-wrap ${extraClass}" style="width:${size}px;height:${size}px"><img class="vlogo" src="${esc(icon)}" alt="" width="${size}" height="${size}" loading="lazy" referrerpolicy="no-referrer" data-seed="${esc(seed)}" onerror="this.replaceWith(window.sondaIdenticon ? window.sondaIdenticon(this.dataset.seed, ${size}) : document.createTextNode(''))"></span>`;
   }
   return `<span class="vlogo-wrap ${extraClass}" style="width:${size}px;height:${size}px">${identiconSvg(seed, size)}</span>`;
 }
@@ -97,13 +136,16 @@ if (typeof window !== 'undefined') {
   };
 }
 
-function keysHtml(r, layout = 'stack') {
+function keysHtml(r, layout = 'stack', opts = {}) {
   const keys = [];
   if (r.name && r.identity_pubkey) keys.push(['id', r.identity_pubkey, 'identity']);
   if (r.vote_account) keys.push(['vt', r.vote_account, 'vote account']);
   if (r.bls_pubkey) keys.push(['bls', r.bls_pubkey, 'BLS pubkey']);
   const n = layout === 'stack' ? 6 : 4;   // wider column on desktop: show more of each key
   const items = keys.map(([k, v, what]) => `<span class="vkey"><span class="vkey-l">${k}</span><span class="vkey-v">${shortenIdentity(v, n, n)}</span>${copyButtonHtml(v, `Copy ${what}`)}</span>`);
+  // validator age closes the key list, only where the cluster's age method is exact
+  const age = opts.age ? ageInfo(r) : null;
+  if (age) items.push(`<span class="vkey vkey-age" data-tip="${esc(age.tip)}"><span class="vkey-l">age</span><span class="vkey-v">${age.label}</span></span>`);
   return `<div class="vkeys vkeys-${layout}">${items.join('')}</div>`;
 }
 
@@ -210,7 +252,6 @@ export function connectionBadges(r) {
     const region = (r.bam_region || '').toUpperCase().split('-')[0];
     out.push(`<span class="vbadge vbadge-bam" data-tip="${esc(`Jito BAM node ${r.bam_node}`)}">BAM${region ? ` ${region}` : ''}</span>`);
   }
-  if (r.rakurai) out.push(`<span class="vbadge vbadge-rk" data-tip="Rakurai client">Rakurai</span>`);
   return out.join('');
 }
 
@@ -225,26 +266,37 @@ export function flagBadges(r) {
 
 // Metrics no validator in the cluster has (slot time on alpenglow, IBRL on devnet) are not
 // drawn at all, not even as dashes: a badge that never has a value is noise (principle 11.36).
+// Up to two badges stay visible everywhere (narrow tables, mobile cards): IBRL where the
+// cluster has it (the default sort of the table), then vote credits. Under Alpenglow credits
+// are stake-weighted rewards and do not compare validators, so skip rate takes their place
+// and credits move to the secondary badges. There is no rank by vote credits any more.
+const IBRL_TIP = 'IBRL score by Jito: fast slots, evenly packed transactions, votes included early';
 export function perfBadges(r, opts = {}) {
-  const avail = opts.avail || { skip: true, slot: true, vlat: true, ibrl: true };
+  const avail = opts.avail || {};
   const bands = opts.bands || null;
   const pb = (cls, b, i, tip, bandKey = null, value = null) => `<span class="vperf ${cls}${bandKey ? perfBandClass(bands, bandKey, value) : ''}" data-tip="${tip}"><b>${b}</b><i>${i}</i></span>`;
+  const byStake = !!avail.creditsByStake;
+  const skipFirst = byStake && !!avail.skip;
+  const creditsTip = `Vote credits this epoch${r.epoch_credits != null ? `: ${fmt(r.epoch_credits)}` : ''}${byStake ? '\nOn this cluster credits scale with stake, so they do not compare validators' : ''}`;
+  const credits = cls => pb(cls, r.epoch_credits != null ? fmtCompact(r.epoch_credits) : '\u2014', opts.short ? 'cr' : 'credits', creditsTip);
+  const skip = cls => pb(cls, r.skip_rate != null ? `${r.skip_rate.toFixed(2)}%` : '\u2014', 'skip', 'Skip rate: leader slots skipped this epoch', 'skip', r.skip_rate);
   const out = [];
-  if (r._tvc_rank != null) out.push(pb('vperf-rank', `#${r._tvc_rank}`, 'TVC', `TVC rank ${r._tvc_rank} of ${r._tvc_total}: position by vote credits this epoch, ties share a rank`));
-  out.push(pb('vperf-main', r.epoch_credits != null ? fmtCompact(r.epoch_credits) : '—', opts.short ? 'cr' : 'credits', `Vote credits this epoch${r.epoch_credits != null ? `: ${fmt(r.epoch_credits)}` : ''}`));
+  if (avail.ibrl) out.push(pb('vperf-lead vperf-ibrl', r.ibrl?.ibrl_score != null ? r.ibrl.ibrl_score.toFixed(0) : '\u2014', 'ibrl', IBRL_TIP, 'ibrl', r.ibrl?.ibrl_score));
+  if (skipFirst) out.push(skip('vperf-main'));
+  else if (!(opts.short && byStake)) out.push(credits('vperf-main'));
   if (!opts.short) {
-    if (avail.skip) out.push(pb('vperf-sec', r.skip_rate != null ? `${r.skip_rate.toFixed(2)}%` : '—', 'skip', 'Skip rate: leader slots skipped this epoch', 'skip', r.skip_rate));
-    if (avail.slot) out.push(pb('vperf-sec', r.slot_duration_median != null ? r.slot_duration_median.toFixed(0) : '—', 'ms', 'Median slot time', 'slot', r.slot_duration_median));
+    if (skipFirst) out.push(credits('vperf-sec'));
+    else if (avail.skip) out.push(skip('vperf-sec'));
+    if (avail.slot) out.push(pb('vperf-sec', r.slot_duration_median != null ? r.slot_duration_median.toFixed(0) : '\u2014', 'ms', 'Median slot time', 'slot', r.slot_duration_median));
     // vote performance (v3.13): credits vs the best validator, last full epoch; latencies in the tooltip
     if (avail.votes) {
       const vcr = r.vote_credits_ratio_prev;
       const lat = r.mean_vote_latency != null ? `Average vote latency ${r.mean_vote_latency.toFixed(2)} slots` : '';
-      out.push(pb('vperf-sec', vcr != null ? `${(vcr * 100).toFixed(2)}%` : '—', 'votes', `Vote credits vs the best validator, last full epoch${lat ? `\n${lat}` : ''}`, 'votes', vcr));
+      out.push(pb('vperf-sec', vcr != null ? `${(vcr * 100).toFixed(2)}%` : '\u2014', 'votes', `Vote credits vs the best validator, last full epoch${lat ? `\n${lat}` : ''}`, 'votes', vcr));
     } else if (avail.vlat) {
       const v = r.mean_vote_latency ?? r.median_vote_latency;
-      out.push(pb('vperf-sec', r.mean_vote_latency != null ? r.mean_vote_latency.toFixed(2) : (r.median_vote_latency != null ? r.median_vote_latency.toFixed(1) : '—'), 'vlat', 'Vote latency, slots', 'vlat', v));
+      out.push(pb('vperf-sec', r.mean_vote_latency != null ? r.mean_vote_latency.toFixed(2) : (r.median_vote_latency != null ? r.median_vote_latency.toFixed(1) : '\u2014'), 'vlat', 'Vote latency, slots', 'vlat', v));
     }
-    if (avail.ibrl) out.push(pb('vperf-sec vperf-ibrl', r.ibrl?.ibrl_score != null ? r.ibrl.ibrl_score.toFixed(0) : '—', 'ibrl', 'IBRL score', 'ibrl', r.ibrl?.ibrl_score));
   }
   return out.join('');
 }
@@ -263,16 +315,25 @@ const PERF_METRICS = [
   ['vlat', r => r.mean_vote_latency ?? r.median_vote_latency, 'low', 0.1],
   ['votes', r => r.vote_credits_ratio_prev, 'high', 0.003],
   ['ibrl', r => r.ibrl?.ibrl_score, 'high', 5],
+  // StakeWiz location penalty (mainnet): 0 is the best, the scale goes down to -30
+  ['penalty', r => locationPenaltyOf(r), 'high', 2],
 ];
-/** True when epoch credits follow stake (Alpenglow): credit-based verdicts are meaningless then. */
+/**
+ * True when epoch credits follow stake (Alpenglow): credit-based verdicts are meaningless
+ * then. Checked on the current epoch and on the previous one, so the answer does not flip
+ * in the first minutes of an epoch, when there are few credits to correlate.
+ */
 export function creditsFollowStake(records) {
-  const pts = (records || []).filter(r => !r.delinquent && (r.epoch_credits || 0) > 0 && (r.activated_stake_lamports || 0) > 0);
-  if (pts.length < 8) return false;
-  const xs = pts.map(r => r.activated_stake_lamports), ys = pts.map(r => r.epoch_credits);
-  const mx = xs.reduce((a, b) => a + b, 0) / xs.length, my = ys.reduce((a, b) => a + b, 0) / ys.length;
-  let sxy = 0, sxx = 0, syy = 0;
-  for (let i = 0; i < xs.length; i++) { const dx = xs[i] - mx, dy = ys[i] - my; sxy += dx * dy; sxx += dx * dx; syy += dy * dy; }
-  return sxx && syy ? sxy / Math.sqrt(sxx * syy) >= 0.9 : false;
+  const linked = (field) => {
+    const pts = (records || []).filter(r => !r.delinquent && (r[field] || 0) > 0 && (r.activated_stake_lamports || 0) > 0);
+    if (pts.length < 8) return false;
+    const xs = pts.map(r => r.activated_stake_lamports), ys = pts.map(r => r[field]);
+    const mx = xs.reduce((a, b) => a + b, 0) / xs.length, my = ys.reduce((a, b) => a + b, 0) / ys.length;
+    let sxy = 0, sxx = 0, syy = 0;
+    for (let i = 0; i < xs.length; i++) { const dx = xs[i] - mx, dy = ys[i] - my; sxy += dx * dy; sxx += dx * dx; syy += dy * dy; }
+    return sxx && syy ? sxy / Math.sqrt(sxx * syy) >= 0.9 : false;
+  };
+  return linked('epoch_credits') || linked('epoch_credits_prev');
 }
 export function computePerfBands(records) {
   const bands = {};
@@ -299,20 +360,50 @@ export function perfBandClass(bands, key, value) {
 /** Which optional columns/badges have data anywhere in the cluster. */
 export function tableAvailability(records) {
   const rs = records || [];
+  // Under Alpenglow epoch credits are stake-weighted rewards: "credits vs the best validator"
+  // then measures stake, not voting, so that badge and its sort are not offered.
+  const creditsByStake = creditsFollowStake(rs);
   return {
     skip: rs.some(r => r.skip_rate != null),
     slot: rs.some(r => r.slot_duration_median != null),
     vlat: rs.some(r => r.mean_vote_latency != null || r.median_vote_latency != null),
-    votes: rs.some(r => r.vote_credits_ratio_prev != null),
+    votes: !creditsByStake && rs.some(r => r.vote_credits_ratio_prev != null),
     ibrl: rs.some(r => r.ibrl?.ibrl_score != null),
     sfdp: rs.some(r => r.sfdp_state),
-    connections: rs.some(r => r.dz_connected || r.bam_node || r.dz_multicast_publisher || r.rakurai),
+    connections: rs.some(r => r.dz_connected || r.bam_node || r.dz_multicast_publisher),
+    age: ageIsExact(rs),
+    creditsByStake,
+    // stake pool ranks (mainnet): pools, pool_jito, pool_xshin, ...
+    ...poolAvailability(rs),
   };
 }
 
-/** Toggle the Connections column on a table wrap according to availability. */
+/** What a click on the Performance header sorts by: IBRL where the cluster has it, else skip rate. */
+export function perfSortFor(avail) {
+  if (avail?.ibrl) return { key: 'ibrl', dir: 'desc', hint: 'IBRL', label: 'IBRL score' };
+  if (avail?.skip) return { key: 'skip', dir: 'asc', hint: 'skip rate', label: 'skip rate' };
+  return null;
+}
+
+/** Default sort of a validator list: IBRL, best first, where the cluster has it; otherwise stake. */
+export function defaultSortFor(avail) {
+  return avail?.ibrl ? 'ibrl-desc' : 'stake-desc';
+}
+
+/** Apply cluster availability to a table wrap: Connections column and the Performance header sort. */
 export function applyAvailability(wrapEl, avail) {
   if (!wrapEl) return;
+  const th = wrapEl.querySelector('th.c-perf');
+  if (th) {
+    const ps = perfSortFor(avail);
+    th.classList.toggle('th-sort', !!ps);
+    if (ps) { th.dataset.sort = ps.key; th.dataset.dir = ps.dir; th.setAttribute('data-tip', `Sort by ${ps.label}`); }
+    else { delete th.dataset.sort; delete th.dataset.dir; th.removeAttribute('data-tip'); th.classList.remove('is-active'); }
+    const hint = th.querySelector('.th-hint');
+    if (hint) hint.textContent = ps ? ps.hint : '';
+    const arrow = th.querySelector('.th-arrow');
+    if (arrow && !ps) arrow.textContent = '';
+  }
   wrapEl.classList.toggle('hide-connections', !avail.connections);
 }
 
@@ -322,12 +413,12 @@ export function renderRow(r, ctx) {
   const conn = connectionBadges(r);
   return `<tr data-href="${href}" data-id="${esc(r.identity_pubkey)}">
     <td class="c-pos"><div class="logo-wrap">${logoHtml(r, 48)}</div>${ctx.pos != null ? `<div class="vpos" data-tip="#${ctx.pos} in this list with the current sort and filters">#${ctx.pos}</div>` : ''}</td>
-    <td class="c-id"><div class="vname-row">${nameHtml(r)}</div>${keysHtml(r, 'stack')}${linksHtml(r)}</td>
+    <td class="c-id"><div class="vname-row">${nameHtml(r)}</div>${keysHtml(r, 'stack', { age: ctx.avail?.age })}${linksHtml(r)}</td>
     <td class="c-ver">${versionHtml(r)}</td>
     <td class="c-stake">${stakeMeterHtml(r, ctx.tiers)}<div class="vstake">${fmtStakeSol(r.activated_stake_lamports)} <small>SOL</small></div><div class="vbadges">${commissionBadges(r)}</div></td>
     <td class="c-loc">${locationHtml(r, ctx)}</td>
     <td class="c-conn"><div class="vbadges">${conn || '<span class="vdash">—</span>'}</div></td>
-    <td class="c-perf"><div class="vbadges">${perfBadges(r, { avail: ctx.avail, bands: ctx.bands })}</div></td>
+    <td class="c-perf"><div class="vbadges">${perfBadges(r, { avail: ctx.avail, bands: ctx.bands })}${poolChips(r, ctx)}</div></td>
     <td class="c-flags"><div class="vbadges">${flagBadges(r)}</div></td>
   </tr>`;
 }
@@ -348,18 +439,19 @@ export function renderCard(r, ctx) {
       <div class="vname-row">${nameHtml(r, { size: 'is-card' })}${linksHtml(r).replace('class="vlinks"', 'class="vlinks is-inline"')}</div>
       <div class="vcard-line"><span class="vstake">${fmtStakeSol(r.activated_stake_lamports)} <small>SOL</small></span>${stakeMeterHtml(r, ctx.tiers, 'is-small')}<span class="vcard-sep"></span><span class="vver${versionStatusCls(r)}">${esc(inG ? (r.version || '—') : '—')}</span>${cl.label ? `<span class="vcli" style="color:${clientColor(r.client_type)}">${esc(cl.label)}</span>` : ''}</div>
       <div class="vcard-line">${pinHtml(r)}<span class="vcity-name">${esc(inG ? (g.city || 'Unknown') : 'Not in gossip')}</span>${prov ? `<span class="vcard-sep"></span><span class="dc-logo" data-initial="${esc(prov.charAt(0).toUpperCase())}">${provLogo ? `<img src="${provLogo}" alt="" loading="lazy" onerror="this.remove()">` : ''}</span><span class="vprov-name">${esc(prov)}</span>` : ''}</div>
-      <div class="vbadges vcard-badges"><span class="vcard-perf-inline">${perfBadges(r, { short: true })}</span>${connectionBadges(r)}${flagBadges(r)}${commissionBadges(r)}</div>
-      ${keysHtml(r, 'row')}
+      <div class="vbadges vcard-badges"><span class="vcard-perf-inline">${perfBadges(r, { short: true, avail: ctx.avail, bands: ctx.bands })}</span>${connectionBadges(r)}${flagBadges(r)}${commissionBadges(r)}${poolChips(r, ctx)}</div>
+      ${keysHtml(r, 'row', { age: ctx.avail?.age })}
     </div>
     <div class="vcard-side">
       <a class="vcard-go" href="${href}" data-tip="Open validator page" aria-label="Open validator page"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg></a>
-      <div class="vbadges vcard-perf">${perfBadges(r, { short: true })}</div>
+      <div class="vbadges vcard-perf">${perfBadges(r, { short: true, avail: ctx.avail, bands: ctx.bands })}</div>
     </div>
   </div>`;
 }
 
 // ---------- header ----------
 // Sortable columns map to sort keys of sortValidators(); dir is the default direction.
+// The Performance column sorts by whatever the cluster offers (perfSortFor).
 export const HEADER_COLUMNS = [
   { cls: 'c-pos', label: '' },
   { cls: 'c-id', label: 'Validator', sort: 'name', dir: 'asc' },
@@ -367,14 +459,24 @@ export const HEADER_COLUMNS = [
   { cls: 'c-stake', label: 'Stake', sort: 'stake', dir: 'desc' },
   { cls: 'c-loc', label: 'Location', sort: 'city', dir: 'asc' },
   { cls: 'c-conn', label: 'Connections' },
-  { cls: 'c-perf', label: 'Performance', sort: 'rank', dir: 'asc', hint: 'TVC' },
+  { cls: 'c-perf', label: 'Performance', perf: true },
   { cls: 'c-flags', label: 'Flags' },
 ];
 
-export function tableHeadHtml() {
-  return `<colgroup>${HEADER_COLUMNS.map(c => `<col class="${c.cls}">`).join('')}</colgroup><thead><tr>${HEADER_COLUMNS.map(c => c.sort
-    ? `<th class="${c.cls} th-sort" data-sort="${c.sort}" data-dir="${c.dir}" title="Sort by ${c.label.toLowerCase()}">${c.label}<span class="th-arrow" aria-hidden="true"></span>${c.hint ? `<span class="th-hint">${c.hint}</span>` : ''}</th>`
-    : `<th class="${c.cls}">${c.label}</th>`).join('')}</tr></thead>`;
+export function tableHeadHtml(avail = null) {
+  const ps = perfSortFor(avail);
+  const cell = (c) => {
+    if (c.perf) {
+      const inner = `${c.label}<span class="th-arrow" aria-hidden="true"></span><span class="th-hint">${ps ? ps.hint : ''}</span>`;
+      return ps
+        ? `<th class="${c.cls} th-sort" data-sort="${ps.key}" data-dir="${ps.dir}" data-tip="Sort by ${ps.label}">${inner}</th>`
+        : `<th class="${c.cls}">${inner}</th>`;
+    }
+    return c.sort
+      ? `<th class="${c.cls} th-sort" data-sort="${c.sort}" data-dir="${c.dir}" data-tip="Sort by ${c.label.toLowerCase()}">${c.label}<span class="th-arrow" aria-hidden="true"></span></th>`
+      : `<th class="${c.cls}">${c.label}</th>`;
+  };
+  return `<colgroup>${HEADER_COLUMNS.map(c => `<col class="${c.cls}">`).join('')}</colgroup><thead><tr>${HEADER_COLUMNS.map(cell).join('')}</tr></thead>`;
 }
 
 /** Reflect the active sort (key + dir) in the header. */

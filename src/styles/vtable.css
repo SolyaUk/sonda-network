@@ -51,6 +51,8 @@
 .vkey { display: inline-flex; align-items: center; gap: 0.4rem; font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-secondary); white-space: nowrap; }
 .vkey-l { color: var(--text-muted); width: 1.6em; }
 .vkey .copy-btn { margin-left: 0; }
+/* validator age: last line of the key list (table and mobile card) */
+.vkey-age { cursor: help; }
 .vlinks { display: flex; gap: 4px; margin-top: 0.35rem; align-items: center; }
 .vlinks.is-inline { display: inline-flex; margin: 0 0 0 0.2rem; }
 .vlink { width: 8px; height: 8px; border-radius: 50%; display: inline-block; background: var(--text-muted); }
@@ -121,8 +123,6 @@ svg.vpin-unsure .vpin-ring { stroke: var(--accent-amber); stroke-width: 1.5; str
 .vperf { display: inline-flex; align-items: baseline; gap: 0.3rem; font-family: var(--font-mono); font-size: 0.72rem; padding: 0.12rem 0.45rem; border-radius: 4px; border: 1px solid var(--border); background: var(--bg-primary); white-space: nowrap; cursor: help; }
 .vperf b { font-weight: 600; color: var(--text-primary); }
 .vperf i { font-style: normal; font-size: 0.58rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
-.vperf-rank { border-color: color-mix(in srgb, var(--cluster-accent) 45%, transparent); background: color-mix(in srgb, var(--cluster-accent) 10%, transparent); }
-.vperf-rank b { color: var(--cluster-accent); }
 
 /* responsive tiers */
 @media (max-width: 1200px) {
@@ -143,15 +143,24 @@ svg.vpin-unsure .vpin-ring { stroke: var(--accent-amber); stroke-width: 1.5; str
 .vcard-line { display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; min-width: 0; white-space: nowrap; overflow: hidden; }
 .vcard-line .vver { font-size: 0.78rem; }
 .vcard-line .vcli { margin: 0; font-size: 0.78rem; }
+/* a line that does not fit gives way at its texts (version and client, city and provider),
+   which are cut with an ellipsis; the stake keeps its width. Before, the line was simply
+   clipped at the card edge ("Firedan"), and a long Frankendancer version hid the client. */
+.vcard-line > * { flex-shrink: 0; }
+.vcard-line > .vver, .vcard-line > .vcli, .vcard-line > .vprov-name, .vcard-line > .vcity-name { flex-shrink: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+/* the client name gives way first and keeps a few letters; the version is cut only after that */
+.vcard-line > .vcli { flex-shrink: 10000; min-width: 3.2em; }
+/* the narrowest phones: the stake bars give their place to the version and the client */
+@media (max-width: 380px) { .vcard-line > .stake-meter { display: none; } }
 .vcard-line .vprov-name { font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-secondary); }
 .vcard-sep { width: 1px; height: 12px; background: var(--border); margin: 0 0.15rem; flex-shrink: 0; }
 .vcard-side { display: flex; flex-direction: column; gap: 0.35rem; align-items: flex-end; }
 .vcard-go { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 8px; background: var(--cluster-accent); color: white; text-decoration: none; flex-shrink: 0; }
 .vcard-perf { justify-content: flex-end; }
-/* card columns: logo + rank (full height) | everything about the validator | go button.
-   On tablets the TVC / credits badges sit under the go button; on phones they move into
-   the badge row of the middle column so the right column is only the button and the
-   middle column keeps its width (Viktor, 2026-09-25). */
+/* card columns: logo + position (full height) | everything about the validator | go button.
+   On tablets the two leading performance badges sit under the go button; on phones they
+   move into the badge row of the middle column so the right column is only the button and
+   the middle column keeps its width (Viktor, 2026-09-25). */
 .vcard-badges { gap: 0.25rem; margin-top: 0.1rem; }
 .vcard .vkeys { margin-top: 0.1rem; }
 .vcard-perf-inline { display: none; gap: 0.25rem; }
@@ -160,6 +169,9 @@ svg.vpin-unsure .vpin-ring { stroke: var(--accent-amber); stroke-width: 1.5; str
   .vcard-side .vcard-perf { display: none; }
   .vcard-perf-inline { display: inline-flex; flex-wrap: wrap; }
   .vcard-go { width: 30px; height: 30px; }
+  /* phones: keys one per line with the age as the last line, as in the table; in a wrapping
+     row the age ended up beside the last key (Viktor, 2026-10-09) */
+  .vcard .vkeys-row { flex-direction: column; flex-wrap: nowrap; gap: 0.2rem; }
 }
 .vcard .vkeys-row .vkey { font-size: 0.68rem; }
 @media (max-width: 1000px) {
@@ -224,3 +236,72 @@ svg.vpin.is-big { width: 34px; height: 42px; }
 /* performance bands: pale tints against the whole cluster (best third / worst third) */
 .vperf.is-good { background: color-mix(in srgb, var(--status-good) 11%, var(--bg-primary)); border-color: color-mix(in srgb, var(--status-good) 32%, var(--border)); }
 .vperf.is-poor { background: color-mix(in srgb, var(--status-critical) 9%, var(--bg-primary)); border-color: color-mix(in srgb, var(--status-critical) 30%, var(--border)); }
+
+/* stake pool chips (src/lib/pools.js, mainnet): pool logo + rank. Rounded, to read apart from
+   the square performance badges. The wrapper dissolves (display: contents), so the chips
+   flow right after the badges and take a new line only when the row is full: a forced line
+   made every row with a pool one line taller. */
+.vpools { display: contents; }
+.vpool { display: inline-flex; align-items: center; gap: 0.3rem; font-family: var(--font-mono); font-size: 0.7rem; line-height: 1.35; padding: 0.1rem 0.5rem 0.1rem 0.3rem; border-radius: 999px; border: 1px solid var(--border); background: var(--bg-primary); white-space: nowrap; cursor: help; }
+.vpool b { font-weight: 600; color: var(--text-primary); }
+.plogo { display: inline-flex; align-items: center; justify-content: center; width: 15px; height: 15px; flex-shrink: 0; }
+.plogo img { width: 100%; height: 100%; object-fit: contain; display: block; }
+/* the Jito mark is a wordmark: sized by height, white on dark themes and black on light */
+.plogo.plogo-wide { width: auto; height: 10px; margin: 0 0.1rem; }
+.plogo.plogo-wide img { width: auto; height: 100%; }
+.plogo-light { display: none !important; }
+[data-theme="light"] .plogo-dark { display: none !important; }
+[data-theme="light"] .plogo-light { display: block !important; }
+/* ranked by the pool but without a place in it: shown only when the list is sorted by that pool */
+.vpool.is-out { border-style: dashed; }
+.vpool.is-out .plogo { filter: grayscale(1); opacity: 0.55; }
+.vpool.is-out b { color: var(--text-muted); font-weight: 500; }
+.vpool.is-stale { opacity: 0.55; }
+/* the pool the list is sorted by: first in the row, outlined in the cluster colour */
+.vpool.is-sorted { border-color: color-mix(in srgb, var(--cluster-accent) 55%, var(--border)); }
+
+/* stake pool quick filter next to the search on /validators */
+.pool-strip { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+.pool-strip[hidden] { display: none; }
+.pool-strip-label { font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); cursor: help; margin-right: 0.1rem; }
+.pool-pick { position: relative; display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.4rem 0.7rem 0.4rem 0.55rem; border: 1px solid var(--border); border-radius: 999px; background: var(--bg-card); color: var(--text-secondary); font-size: 0.78rem; line-height: 1.2; cursor: pointer; user-select: none; white-space: nowrap; transition: border-color 0.12s, background 0.12s; }
+.pool-pick:hover { border-color: var(--border-accent); color: var(--text-primary); }
+.pool-pick:focus-visible { outline: 2px solid var(--cluster-accent); outline-offset: 2px; }
+.pool-pick b { font-family: var(--font-mono); font-size: 0.76rem; font-weight: 600; color: var(--text-primary); }
+.pool-pick .plogo { width: 17px; height: 17px; }
+.pool-pick .plogo.plogo-wide { width: auto; height: 12px; }
+.pool-pick .plogo-wide + .pool-pick-name { display: none; }   /* the wordmark is the name */
+.pool-pick.is-selected { border-color: color-mix(in srgb, var(--cluster-accent) 60%, transparent); background: color-mix(in srgb, var(--cluster-accent) 14%, transparent); color: var(--text-primary); }
+.pool-pick.is-excluded { border-style: dashed; border-color: color-mix(in srgb, var(--status-critical) 55%, transparent); }
+.pool-pick.is-excluded .pool-pick-name { text-decoration: line-through; color: var(--text-muted); }
+.pool-pick.is-excluded .plogo { filter: grayscale(1); opacity: 0.6; }
+.pool-pick.is-dim { opacity: 0.5; }
+.pool-pick.is-stale .plogo { opacity: 0.55; }
+/* the exclude button sits on the corner of the pick, so showing it never moves the row */
+.pool-pick .vagg-not { right: -6px; top: -7px; transform: none; }
+.pool-pick:hover .vagg-not, .pool-pick.is-excluded .vagg-not { display: inline-flex; }
+.pool-pick.is-excluded .vagg-not { color: var(--status-critical); border-color: color-mix(in srgb, var(--status-critical) 55%, transparent); }
+@media (hover: none) { .pool-pick.is-excluded .vagg-not { display: inline-flex !important; } }
+/* phones: logo and count only, the four picks stay on one line (the name is in the filter
+   chip once picked) */
+@media (max-width: 600px) {
+  .pool-strip { gap: 0.3rem; width: 100%; }
+  .pool-pick { padding: 0.35rem 0.55rem 0.35rem 0.45rem; gap: 0.3rem; }
+  .pool-pick-name { display: none; }
+}
+/* wider screens: a pick names its pool and shows its state itself, so the filter chip of a
+   pool is not drawn (next to the picks it only squeezed the search) */
+@media (min-width: 601px) {
+  .filter-chip.is-pool, .filter-chips.only-pool { display: none; }
+}
+@media (max-width: 345px) { .pool-strip-label { display: none; } }
+
+/* StakeWiz location penalty of a place (city card on the provider page, Locations cell of
+   the providers list): neutral, tinted against all validators like the performance bands */
+.vbadge-pen { color: var(--text-secondary); border-color: var(--border); background: var(--bg-card); text-transform: none; letter-spacing: 0; }
+.vbadge-pen.is-good { color: var(--status-good); border-color: color-mix(in srgb, var(--status-good) 35%, var(--border)); background: color-mix(in srgb, var(--status-good) 9%, var(--bg-primary)); }
+.vbadge-pen.is-poor { color: var(--status-critical); border-color: color-mix(in srgb, var(--status-critical) 35%, var(--border)); background: color-mix(in srgb, var(--status-critical) 8%, var(--bg-primary)); }
+/* the mark of the pool the penalty belongs to (SOL Strategies delegates by the StakeWiz score) */
+.vbadge-pen { align-items: center; }
+.vbadge-pen .plogo { width: 11px; height: 11px; }
+.p-pen { margin-top: 0.3rem; }

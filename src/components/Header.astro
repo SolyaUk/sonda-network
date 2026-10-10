@@ -13,7 +13,6 @@ const { activePage = 'overview' } = Astro.props;
       <a href="/" class:list={['nav-link', activePage === 'overview' && 'active']}>Overview</a>
       <a href="/validators" class:list={['nav-link', activePage === 'validators' && 'active']}>Validators</a>
       <a href="/datacenters" class:list={['nav-link', activePage === 'datacenters' && 'active']}>Datacenters</a>
-      <a href="/endpoints" data-stub class:list={['nav-link', activePage === 'endpoints' && 'active']}>Endpoints</a>
       <a href="/#about" class="nav-link">About</a>
     </nav>
 
@@ -72,7 +71,6 @@ const { activePage = 'overview' } = Astro.props;
     <a href="/" class:list={['mobile-link', activePage === 'overview' && 'active']}>Overview</a>
     <a href="/validators" class:list={['mobile-link', activePage === 'validators' && 'active']}>Validators</a>
     <a href="/datacenters" class:list={['mobile-link', activePage === 'datacenters' && 'active']}>Datacenters</a>
-    <a href="/endpoints" data-stub class:list={['mobile-link', activePage === 'endpoints' && 'active']}>Endpoints</a>
     <a href="/#about" class="mobile-link">About</a>
   </div>
 </header>
@@ -132,15 +130,16 @@ const { activePage = 'overview' } = Astro.props;
 .mobile-link { font-size: 0.92rem; font-weight: 500; color: var(--text-secondary); text-decoration: none; padding: 0.7rem 0.5rem; border-radius: 6px; }
 .mobile-link.active { color: var(--cluster-accent); background: color-mix(in srgb, var(--cluster-accent) 10%, transparent); }
 
-@media (max-width: 900px) {
+/* Breakpoints follow what the header needs on one line: about 1062px with the nav,
+   about 750px without it. Below that the cluster switcher takes a second row. */
+@media (max-width: 1080px) {
   .site-nav { display: none; }
   .mobile-menu-toggle { display: flex; }
 }
-@media (max-width: 600px) {
-  .logo-text { display: none; }
+@media (max-width: 760px) {
   /* Allow header to grow when cluster-switcher wraps to row 2.
      align-items: flex-start keeps the logo at the top of row 1 alongside the
-     controls — without it, the logo centers vertically across the full
+     controls: without it, the logo centers vertically across the full
      2-row height of header-controls and visually drifts toward the middle. */
   .header-inner {
     min-height: 60px; height: auto;
@@ -149,13 +148,6 @@ const { activePage = 'overview' } = Astro.props;
     align-items: flex-start;
   }
   .logo-link { padding-top: 0.15rem; }
-  /* Tighter icons + pill so everything fits on 360-412px viewports without hiding socials */
-  .icon-link { width: 32px; height: 32px; }
-  .updated-pill { font-size: 0.62rem; padding: 0.18rem 0.4rem; }
-  .theme-toggle .toggle-track { width: 44px; height: 24px; }
-  .theme-toggle .toggle-thumb { width: 18px; height: 18px; }
-  :global([data-theme="light"]) .toggle-thumb { left: 22px; }
-  .toggle-icon { width: 20px; height: 20px; }
   /* Controls flex container ITSELF wraps. cluster-switcher inside it
      gets order: 99 + flex-basis: 100% so it becomes a full second row beneath
      the theme-toggle and icons (which stay on the first row). */
@@ -177,6 +169,16 @@ const { activePage = 'overview' } = Astro.props;
     padding: 0.4rem 0.3rem; font-size: 0.7rem;
     text-align: center;
   }
+}
+@media (max-width: 600px) {
+  .logo-text { display: none; }
+  /* Tighter icons + pill so everything fits on 360-412px viewports without hiding socials */
+  .icon-link { width: 32px; height: 32px; }
+  .updated-pill { font-size: 0.62rem; padding: 0.18rem 0.4rem; }
+  .theme-toggle .toggle-track { width: 44px; height: 24px; }
+  .theme-toggle .toggle-thumb { width: 18px; height: 18px; }
+  :global([data-theme="light"]) .toggle-thumb { left: 22px; }
+  .toggle-icon { width: 20px; height: 20px; }
 }
 
 /* Very narrow viewports (≤360px — small Android phones).

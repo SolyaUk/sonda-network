@@ -101,35 +101,31 @@ export function versionColor(version) {
   return VERSION_PALETTE[Math.abs(hash) % VERSION_PALETTE.length];
 }
 // ============================================================================
-// Client/software palette (canonical, must match Software card on homepage).
-// Family-based: clients in the same family share a hue. Visually distinct
-// families (Jito vs Harmonic vs Frankendancer vs Firedancer) get different hues.
-// Keep in sync with CLIENT_COLORS in index.astro.
+// Client/software palette: the one canonical map, used on every page. Family-based:
+// clients of one family share a hue; grey is reserved for Unknown. Names follow the
+// backend registry (agave client_ids.rs, REFERENCE R12.3).
 // ============================================================================
 const CLIENT_COLORS = {
-  // Jito family — violet
-  'Jito_BAM':                 '#a78bfa',
+  // Jito family: violet
   'JitoBAM':                  '#a78bfa',
-  'Jito_Labs':                '#8b5cf6',
   'Jito':                     '#8b5cf6',
-  // Harmonic family — cyan
-  'Harmonic':                 '#22d3ee',
+  // Harmonic family: cyan
   'HarmonicAgave':            '#22d3ee',
   'HarmonicFrankendancer':    '#06b6d4',
   'HarmonicFiredancer':       '#0891b2',
-  'HarmonicMajor':            '#0e7490',
-  'Harmonic_Major':           '#0e7490',  // legacy Trillium-style key, kept for cached responses
-  'FD_Harmonic':              '#0891b2',
-  // Frankendancer family — magenta
+  // Frankendancer family: magenta
   'Frankendancer':            '#e879f9',
-  // Firedancer family — orange
+  // Firedancer family: orange
   'Firedancer':               '#f97316',
   'FireBAM':                  '#fb923c',
-  // Standalone clients — each its own color
+  // Agave family: teal
+  'Agave':                    '#14b8a6',
+  'Paladin':                  '#5eead4',  // Agave fork (client id 4), not on any cluster yet
+  // Standalone clients: each its own color
   'Rakurai':                  '#eab308',
   'Raiku':                    '#fbbf24',
-  'Agave':                    '#14b8a6',
-  'Mithril':                  '#a3e635',  // Overclock client (gossip id 19785), canonical since analyzer v3.11
+  'Mithril':                  '#a3e635',  // Overclock client (gossip id 19785)
+  'Sig':                      '#60a5fa',  // Syndica client (client id 7), not on any cluster yet
   'Unknown':                  '#6b7280',
 };
 

@@ -7,6 +7,7 @@
  */
 import { isValidatorRecord, isInGossip, providerOf, providerMeta, providerLogoUrl, providerTagsText, fetchValidators } from './data.js';
 import { applyListFilter } from './ui.js';
+import { locationPenaltyOf, medianPenalty } from './pools.js';
 
 export const CLUSTER_ORDER = ['mainnet-beta', 'testnet', 'devnet', 'alpenglow-community'];
 export const CLUSTER_SHORT = { 'mainnet-beta': 'mainnet', 'testnet': 'testnet', 'devnet': 'devnet', 'alpenglow-community': 'alpenglow' };
@@ -155,7 +156,7 @@ export function concentrationLevelOf(pct) {
 /**
  * Returns [{ provider, count, delinquent, stake_lamports, stake_pct, asns: [{asn, name, count, stake_lamports}],
  *   countries: Map(cc -> {cc, country, count}), cities: [{city, cc, country, count, stake_lamports, asns:Set}],
- *   dz, multicast, bam, sfdp, superminority, skip_avg, rank_median, rank_best, tags, website, logo, level }]
+ *   dz, multicast, bam, sfdp, superminority, skip_avg, ibrl_median, perf_quarter, tags, website, logo, level }]
  * sorted by stake desc. Records outside gossip (no geolocation) are skipped.
  */
 /**
@@ -191,7 +192,8 @@ export function networkOnlyProviders(existing, infraRecords, summary, asnToProvi
       countries: [...countries.values()].sort((a, b) => b.nodes - a.nodes),
       cities: [...cities.values()].map(c => Object.assign(c, { asns: [...c.asns] })).sort((a, b) => b.nodes - a.nodes),
       dz: 0, multicast: 0, bam: 0, sfdp: 0, superminority: 0,
-      skip_avg: null, rank_median: null, rank_best: null, ibrl_median: null, slot_median: null, vlat_median: null, vlat_mean: null, votes_mean: null,
+      skip_avg: null, ibrl_median: null, slot_median: null, vlat_median: null, vlat_mean: null, votes_mean: null,
+      loc_penalty: null, loc_penalty_n: 0,
       tags: Array.isArray(meta.tags) ? meta.tags : [], tagsText: providerTagsText(summary, name), website: meta.website || null,
       logo: providerLogoUrl(summary, name, asns[0]?.asn || null),
       top: [], net, net_total: netTotal(net), net_cities: byProviderCity.get(name) || new Map(),
@@ -220,7 +222,7 @@ export function aggregateProviders(records, summary) {
     if (!map.has(key)) map.set(key, {
       provider: key, count: 0, delinquent: 0, stake_lamports: 0, stake_pct: 0,
       _asns: new Map(), _countries: new Map(), _cities: new Map(),
-      dz: 0, multicast: 0, bam: 0, sfdp: 0, superminority: 0, _skips: [], _ranks: [], _ibrl: [], _slot: [], _vlat: [], _votes: [], _top: [],
+      dz: 0, multicast: 0, bam: 0, sfdp: 0, superminority: 0, _skips: [], _ibrl: [], _slot: [], _vlat: [], _votes: [], _top: [], _pen: [],
     });
     const e = map.get(key);
     e.count++;
@@ -236,9 +238,12 @@ export function aggregateProviders(records, summary) {
       c.count++; c.stake_lamports += r.activated_stake_lamports || 0; e._countries.set(cc, c);
     }
     const cityKey = `${g.city || 'Unknown'}|${cc || '??'}`;
-    const ci = e._cities.get(cityKey) || { city: g.city || 'Unknown', cc, country: g.country || cc || '', count: 0, delinquent: 0, stake_lamports: 0, dz: 0, bam: 0, asns: new Set() };
+    const ci = e._cities.get(cityKey) || { city: g.city || 'Unknown', cc, country: g.country || cc || '', count: 0, delinquent: 0, stake_lamports: 0, dz: 0, bam: 0, asns: new Set(), _pen: [] };
     ci.count++; if (r.delinquent) ci.delinquent++; ci.stake_lamports += r.activated_stake_lamports || 0;
     if (r.dz_connected) ci.dz++; if (r.bam_node) ci.bam++; if (g.asn) ci.asns.add(g.asn);
+    // StakeWiz location penalty (mainnet pool data): median per provider and per city
+    const pen = locationPenaltyOf(r);
+    if (pen != null) { e._pen.push(pen); ci._pen.push(pen); }
     e._cities.set(cityKey, ci);
     if (r.dz_connected) e.dz++;
     if (r.dz_multicast_publisher) e.multicast++;
@@ -246,7 +251,6 @@ export function aggregateProviders(records, summary) {
     if (r.sfdp_state === 'Approved') e.sfdp++;
     if (r.is_superminority) e.superminority++;
     if (r.skip_rate != null) e._skips.push(r.skip_rate);
-    if (r._tvc_rank != null) e._ranks.push(r._tvc_rank);
     e._top.push({ name: r.name || null, identity: r.identity_pubkey, vote: r.vote_account, icon_url: r.icon_url || null, stake: r.activated_stake_lamports || 0 });
     if (r.ibrl?.ibrl_score != null) e._ibrl.push(r.ibrl.ibrl_score);
     if (r.slot_duration_median != null) e._slot.push(r.slot_duration_median);
@@ -260,16 +264,16 @@ export function aggregateProviders(records, summary) {
     e.asns = [...e._asns.values()].sort((a, b) => b.count - a.count);
     e.primary_asn = e.asns[0]?.asn || null;
     e.countries = [...e._countries.values()].sort((a, b) => b.count - a.count);
-    e.cities = [...e._cities.values()].map(c => Object.assign(c, { asns: [...c.asns], stake_pct: totalStake ? (c.stake_lamports / totalStake) * 100 : 0 })).sort((a, b) => b.stake_lamports - a.stake_lamports);
+    e.cities = [...e._cities.values()].map(c => { const pens = c._pen; delete c._pen; return Object.assign(c, { asns: [...c.asns], stake_pct: totalStake ? (c.stake_lamports / totalStake) * 100 : 0, loc_penalty: medianPenalty(pens), loc_penalty_n: pens.length }); }).sort((a, b) => b.stake_lamports - a.stake_lamports);
     e.stake_pct = totalStake ? (e.stake_lamports / totalStake) * 100 : 0;
     e.skip_avg = mean(e._skips);
-    e.rank_median = median(e._ranks);
-    e.rank_best = e._ranks.length ? Math.min(...e._ranks) : null;
     e.ibrl_median = median(e._ibrl);
     e.slot_median = median(e._slot);
     e.vlat_median = median(e._vlat);
     e.vlat_mean = mean(e._vlat);   // mean of the validators' mean latencies (v3.13), medians as fallback
     e.votes_mean = mean(e._votes);  // average vote performance (credits vs the best validator, last full epoch)
+    e.loc_penalty = medianPenalty(e._pen);   // 0 = none, negative = points off the StakeWiz score
+    e.loc_penalty_n = e._pen.length;
     e.slug = providerSlug(e.provider);
     e.top = e._top.sort((a, b) => b.stake - a.stake).slice(0, 5);   // biggest validators, for the faces in the list
     e.net = netInfra.get(e.provider) || emptyNet();
@@ -280,7 +284,7 @@ export function aggregateProviders(records, summary) {
     e.tagsText = providerTagsText(summary, e.provider);
     e.website = meta.website || null;
     e.logo = providerLogoUrl(summary, e.provider, e.primary_asn);
-    delete e._asns; delete e._countries; delete e._cities; delete e._skips; delete e._ranks; delete e._ibrl; delete e._slot; delete e._vlat; delete e._votes; delete e._top;
+    delete e._asns; delete e._countries; delete e._cities; delete e._skips; delete e._ibrl; delete e._slot; delete e._vlat; delete e._votes; delete e._top; delete e._pen;
     return e;
   });
   out.sort((a, b) => b.stake_lamports - a.stake_lamports || b.count - a.count);
@@ -289,10 +293,37 @@ export function aggregateProviders(records, summary) {
   const q = p => st[Math.min(st.length - 1, Math.floor(p * st.length))] || 0;
   const [p25, p75, p90] = [q(0.25), q(0.75), q(0.9)];
   for (const e of out) e.stake_tier = e.stake_lamports >= p90 ? 4 : e.stake_lamports >= p75 ? 3 : e.stake_lamports >= p25 ? 2 : 1;
-  // performance quarter by median TVC rank among providers that have a rank (1 = best quarter)
-  const ranked = out.filter(e => e.rank_median != null).sort((a, b) => a.rank_median - b.rank_median);
-  ranked.forEach((e, i) => { e.perf_quarter = Math.min(4, Math.floor((i / Math.max(1, ranked.length)) * 4) + 1); });
+  // Performance quarter among providers that have a value (1 = best quarter). Providers with
+  // the same value share the better quarter: with skip rates many sit at exactly 0%.
+  const basis = providerPerfBasis(out);
+  for (const e of out) e.perf_quarter = null;
+  if (basis) {
+    const val = PROVIDER_PERF[basis].value;
+    const better = PROVIDER_PERF[basis].better;
+    const ranked = out.filter(e => val(e) != null).sort((a, b) => (better === 'high' ? val(b) - val(a) : val(a) - val(b)) || b.count - a.count);
+    let first = 0;
+    ranked.forEach((e, i) => {
+      if (i > 0 && val(e) !== val(ranked[i - 1])) first = i;
+      e.perf_quarter = Math.min(4, Math.floor((first / Math.max(1, ranked.length)) * 4) + 1);
+    });
+  }
   return out;
+}
+
+/**
+ * What a provider's performance is measured by in a cluster: the median IBRL of its
+ * validators where the cluster has IBRL, otherwise their average skip rate. There is no
+ * rank by vote credits: under Alpenglow credits are stake-weighted rewards.
+ */
+export const PROVIDER_PERF = {
+  ibrl: { value: e => e.ibrl_median, better: 'high', sort: 'ibrl', dir: 'desc' },
+  skip: { value: e => e.skip_avg, better: 'low', sort: 'skip', dir: 'asc' },
+};
+export function providerPerfBasis(list) {
+  const rs = list || [];
+  if (rs.some(e => e.ibrl_median != null)) return 'ibrl';
+  if (rs.some(e => e.skip_avg != null)) return 'skip';
+  return null;
 }
 
 /** Sort accessor for provider entries. */
@@ -310,16 +341,17 @@ export function sortProviders(list, key, dir) {
     bam: e => e.bam,
     sfdp: e => e.sfdp,
     skip: e => (e.skip_avg == null ? Infinity * (dir === 'asc' ? 1 : -1) : e.skip_avg),
-    rank: e => (e.rank_median == null ? Infinity * (dir === 'asc' ? 1 : -1) : e.rank_median),
     ibrl: e => (e.ibrl_median == null ? -Infinity * (dir === 'asc' ? -1 : 1) : e.ibrl_median),
     slot: e => (e.slot_median == null ? Infinity * (dir === 'asc' ? 1 : -1) : e.slot_median),
     vlat: e => (e.vlat_mean == null ? Infinity * (dir === 'asc' ? 1 : -1) : e.vlat_mean),
     votes: e => (e.votes_mean == null ? -Infinity * (dir === 'asc' ? -1 : 1) : e.votes_mean),
+    // location penalty: 0 is the best, more negative is worse; providers without one go last
+    penalty: e => (e.loc_penalty == null ? -Infinity * (dir === 'asc' ? -1 : 1) : e.loc_penalty),
     net: e => e.net_total,
   }[key] || (e => e.stake_lamports);
   // Tie-break: performance keys fall back to validator count (a 2-node provider with a
   // great median should not outrank a 100-node one at equal values), the rest to stake.
-  const tie = ['rank', 'skip', 'ibrl', 'slot', 'vlat', 'votes'].includes(key) ? (a, b) => b.count - a.count || b.stake_lamports - a.stake_lamports : (a, b) => b.stake_lamports - a.stake_lamports;
+  const tie = ['skip', 'ibrl', 'slot', 'vlat', 'votes', 'penalty'].includes(key) ? (a, b) => b.count - a.count || b.stake_lamports - a.stake_lamports : (a, b) => b.stake_lamports - a.stake_lamports;
   return [...list].sort((a, b) => {
     const va = acc(a), vb = acc(b);
     if (va < vb) return -1 * m;

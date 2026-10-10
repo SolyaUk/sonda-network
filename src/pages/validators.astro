@@ -59,6 +59,8 @@ import Footer from '../components/Footer.astro';
       <div class="filter-search-wrap">
         <span class="search-wrap"><input type="search" class="filter-search" id="filter-search" placeholder="Search name, identity or vote account…" /><button type="button" class="search-clear" data-for="filter-search" aria-label="Clear search" hidden><svg viewBox="0 0 20 20" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15"/></svg></button></span>
       </div>
+      <!-- Stake pool quick filter (mainnet): one pick per pool, rendered by renderPoolStrip() -->
+      <div class="pool-strip" id="pool-strip" hidden></div>
       <div class="filter-chips" id="active-filters"></div>
       <button class="filter-clear" id="filter-clear" style="display:none">Clear all filters &times;</button>
     </section>
@@ -68,7 +70,7 @@ import Footer from '../components/Footer.astro';
       <span id="result-count">Loading…</span>
       <div class="sort-controls">
         <select id="sort-select" class="sort-select" hidden aria-hidden="true">
-          <option value="rank-asc" selected>TVC rank, best first</option>
+          <option value="stake-desc" selected>Stake, high to low</option>
         </select>
         <div id="sort-menu"></div>
       </div>
@@ -155,7 +157,8 @@ import Footer from '../components/Footer.astro';
     margin-bottom: 0.8rem;
     flex-wrap: wrap;
   }
-  .filter-search-wrap { flex: 1; min-width: 200px; }
+  /* the search keeps a readable width: chips and picks wrap to the next line instead of squeezing it */
+  .filter-search-wrap { flex: 1; min-width: min(100%, 320px); }
   .filter-search {
     width: 100%;
     background: var(--bg-card);
@@ -253,7 +256,7 @@ import Footer from '../components/Footer.astro';
 <script>
 import {
   bootstrapCluster, getCluster, fetchValidators, fetchSummary,
-  filterValidators, sortValidators, computeTvcRanks, aggregateByProvider, providerOf,
+  filterValidators, sortValidators, aggregateByProvider, providerOf,
   providerLogoUrl, providerTagsText,
   isValidatorRecord, isInGossip, clientLabel,
   fmtStakeShort, concentrationLevel,
@@ -261,9 +264,10 @@ import {
 import { fmt, pct, shortenIdentity, fmtSol, clientColor, versionColor, displayClient, fmtCompact, bamRegionCode } from '../lib/formatters.js';
 import { renderDonut } from '../lib/charts.js';
 import { copyButtonHtml, listValueState, nextListValues, initLongPress, NOT_BUTTON } from '../lib/ui.js';
-import { renderRow, renderCard, tableHeadHtml, markSortedHeader, initHeaderSort, computeStakeTiers, tableAvailability, applyAvailability, circleFlagSvg, pinFlagSvg, computePerfBands } from '../lib/validator-table.js';
-import { initSortMenu } from '../lib/sort-menu.js';
+import { renderRow, renderCard, tableHeadHtml, markSortedHeader, initHeaderSort, computeStakeTiers, tableAvailability, applyAvailability, circleFlagSvg, pinFlagSvg, computePerfBands, defaultSortFor } from '../lib/validator-table.js';
+import { initSortMenu, isKnownSort } from '../lib/sort-menu.js';
 import { startAutoRefresh, signatureMap, changedIdentities, preserveScroll } from '../lib/refresh.js';
+import { POOLS, poolById, poolLogoHtml, inPool, poolMeta, poolStaleReason } from '../lib/pools.js';
 
 const NO_GOSSIP_TIP = 'Vote account has stake but the node is not visible in gossip: no IP, version or client data this cycle';
 
@@ -287,8 +291,9 @@ const FILTER_LABELS = {
   country: 'Country', city: 'City', provider: 'Provider', asn: 'ASN', client: 'Client', version: 'Version',
   dz: 'DZ', bam: 'BAM', rakurai: 'Rakurai',
   sfdp: 'SFDP', delinquent: 'Delinquent', superminority: 'Superminority', gossip: 'Gossip',
+  pool: 'Pool',
 };
-const LIST_FILTERS = ['country', 'city', 'provider', 'asn', 'client', 'version', 'sfdp'];
+const LIST_FILTERS = ['country', 'city', 'provider', 'asn', 'client', 'version', 'sfdp', 'pool'];
 
 function listParam(key) {
   return (params.get(key) || '').split(',').map(v => v.trim()).filter(Boolean);
@@ -346,6 +351,7 @@ function chipText(key, value) {
   if (key === 'sfdp') return `SFDP ${value.replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase()}`;
   if (key === 'bam') return value === 'false' ? 'Not on BAM' : 'Jito BAM';
   if (key === 'rakurai') return 'Rakurai';
+  if (key === 'pool') return `${poolById(value)?.name || value} pool`;
   if (key === 'dz') return value === 'no' ? 'Not on DoubleZero' : value === 'multicast' ? 'Multicast publisher' : value === 'unicast' ? 'DZ without multicast' : 'DZ connected';
   return `${FILTER_LABELS[key] || key}: ${value}`;
 }
@@ -367,10 +373,15 @@ function clearAllFilters() {
 function renderFilterChips() {
   const wrap = document.getElementById('active-filters');
   const chips = getActiveFilterChips();
+  // A pool pick next to the search shows its own state (selected, excluded) and is removed
+  // by a click on it, so on wide screens its chip is hidden: it only took the room of the
+  // search. On phones a pick is a logo and a number, and the chip is where the pool is named
+  // (the rule is in vtable.css, next to the one that hides the names in the picks).
+  wrap.classList.toggle('only-pool', chips.length > 0 && chips.every(c => c.key === 'pool'));
   wrap.innerHTML = chips.map(c => {
     const not = c.value.startsWith('!');
     const raw = not ? c.value.slice(1) : c.value;
-    return `<span class="filter-chip${not ? ' is-not' : ''}">${not ? '<span class="chip-not">not</span>' : ''}${escapeAttr(chipText(c.key, raw))}<span class="chip-x" data-key="${c.key}" data-value="${escapeAttr(raw)}">&times;</span></span>`;
+    return `<span class="filter-chip${not ? ' is-not' : ''}${c.key === 'pool' ? ' is-pool' : ''}">${not ? '<span class="chip-not">not</span>' : ''}${escapeAttr(chipText(c.key, raw))}<span class="chip-x" data-key="${c.key}" data-value="${escapeAttr(raw)}">&times;</span></span>`;
   }).join('');
   ['filter-clear', 'filter-clear-top'].forEach(id => {
     const b = document.getElementById(id);
@@ -392,8 +403,18 @@ let stakeTiers = null;
 let tableAvail = null;
 let perfBands = null;
 let sortMenu = null;
+// Sort picked by the user or given in the URL; null means the cluster default (IBRL where
+// the cluster has it, otherwise stake), which is never written to the URL.
+let userSort = null;
+function syncSort() {
+  if (!sortMenu) return;
+  const def = defaultSortFor(tableAvail);
+  const res = sortMenu.update(tableAvail || {}, { defaultValue: def, value: userSort || def });
+  if (res.fellBack && userSort) { userSort = null; setUrlParam('sort', null); }
+}
+let activeSortKey = null;   // set by applyAndRender(); a pool-rank sort shows that pool on every row
 function rowCtx(pos) {
-  return { cluster: getCluster(), pos, tiers: stakeTiers, summary: latestSummary, avail: tableAvail, bands: perfBands };
+  return { cluster: getCluster(), pos, tiers: stakeTiers, summary: latestSummary, avail: tableAvail, bands: perfBands, sortKey: activeSortKey };
 }
 function renderTableRow(r, pos) { return renderRow(r, rowCtx(pos)); }
 function renderMobileCard(r, pos) { return renderCard(r, rowCtx(pos)); }
@@ -401,6 +422,7 @@ function renderMobileCard(r, pos) { return renderCard(r, rowCtx(pos)); }
 function applyAndRender(opts = {}) {
   const sortVal = document.getElementById('sort-select').value;
   const [sortKey, sortDir] = sortVal.split('-');
+  activeSortKey = sortKey;
   markSortedHeader(document.getElementById('vtable'), sortKey, sortDir);
   filtered = sortValidators(filterValidators(allRecords, params), sortKey, sortDir);
   const keep = opts.keepCount ? Math.max(PAGE_SIZE, renderedCount) : PAGE_SIZE;
@@ -411,7 +433,77 @@ function applyAndRender(opts = {}) {
   document.getElementById('result-count').textContent =
     `${filtered.length} validator${filtered.length === 1 ? '' : 's'}`;
   renderFilterChips();
+  renderPoolStrip();
   renderAggCards(allRecords, filtered, getCluster(), latestSummary);
+}
+
+// ----- Stake pool quick filter (mainnet) -----
+// One pick per pool the cluster has ranks for: logo, name and the number of validators that
+// hold a place in the pool. Click = include, the "not" button or a long press = exclude.
+// A validator can be in several pools, so several included picks mean a place in every one
+// of them. The number on a pick is faceted like the cards: it is counted among the
+// validators passing every other filter, the other picks included, so it says how many
+// rows the pick leaves in the table.
+const POOL_STRIP_TIP = 'Validators that hold a place in a stake pool\nClick a pool to filter the table, click again to remove\nSeveral pools: validators with a place in every one of them';
+function renderPoolStrip() {
+  const el = document.getElementById('pool-strip');
+  if (!el) return;
+  if (!tableAvail?.pools) { el.hidden = true; el.innerHTML = ''; return; }
+  const selected = listParam('pool');
+  const baseCache = new Map();
+  const baseFor = (pool) => {
+    const others = selected.filter(v => v !== pool.id && v !== `!${pool.id}`);
+    const key = others.join(',');
+    if (!baseCache.has(key)) {
+      const p = new URLSearchParams(params.toString());
+      if (others.length) p.set('pool', key); else p.delete('pool');
+      baseCache.set(key, filterValidators(allRecords, p));
+    }
+    return baseCache.get(key);
+  };
+  const everyone = filterValidators(allRecords, new URLSearchParams());
+  const picks = POOLS.filter(pool => tableAvail[`pool_${pool.id}`]).map(pool => {
+    const base = baseFor(pool);
+    const n = base.filter(r => inPool(r, pool.key)).length;
+    // under other filters the pick no longer shows the size of the pool: the tooltip keeps it
+    const whole = base.length !== everyone.length ? everyone.filter(r => inPool(r, pool.key)).length : null;
+    const st = filterState('pool', pool.id);
+    const meta = poolMeta(latestSummary, pool.key) || {};
+    const stale = poolStaleReason(pool.key, latestSummary);
+    const tip = [
+      `{head}${pool.full}`,
+      `${fmt(n)} of ${fmt(base.length)} validators ${pool.many}`,
+      whole != null ? `In the whole cluster: ${fmt(whole)}` : '',
+      meta.pool_stake_sol != null ? `Pool stake: ${fmtCompact(meta.pool_stake_sol)} SOL` : '',
+      stale ? `{warn}${stale}` : '',
+    ].filter(Boolean).join('\n');
+    const cls = `${st === 'include' ? ' is-selected' : st === 'exclude' ? ' is-excluded' : (n === 0 ? ' is-dim' : '')}${stale ? ' is-stale' : ''}`;
+    return `<span class="pool-pick${cls}" role="button" tabindex="0" aria-pressed="${st === 'include'}" data-fkey="pool" data-fval="${pool.id}" data-tip="${escapeAttr(tip)}" data-tip-rich>${poolLogoHtml(pool)}<span class="pool-pick-name">${escapeAttr(pool.name)}</span><b>${fmt(n)}</b>${NOT_BUTTON}</span>`;
+  }).join('');
+  // a keyboard user stays on the pick they just toggled (the re-render replaces the nodes)
+  const focused = el.contains(document.activeElement) ? document.activeElement.closest('.pool-pick')?.dataset.fval : null;
+  el.innerHTML = `<span class="pool-strip-label" data-tip="${escapeAttr(POOL_STRIP_TIP)}">Pools</span>${picks}`;
+  el.hidden = false;
+  if (focused) el.querySelector(`.pool-pick[data-fval="${focused}"]`)?.focus();
+}
+function initPoolStrip() {
+  const el = document.getElementById('pool-strip');
+  if (!el) return;
+  const pick = (e) => (e.target instanceof Element ? e.target.closest('.pool-pick') : null);
+  el.addEventListener('click', (e) => {
+    const t = pick(e);
+    if (!t) return;
+    const not = e.target instanceof Element && e.target.closest('.vagg-not');
+    toggleFilterValue('pool', t.dataset.fval, not ? 'exclude' : 'include');
+  });
+  el.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const t = pick(e);
+    if (!t) return;
+    e.preventDefault();
+    toggleFilterValue('pool', t.dataset.fval, 'include');
+  });
+  initLongPress(el, '.pool-pick', (t) => toggleFilterValue('pool', t.dataset.fval, 'exclude'));
 }
 
 function renderNext(count = PAGE_SIZE) {
@@ -439,12 +531,13 @@ function renderNext(count = PAGE_SIZE) {
   });
   // Wire up mobile card head toggle
   // New cards (validator-table.js) have no collapsed body: a tap anywhere except the
-  // copy buttons and the go button opens the validator page.
+  // copy buttons and the go button opens the validator page. Taps that open a tooltip (a
+  // badge, a name that is cut off) never get here: the tooltip engine keeps them.
   cwrap.querySelectorAll('.vcard').forEach(card => {
     if (card.dataset.wired) return;
     card.dataset.wired = '1';
     card.addEventListener('click', e => {
-      if (e.target instanceof Element && e.target.closest('.vcard-go, [data-copy], [data-tip-ellipsis]')) return;
+      if (e.target instanceof Element && e.target.closest('.vcard-go, [data-copy]')) return;
       const go = card.querySelector('.vcard-go');
       if (go) window.location.href = go.getAttribute('href');
     });
@@ -681,9 +774,21 @@ function mergeSegments(all, filteredSegs, byCurrent = false) {
   return merged;
 }
 
-function delinqHtml(seg, withTip = true) {
-  if (!(seg.delinquent > 0)) return '';
+// Delinquent part of a count. When any row of a card has delinquents, every row gets the
+// same slot (`slot` = digits, the width comes from --dq on the list), empty where there are
+// none, so the counts of all rows stay in one column.
+function delinqHtml(seg, withTip = true, slot = 0) {
+  if (!(seg.delinquent > 0)) return slot ? '<span class="vagg-delinq is-none" aria-hidden="true"></span>' : '';
   return `<span class="vagg-delinq"${withTip ? ` data-tip="${seg.delinquent} of ${seg.count} delinquent"` : ''}>${seg.delinquent}</span>`;
+}
+function delinqDigits(segs) {
+  const max = Math.max(0, ...segs.map(s => s.delinquent || 0));
+  return max > 0 ? String(max).length : 0;
+}
+// The exclude button is rendered inside the row's number cell and sits just left of the
+// number (filter-cards.css); only rows that carry a filter get one.
+function notButtonFor(card, seg) {
+  return card.fkey && LIST_FILTERS.includes(card.fkey) && entryFilter(card, seg) ? NOT_BUTTON : '';
 }
 
 // Filter pair for an entry: the card key by default, an explicit pair for special rows
@@ -723,6 +828,8 @@ function renderSoftwareCard(card, segs, totals) {
   const rest = live.slice(SOFT_ROWS_VISIBLE);
   const restAgg = { key: '__other', label: `Other (${rest.length})`, count: rest.reduce((a, x) => a + x.count, 0), delinquent: rest.reduce((a, x) => a + x.delinquent, 0), stake: rest.reduce((a, x) => a + x.stake, 0) };
 
+  const dq = delinqDigits([...segs, restAgg]);
+
   const segTip = (seg) => `${seg.label}: ${seg.count} validators (${sharePct(seg).toFixed(1)}%), ${stakePct(seg).toFixed(1)}% of stake`;
   const segHtml = (seg, color) => {
     const w = stakePct(seg);
@@ -743,12 +850,12 @@ function renderSoftwareCard(card, segs, totals) {
       <span class="stacked-legend-dot" style="background:${i == null ? 'var(--text-muted)' : segmentColor(seg, i)};"></span>
       <span class="stacked-legend-name${status}">${escapeAttr(seg.label)}</span>
       <span class="legend-leader"></span>
-      <span class="stacked-legend-stat">${fmt(seg.count)}${delinqHtml(seg, false)}</span>${clickable && card.fkey && LIST_FILTERS.includes(card.fkey) ? NOT_BUTTON : ''}
+      <span class="stacked-legend-stat">${clickable ? notButtonFor(card, seg) : ''}${fmt(seg.count)}${delinqHtml(seg, false, dq)}</span>
     </span>`;
   };
   const legend = top.map((seg, i) => item(seg, i, '', true)).join('')
     + rest.map((seg, i) => item(seg, SOFT_ROWS_VISIBLE + i, ' is-extra', true)).join('')
-    + (rest.length ? `<span class="stacked-legend-item is-special vagg-other" data-more="1" data-tip="${escapeAttr(rowTip(restAgg))}. Click to show all"><span class="stacked-legend-dot" style="background:#4b4f63;"></span><span class="stacked-legend-name">${restAgg.label}</span><span class="legend-leader"></span><span class="stacked-legend-stat">${fmt(restAgg.count)}${delinqHtml(restAgg, false)}</span></span>` : '')
+    + (rest.length ? `<span class="stacked-legend-item is-special vagg-other" data-more="1" data-tip="${escapeAttr(rowTip(restAgg))}. Click to show all"><span class="stacked-legend-dot" style="background:#4b4f63;"></span><span class="stacked-legend-name">${restAgg.label}</span><span class="legend-leader"></span><span class="stacked-legend-stat">${fmt(restAgg.count)}${delinqHtml(restAgg, false, dq)}</span></span>` : '')
     + specials.map(seg => item(seg, null, '', true)).join('');
   const more = rest.length ? `<button class="vagg-more" type="button" data-more="${live.length}">Show all ${live.length}</button>` : '';
 
@@ -759,7 +866,7 @@ function renderSoftwareCard(card, segs, totals) {
     </div>
     <div class="story-title">${card.title}</div>
     <div class="stacked-bar"><div class="stacked-bar-inner">${barHtml || '<div class="stacked-segment" style="width:100%;background:var(--bg-card-hover)"></div>'}</div></div>
-    <div class="stacked-legend">${legend}</div>
+    <div class="stacked-legend"${dq ? ` style="--dq:${dq}"` : ''}>${legend}</div>
     <div class="vagg-foot">${more}</div>
   </div>`;
 }
@@ -776,14 +883,15 @@ function renderDonutCard(card, segs, totals) {
   if (restStake > 0) items.push({ label: 'Other', value: restStake, color: '#4b4f63', title: `Other (${rest.length}): ${restCount} validators, ${((restStake / totalStake) * 100).toFixed(1)}% stake` });
   const donut = items.length > 0 ? renderDonut(items, { size: 150, ringR: 70, innerR: 44 }).svg : '<div class="vagg-empty">no match</div>';
   const colorOf = new Map(top.map((seg, i) => [seg.key, segmentColor(seg, i)]));
+  const dq = delinqDigits(segs);
 
   const rowsHtml = segs.map((seg, i) => {
     const name = `<span class="vagg-name"><span${seg.tip ? ` data-tip="${escapeAttr(seg.tip)}"` : ' data-tip-ellipsis'}>${escapeAttr(seg.label)}</span><span class="legend-leader"></span></span>`;
     return `<div class="vagg-row ${rowClasses(card, seg)}${i >= AGG_ROWS_VISIBLE ? ' is-extra' : ''}"${fattr(card, seg)}>
       ${markerHtml(seg.marker, seg.label)}
       ${name}
-      <span class="vagg-count">${fmt(seg.count)}${delinqHtml(seg)}</span>
-      <span class="vagg-stake"${colorOf.has(seg.key) ? ` style="color:${colorOf.get(seg.key)}"` : ''}>${stakePct(seg).toFixed(1)}%</span>${card.fkey && LIST_FILTERS.includes(card.fkey) ? NOT_BUTTON : ''}
+      <span class="vagg-count">${notButtonFor(card, seg)}${fmt(seg.count)}${delinqHtml(seg, true, dq)}</span>
+      <span class="vagg-stake"${colorOf.has(seg.key) ? ` style="color:${colorOf.get(seg.key)}"` : ''}>${stakePct(seg).toFixed(1)}%</span>
     </div>`;
   }).join('');
   const more = segs.length > AGG_ROWS_VISIBLE ? `<button class="vagg-more" type="button" data-more="${segs.length}">Show all ${segs.length}</button>` : '';
@@ -793,7 +901,7 @@ function renderDonutCard(card, segs, totals) {
       <span class="vagg-meta">${fmt(segs.length)} ${segs.length === 1 ? 'entry' : 'entries'}</span>
     </div>
     <div class="story-title">${card.title}</div>
-    <div class="vagg-donut"><div class="donut-svg">${donut}</div><div class="vagg-rows">${rowsHtml}</div></div>
+    <div class="vagg-donut is-fluid"><div class="donut-svg">${donut}</div><div class="vagg-rows"${dq ? ` style="--dq:${dq}"` : ''}>${rowsHtml}</div></div>
     <div class="vagg-foot">${more}</div>
   </div>`;
 }
@@ -814,7 +922,7 @@ function renderStatusCard(card, rowsAll, rowsFiltered, totals, facetCount, facet
     return `<div class="bar-row ${cls}" data-fkey="${row.filter.key}" data-fval="${escapeAttr(row.filter.val)}" data-tip="${row.label}: ${cur} of ${fmt(denomOf(row))} validators matching the other filters (${((cur / denomOf(row)) * 100).toFixed(1)}%)">
       <div class="bar-row-label">${row.label}</div>
       <div class="bar-row-track"><div class="bar-row-fill ${row.fill}" style="width:${cur > 0 ? Math.max(3, (cur / maxRow) * 100) : 0}%"></div></div>
-      <div class="bar-row-num ${numCls}">${fmt(cur)}</div>${NOT_BUTTON}
+      <div class="bar-row-num ${numCls}">${NOT_BUTTON}${fmt(cur)}</div>
     </div>`;
   }).join('');
   return `<div class="story vagg-card vagg-view-status" data-card="${card.id}">
@@ -956,6 +1064,8 @@ async function loadAndRender() {
   const aggSection = document.getElementById('vagg');
   if (aggSection) { aggSection.hidden = true; aggSection.querySelectorAll('.vagg-grid').forEach(g => { g.innerHTML = ''; }); }
   latestSummary = null;
+  const poolStrip = document.getElementById('pool-strip');
+  if (poolStrip) { poolStrip.hidden = true; poolStrip.innerHTML = ''; }
   const sumLine = document.getElementById('vsummary-line');
   if (sumLine) sumLine.textContent = 'Loading cluster summary…';
 
@@ -970,14 +1080,18 @@ async function loadAndRender() {
     const data = await fetchValidators(cluster);
     allRecords = (data?.records || []).filter(isValidatorRecord);
     lastSnapshotTs = data?.meta?.timestamp || null;
-    computeTvcRanks(allRecords);
     stakeTiers = computeStakeTiers(allRecords);
     perfBands = computePerfBands(allRecords);
 
     // Cluster-aware visibility: columns/badges/sort keys with no data in this cluster are not shown
     tableAvail = tableAvailability(allRecords);
     applyAvailability(document.getElementById('vtable-wrap'), tableAvail);
-    if (sortMenu) sortMenu.update(tableAvail);
+    syncSort();
+    // A pool filter has nothing to select from in a cluster without pool data, and the picks
+    // that set it are not shown there: it is dropped like a sort key the cluster does not
+    // have, so a switch from mainnet does not leave an empty table behind. Only here (first
+    // load and cluster switch): a refresh that briefly loses pool data keeps the filter.
+    if (!tableAvail.pools && params.has('pool')) { params.delete('pool'); setUrlParam('pool', null); }
 
     // Summary line + breakdown cards
     renderSummaryLine(allRecords);
@@ -1007,11 +1121,11 @@ async function refreshValidators() {
   const before = signatureMap(allRecords);
   allRecords = data.records.filter(isValidatorRecord);
   lastSnapshotTs = ts;
-  computeTvcRanks(allRecords);
   stakeTiers = computeStakeTiers(allRecords);
   perfBands = computePerfBands(allRecords);
   tableAvail = tableAvailability(allRecords);
   applyAvailability(document.getElementById('vtable-wrap'), tableAvail);
+  syncSort();
   if (summary) latestSummary = summary;
   const changed = changedIdentities(before, signatureMap(allRecords));
   preserveScroll(() => {
@@ -1042,15 +1156,12 @@ function initSortControl() {
   const host = document.getElementById('sort-menu');
   const select = document.getElementById('sort-select');
   if (!host || !select) return;
-  // sort from the URL (the option is created on demand by the menu)
+  // Sort from the URL counts as the user's choice. Unknown or retired keys (old links with
+  // sort=rank-asc) are dropped and the cluster default applies once the data is in.
   const fromUrl = params.get('sort');
-  if (fromUrl && /^[a-z]+-(asc|desc)$/.test(fromUrl)) {
-    if (![...select.options].some(o => o.value === fromUrl)) {
-      const opt = document.createElement('option'); opt.value = fromUrl; opt.textContent = fromUrl; select.appendChild(opt);
-    }
-    select.value = fromUrl;
-  }
-  sortMenu = initSortMenu(host, select, { avail: tableAvail || {} });
+  if (isKnownSort(fromUrl)) userSort = fromUrl;
+  else if (fromUrl) setUrlParam('sort', null);
+  sortMenu = initSortMenu(host, select, { avail: tableAvail || {}, defaultValue: 'stake-desc' });
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -1059,6 +1170,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initAggToggle();
   initAggBlockToggles();
   initAggFilterClicks();
+  initPoolStrip();
   bootstrapCluster();
   startAutoRefresh(refreshValidators, { intervalMs: 60000 });
 
@@ -1075,8 +1187,8 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   document.getElementById('sort-select').addEventListener('change', e => {
-    const v = e.target.value;
-    setUrlParam('sort', v);
+    userSort = e.target.value;
+    setUrlParam('sort', userSort);
     applyAndRender();
   });
 

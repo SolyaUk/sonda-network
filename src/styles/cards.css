@@ -37,8 +37,10 @@
 
 /* ---- bar-row ---- */
 /* Generic stacked progress row — used by DZ breakdown, software versions, SFDP states */
-.bar-row { display: grid; grid-template-columns: 1fr 70px 38px; gap: 0.6rem; align-items: center; font-size: 0.78rem; padding: 0.15rem 0; }
-.bar-row-label { color: var(--text-secondary); white-space: nowrap; min-width: 0; cursor: default; position: relative; }
+/* the label column may shrink below its text: a long label is cut with an ellipsis instead
+   of running over the bar ("ibrl only (not publishing)" on the DoubleZero card) */
+.bar-row { display: grid; grid-template-columns: minmax(0, 1fr) 70px 38px; gap: 0.6rem; align-items: center; font-size: 0.78rem; padding: 0.15rem 0; }
+.bar-row-label { color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; cursor: default; position: relative; }
 .bar-row-label[data-tip] { cursor: help; }
 /* Labels with tooltip can't have overflow:hidden because it clips the tooltip popup.
    Long labels will wrap naturally; current set of labels is short enough not to need ellipsis. */

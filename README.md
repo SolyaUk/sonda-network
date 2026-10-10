@@ -1,43 +1,52 @@
 # sonda.network
 
-Public dashboard for **SONDA** — Solana Observatory for Network Decentralization Analysis.
+Public dashboard for **SONDA**, the Solana Observatory for Network Decentralization Analysis.
 
-Multi-source geo-verified analysis of validator distribution, infrastructure mapping, and network health metrics across all three Solana clusters (mainnet, testnet, devnet).
+Solana validator network analytics: network snapshots across mainnet, testnet, devnet and the Alpenglow community cluster, verified, mapped and turned into tactical insight for validators.
 
 Live at **[sonda.network](https://sonda.network)**.
 
 ## What this is
 
-SONDA maps and verifies the Solana network: where validators run, who their hosts are, how concentrated the network is geographically and by network provider, and how live infrastructure (DoubleZero, Jito BAM, Solana RPC, Harmonic) is performing.
+SONDA maps the Solana network: where validators run, who hosts them, how concentrated stake is by country, city and network provider, how validators perform, and how live infrastructure (DoubleZero, Jito BAM, Solana RPC, Harmonic) is doing.
 
-The data is collected and cross-verified by an independent backend (4 geolocation sources, Solana RPC, DoubleZero Malbec API, Jito Kobe, SFDP), then published as JSON to [data.sonda.network](https://data.sonda.network). This repository is the public-facing dashboard that consumes that data.
+The data is collected and cross-checked by an independent backend (four geolocation sources, Solana RPC, DoubleZero, Jito, SFDP and the other sources listed in the site footer), then published as JSON to [data.sonda.network](https://data.sonda.network). This repository is the public dashboard that reads that data.
 
-Built by [Solya validator](https://solya.studio) (Brazil and Ukraine).
+Built by [Solya validator](https://solya.studio).
 
 ## Audience
 
-- Validators checking their own standing, infrastructure coverage, performance
-- Stake pool operators and delegation programs running due diligence
-- Solana ecosystem researchers and developers
-- SFDP context
+- Validator operators checking their own standing, choosing a datacenter or comparing providers
+- Stake pool operators and delegation programs doing due diligence
+- Researchers, journalists and developers in the Solana ecosystem
+
+## Pages
+
+- `/` overview: chain vitals, live infrastructure, insights, decentralization metrics, geographic distribution, roadmap
+- `/validators` every vote account with stake: filters with include and exclude, sorting, live refresh; on mainnet also ranks in four stake pools (Jito, xSHIN, SOL Strategies, JPool)
+- `/validator?id=<vote account>` validator profile
+- `/datacenters` network providers with locations, hosted validators, infrastructure and performance
+- `/datacenter?provider=<slug>` one provider: cities, networks, validators
+
+Every page works on four clusters: `mainnet-beta`, `testnet`, `devnet`, `alpenglow-community`.
 
 ## Stack
 
-- [Astro 5](https://astro.build/) (static shell with JS islands)
+- [Astro 6](https://astro.build/), static shell with client-side rendering from JSON
 - [Tailwind CSS v4](https://tailwindcss.com/) via `@tailwindcss/vite`
 - Cloudflare Pages, auto-deploy from this repository
-- Data fetched from Cloudflare R2 (`data.sonda.network`)
+- Data fetched in the browser from Cloudflare R2 (`data.sonda.network`)
 
 ## Local development
 
-Requires Node 22 LTS or newer.
+Requires Node 22.12 or newer.
 
 ```bash
 npm install
 npm run dev
 ```
 
-Dev server runs at `http://localhost:4321`. Data is fetched live from `data.sonda.network` so the dashboard works the same as production locally.
+Dev server runs at `http://localhost:4321`. Data is fetched live from `data.sonda.network`, so the dashboard works locally the same way as in production.
 
 ```bash
 npm run build      # static output in dist/
@@ -48,76 +57,67 @@ npm run preview    # preview the built site locally
 
 ```
 src/
-├── components/
-│   ├── Header.astro             top sticky header (logo, nav, cluster, theme, social)
-│   ├── StatusStrip.astro        epoch progress + LIVE pill (sticky under header)
-│   └── ClusterBanner.astro      "what is this cluster" banner on testnet/devnet
-├── layouts/
-│   └── BaseLayout.astro         document shell + theme init script
-├── pages/
-│   └── index.astro              homepage (hero, pulse, live infra, insights,
-│                                 decentralization metrics, path, geographic,
-│                                 about + roadmap). All JS rendering inline.
-├── lib/
-│   ├── data.js                  R2 fetch + cluster bootstrap helpers
-│   ├── compare.js               previous-fetch storage + glow-on-change helpers
-│   └── formatters.js            fmt, pct, flag, rating thresholds
-└── styles/
-    └── global.css               theme variables, cluster tinting, scrollbar
+  components/   Header, StatusStrip, ClusterBanner, Footer
+  layouts/      BaseLayout: document shell, theme init, shared UI init
+  pages/        index, validators, validator, datacenters, datacenter, 404
+  lib/
+    data.js             fetch, cluster bootstrap, validator filtering and sorting
+    validator-table.js  shared validators table and mobile cards
+    providers.js        provider aggregation for the datacenter pages
+    sort-menu.js        sort menu
+    pools.js            stake pool ranks: chips, tooltips, filter and sort helpers (mainnet)
+    ui.js               copy buttons, toasts, sticky offset, filter helpers, HTML escaping
+    charts.js           donut chart, identicons
+    tooltip.js          tooltip engine
+    refresh.js          in-place auto refresh
+    formatters.js       number formatting, client palette, rating thresholds
+    compare.js          glow on changed values
+  styles/       global.css, cards.css, filter-cards.css, vtable.css
 ```
 
-## Homepage flow
+## Data
 
-```
-hero → pulse row → live infrastructure → insights → decentralization metrics
-  → path to better decentralization → geographic distribution → about + roadmap
-```
+The dashboard reads three files per cluster from `data.sonda.network/current/{cluster}/`:
 
-The "Decentralization metrics" + "Path to better decentralization" pair sits next to each other on purpose: Path quantifies the gap to thresholds, the metrics show the absolute state. Reading them together is the intended flow.
+- `network_summary.json`: aggregated metrics (decentralization, distributions, chain vitals, BAM, DoubleZero)
+- `validators.json`: one record per validator
+- `infrastructure.json`: DoubleZero devices, Jito, Harmonic and Solana endpoints
 
-## Data shape
-
-The dashboard reads four files per cluster from `data.sonda.network/current/{cluster}/`:
-
-- `network_summary.json` — aggregated metrics (decentralization, distributions, BAM, DZ, SFDP)
-- `validators.json` — full per-validator records
-- `rpc.json` — public RPC nodes
-- `infrastructure.json` — DZ devices, Jito endpoints, Solana endpoints, Harmonic
-
-Schema is documented in the project system prompt (`SONDA_NETWORK_PROMPT.md`).
+`rpc.json` (RPC nodes) is published next to them and is not used by the dashboard yet. The files are produced by the backend in [SolyaUk/sonda](https://github.com/SolyaUk/sonda).
 
 ## Cluster switching
 
-State stored in `localStorage` under `sonda-cluster`. Default is `mainnet-beta`. The selected cluster is also reflected in the URL `?cluster=` query parameter so links can be shared. The `<html data-cluster>` attribute drives a `--cluster-accent` CSS variable that tints UI accents per cluster.
+The selected cluster is stored in `localStorage` under `sonda-cluster` (default `mainnet-beta`) and mirrored in the `?cluster=` query parameter, so links can be shared. The `<html data-cluster>` attribute drives the `--cluster-accent` CSS variable that tints the interface per cluster.
 
 | Cluster | Accent |
 |---|---|
 | mainnet-beta | blue |
 | testnet | magenta |
 | devnet | amber |
+| alpenglow-community | rose |
 
 ## Theming
 
-Dark theme by default. Toggle in the header. Stored in `localStorage` under `sonda-theme`. An inline init script in the document head prevents flash on load.
+Dark theme by default, toggle in the header, stored in `localStorage` under `sonda-theme`. An inline init script in the document head prevents a flash on load.
 
 ## Roadmap
 
 | Phase | Status | What |
 |---|---|---|
-| 0 | Done | Backend pipeline (multi-source geo, R2, snapshots, Telegram event bot) |
-| 1 | Done | Public dashboard launched on all three clusters |
-| 2 | In progress | Per-page deep dives: validators, validator profile, endpoints, datacenters, RPC, methodology |
-| 3 | Planned | Historical analytics (per-epoch snapshots, decentralization trends, events archive) |
-| 4 | Planned | Open data (public API, JSON exports, attribution program) |
-| 5 | Vision | Synthetic Validator Score and DC Score, embeddable widgets, alerts, watchlists, i18n |
+| 0 | Done | Backend pipeline: multi-source geolocation, R2 distribution, automated snapshots, Telegram bot for network events |
+| 1 | Done | Public dashboard launched on four clusters |
+| 2 | In progress | Per-page deep dives: validators table with filters, validator profiles and age, stake pool ranks, datacenters by provider, chain vitals. Next: range and region filters, validator profile redesign, methodology page |
+| 3 | Planned | Historical analytics: location history, per-epoch charts, decentralization trends, endpoints monitor, events archive |
+| 4 | Planned | Open data and discoverability: public API, JSON exports, attribution program, provider and location pages |
+| 5 | Vision | Validator Score and Datacenter Score, embeddable widgets, alerts, watchlists, internationalization |
 
 ## Links
 
 - Dashboard: [sonda.network](https://sonda.network)
 - Live data: [data.sonda.network](https://data.sonda.network)
-- Twitter: [@SondaNetwork](https://x.com/SondaNetwork)
-- Telegram channel (live network events): [t.me/sonda_network_events](https://t.me/sonda_network_events)
-- Backend scripts: [SolyaUk/sonda](https://github.com/SolyaUk/sonda)
+- X: [@SondaNetwork](https://x.com/SondaNetwork)
+- Telegram channel with live network events: [t.me/sonda_network_events](https://t.me/sonda_network_events)
+- Backend: [SolyaUk/sonda](https://github.com/SolyaUk/sonda)
 - Built by: [Solya validator](https://solya.studio)
 
 ## License
@@ -126,6 +126,6 @@ MIT.
 
 ## Contributing
 
-This is a public good built with limited time. Issues and pull requests are welcome. If you find a problem, open an issue with the cluster, browser, and a screenshot if possible.
+This is a public good built with limited time. Issues and pull requests are welcome. If you find a problem, open an issue with the cluster, the browser and a screenshot if possible.
 
 For commercial inquiries or sponsorship, reach out via Telegram or X.
