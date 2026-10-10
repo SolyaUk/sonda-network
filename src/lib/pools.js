@@ -12,17 +12,19 @@
  * Everything here is driven by the data: no pool_ranks on the records means no pool UI.
  */
 import { fmt } from './formatters.js';
-import { esc } from './ui.js';
+import { esc, EXT_ICON } from './ui.js';
 
 /** One switch for every pool element on the site (chips, sort, filter, validator card, penalty). */
 export const POOLS_ENABLED = true;
 
 // key = field in pool_ranks; id = value in URLs (pool=..., sort=...), letters only;
+// kind = the short note next to the name on a validator page tile: it shares one line with the
+// name and the external-link mark, so it stays short (full carries the whole wording);
 // member / out = status of one validator, many = the same for a count of validators
 export const POOLS = [
   { key: 'jito', id: 'jito', name: 'Jito', kind: 'JitoSOL steward', full: 'Jito (JitoSOL steward)', url: 'https://www.jito.network/stakenet/steward/', wide: true, member: 'eligible', out: 'not eligible', many: 'eligible' },
   { key: 'shinobi', id: 'xshin', name: 'xSHIN', kind: 'Shinobi Systems', full: 'xSHIN (Shinobi Systems)', url: 'https://xshin.fi/', logo: 'xshin.png', member: 'in the pool', out: 'not in the pool', many: 'in the pool' },
-  { key: 'solstrategies', id: 'solstrategies', name: 'SOL Strategies', kind: 'StakeWiz score', full: 'SOL Strategies (StakeWiz score)', url: 'https://stakewiz.com/', logo: 'solstrategies.png', member: 'has pool stake', out: 'no pool stake', many: 'with pool stake' },
+  { key: 'solstrategies', id: 'solstrategies', name: 'SOL Strategies', kind: 'StakeWiz', full: 'SOL Strategies (StakeWiz score)', url: 'https://stakewiz.com/', logo: 'solstrategies.png', member: 'has pool stake', out: 'no pool stake', many: 'with pool stake' },
   { key: 'jpool_perf', id: 'jpool', name: 'JPool', kind: 'performance rank', full: 'JPool performance', url: 'https://jpool.one/', logo: 'jpool.svg', member: 'receives performance stake', out: 'no performance stake', many: 'with performance stake' },
 ];
 const BY_ID = new Map(POOLS.map(p => [p.id, p]));
@@ -216,7 +218,7 @@ export function penaltyParts(entry) {
 
 /**
  * One tile of the "Stake pools" card on the validator page: logo and name (a link to the
- * pool), rank, status and pool stake, then a zone of rows: the pool's reasons, the
+ * pool's own site, marked as external like every link that leaves SONDA), rank, status and pool stake, then a zone of rows: the pool's reasons, the
  * validator's numbers as "label ... value", and what the pool itself looks like.
  */
 export function poolTileHtml(info) {
@@ -241,7 +243,7 @@ export function poolTileHtml(info) {
   // pot, a Jito position being unstaked); 1 SOL is the minimum a pool leaves on a stake account
   const state = info.member ? 'is-in' : (info.stakeSol > 1.5 ? 'is-staked' : 'is-out');
   return `<div class="v-pool ${state}${info.stale ? ' is-stale' : ''}">
-    <div class="v-pool-head"><a class="v-pool-name" href="${pool.url}" target="_blank" rel="noopener" data-tip="Open the pool's page">${poolLogoHtml(pool)}${pool.wide ? '' : esc(pool.name)}</a><span class="v-pool-kind">${esc(pool.kind)}</span></div>
+    <div class="v-pool-head"><a class="v-pool-name" href="${pool.url}" target="_blank" rel="noopener" data-tip="Pool website, opens in a new tab">${poolLogoHtml(pool)}${pool.wide ? '' : esc(pool.name)}${EXT_ICON}</a><span class="v-pool-kind" data-tip-ellipsis>${esc(pool.kind)}</span></div>
     <div class="v-pool-rank">${rank}</div>
     <span class="v-pool-pill">${esc(info.status)}</span>
     <div class="v-pool-stake">${stake}</div>

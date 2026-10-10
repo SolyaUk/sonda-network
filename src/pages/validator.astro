@@ -285,11 +285,14 @@ import Footer from '../components/Footer.astro';
   .v-pools-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 0.8rem; }
   .v-pool { background: var(--bg-card-hover); border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem 0.9rem 0.85rem; display: flex; flex-direction: column; gap: 0.45rem; min-width: 0; }
   .v-pool-head { display: flex; align-items: center; gap: 0.5rem; min-height: 22px; }
-  .v-pool-name { display: inline-flex; align-items: center; gap: 0.45rem; font-weight: 600; font-size: 0.9rem; color: var(--text-primary); text-decoration: none; }
+  /* the head stays one line at every tile width: the name never wraps, the kind gives way with an ellipsis (full text in its tooltip) */
+  .v-pool-name { display: inline-flex; align-items: center; gap: 0.45rem; font-weight: 600; font-size: 0.9rem; color: var(--text-primary); text-decoration: none; white-space: nowrap; flex-shrink: 0; }
   .v-pool-name:hover { color: var(--cluster-accent); }
+  .v-pool-name .ext-ico { width: 11px; height: 11px; flex-shrink: 0; margin-left: -0.15rem; color: var(--text-muted); }
+  .v-pool-name:hover .ext-ico { color: inherit; }
   .v-pool-name .plogo { width: 20px; height: 20px; }
   .v-pool-name .plogo.plogo-wide { width: auto; height: 14px; margin: 0; }
-  .v-pool-kind { font-size: 0.68rem; color: var(--text-muted); margin-left: auto; text-align: right; }
+  .v-pool-kind { font-size: 0.68rem; color: var(--text-muted); margin-left: auto; text-align: right; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .v-pool-rank { display: flex; align-items: baseline; gap: 0.4rem; font-family: var(--font-mono); }
   .v-pool-rank b { font-size: 1.35rem; font-weight: 700; color: var(--text-primary); line-height: 1.1; }
   .v-pool-rank span { font-size: 0.75rem; color: var(--text-muted); }

@@ -212,6 +212,12 @@ export function initLongPress(root, selector, cb) {
   root.addEventListener('click', (e) => { if (fired) { e.stopPropagation(); e.preventDefault(); fired = false; } }, true);
 }
 
+/**
+ * Mark of a link that leaves the site and opens in a new tab (provider website, pool page).
+ * An inline SVG in the colour of its link; the place that uses it sets the size.
+ */
+export const EXT_ICON = '<svg class="ext-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6"/><path d="M20 4L10 14"/><path d="M18 14v6H4V6h6"/></svg>';
+
 export const NOT_BUTTON = '<button type="button" class="vagg-not" data-tip="Exclude" aria-label="Exclude"><svg viewBox="0 0 20 20" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="10" cy="10" r="7"/><path d="M5.5 5.5l9 9"/></svg></button>';
 
 /** Clear buttons for search inputs: shown when the field has text, clearing fires "input". */
